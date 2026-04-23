@@ -44,18 +44,34 @@ export async function geminiGenerate(
     body.systemInstruction = { parts: [{ text: opts.system }] };
   }
 
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-goog-api-key": key,
-    },
-    body: JSON.stringify(body),
-  });
+  const MAX_ATTEMPTS = 4;
+  let res!: Response;
+  let lastErr = "";
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-goog-api-key": key,
+      },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) break;
+    lastErr = await res.text();
+    // Retry only on transient overload/rate-limit
+    if (res.status !== 503 && res.status !== 429) break;
+    if (attempt === MAX_ATTEMPTS - 1) break;
+    const delay = 500 * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
+    await new Promise((r) => setTimeout(r, delay));
+  }
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini ${res.status}: ${err.slice(0, 200)}`);
+    if (res.status === 503) {
+      throw new Error(
+        "AI-tjenesten er overbelastet akkurat nå. Prøv igjen om et minutt.",
+      );
+    }
+    throw new Error(`Gemini ${res.status}: ${lastErr.slice(0, 200)}`);
   }
 
   const data = (await res.json()) as {
