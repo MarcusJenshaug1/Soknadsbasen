@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       mode,
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/app?success=1`,
+      success_url: `${origin}/suksess?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/app/billing`,
       allow_promotion_codes: true,
       metadata: { userId: session.userId, type },
