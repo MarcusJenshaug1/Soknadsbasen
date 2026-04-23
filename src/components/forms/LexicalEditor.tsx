@@ -86,15 +86,14 @@ export function LexicalEditor({
 function InitialValue({ value }: { value: string }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
+    if (!value) return;
     editor.update(() => {
       const root = $getRoot();
-      if (root.getFirstChild()) return;
-      if (value) {
-        const parser = new DOMParser();
-        const dom = parser.parseFromString(value, "text/html");
-        const nodes = $generateNodesFromDOM(editor, dom);
-        root.append(...nodes);
-      }
+      root.clear();
+      const parser = new DOMParser();
+      const dom = parser.parseFromString(value, "text/html");
+      const nodes = $generateNodesFromDOM(editor, dom);
+      root.append(...nodes);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
