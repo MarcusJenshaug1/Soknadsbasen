@@ -11,15 +11,27 @@ const TONES: { id: Tone; label: string }[] = [
   { id: "konsis", label: "Konsis" },
 ];
 
+export type AiLetterMeta = {
+  senderName: string | null;
+  senderEmail: string | null;
+  senderPhone: string | null;
+  senderLocation: string | null;
+  recipientName: string | null;
+  recipientTitle: string | null;
+  companyAddress: string | null;
+};
+
 /**
  * Generates an AI draft for the cover letter body via /api/ai/cover-letter.
  * Callers receive the HTML and swap it into the Lexical editor (via key-remount).
  */
 export function AiDraftButton({
   applicationId,
+  letter,
   onDraft,
 }: {
   applicationId: string;
+  letter: AiLetterMeta;
   onDraft: (html: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -34,7 +46,7 @@ export function AiDraftButton({
       const res = await fetch("/api/ai/cover-letter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId, tone }),
+        body: JSON.stringify({ applicationId, tone, letter }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Kunne ikke hente utkast");

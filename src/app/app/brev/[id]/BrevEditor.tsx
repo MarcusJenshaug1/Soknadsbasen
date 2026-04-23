@@ -214,6 +214,15 @@ export function BrevEditor({
                 <label className={LABEL.replace("block mb-2", "")}>Brødtekst</label>
                 <AiDraftButton
                   applicationId={application.id}
+                  letter={{
+                    senderName: letter.senderName,
+                    senderEmail: letter.senderEmail,
+                    senderPhone: letter.senderPhone,
+                    senderLocation: letter.senderLocation,
+                    recipientName: letter.recipientName,
+                    recipientTitle: letter.recipientTitle,
+                    companyAddress: letter.companyAddress,
+                  }}
                   onDraft={(html) => {
                     dirtyRef.current = true;
                     setLetter((l) => ({ ...l, body: html }));
