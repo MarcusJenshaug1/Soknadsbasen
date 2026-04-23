@@ -72,7 +72,7 @@ export function CompanyLogo({
         <img
           src={faviconUrl(host, dims.px)}
           alt=""
-          className="w-2/3 h-2/3 object-contain"
+          className="w-full h-full object-cover"
           onError={() => setFailed(true)}
         />
       ) : (
