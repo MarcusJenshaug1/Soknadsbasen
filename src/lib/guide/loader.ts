@@ -98,3 +98,34 @@ export const getRelatedGuides = cache(
     return guides.filter((g): g is Guide => !!g);
   },
 );
+
+export type GuideRaw = {
+  frontmatter: GuideFrontmatter;
+  content: string;
+};
+
+export const getAllGuidesRaw = cache(async (): Promise<GuideRaw[]> => {
+  const slugs = await listSlugs();
+  const raw = await Promise.all(
+    slugs.map(async (slug): Promise<GuideRaw | null> => {
+      try {
+        const filePath = path.join(GUIDES_DIR, `${slug}.md`);
+        const file = await fs.readFile(filePath, "utf8");
+        const { data, content } = matter(file);
+        return {
+          frontmatter: { ...(data as Omit<GuideFrontmatter, "slug">), slug },
+          content,
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return raw
+    .filter((g): g is GuideRaw => !!g)
+    .sort((a, b) =>
+      (b.frontmatter.publishedAt ?? "").localeCompare(
+        a.frontmatter.publishedAt ?? "",
+      ),
+    );
+});
