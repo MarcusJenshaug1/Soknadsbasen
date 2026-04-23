@@ -76,6 +76,9 @@ export default function Home() {
           <Link href="#priser" className="hover:text-[#14110e]">
             Priser
           </Link>
+          <Link href="/guide" className="hover:text-[#14110e]">
+            Guide
+          </Link>
           <Link href="#faq" className="hover:text-[#14110e]">
             FAQ
           </Link>
@@ -307,6 +310,10 @@ export default function Home() {
           <span>© 2026 Søknadsbasen</span>
           <span>Oslo · Norge</span>
           <span className="flex items-center gap-3">
+            <Link href="/guide" className="hover:text-[#14110e]">
+              Guide
+            </Link>
+            <span className="text-[#14110e]/25">·</span>
             <Link href="/personvern" className="hover:text-[#14110e]">
               Personvern
             </Link>
