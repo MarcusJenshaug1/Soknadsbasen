@@ -528,24 +528,24 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   </div>
                 </>
               ) : null}
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={newTaskDue}
-                  onChange={(e) => setNewTaskDue(e.target.value)}
-                  className="flex-1 bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] text-[#14110e]/70"
-                />
+              <input
+                type="date"
+                value={newTaskDue}
+                onChange={(e) => setNewTaskDue(e.target.value)}
+                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] text-[#14110e]/70"
+              />
+              <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setNewTaskExpanded((v) => !v)}
-                  className="px-3 py-2 rounded-full border border-black/15 text-[11px] text-[#14110e]/65 hover:border-black/30"
+                  className="px-3 py-1.5 rounded-full text-[11px] text-[#14110e]/65 hover:text-[#14110e] hover:bg-black/5"
                 >
-                  {newTaskExpanded ? "Mindre" : "Mer"}
+                  {newTaskExpanded ? "− Mindre" : "+ Mer"}
                 </button>
                 <button
                   type="submit"
                   disabled={!newTask.trim()}
-                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-40"
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-40 whitespace-nowrap"
                 >
                   <IconPlus size={12} />
                   Legg til
