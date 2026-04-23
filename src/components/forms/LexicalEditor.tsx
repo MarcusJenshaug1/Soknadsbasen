@@ -70,8 +70,8 @@ export function LexicalEditor({
         <HistoryPlugin />
         <ListPlugin />
         <OnChangePlugin
-          onChange={(_state, editor) => {
-            editor.update(() => {
+          onChange={(editorState, editor) => {
+            editorState.read(() => {
               const html = $generateHtmlFromNodes(editor);
               onChange(html);
             });
