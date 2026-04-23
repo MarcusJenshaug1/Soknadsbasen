@@ -1,187 +1,107 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import {
-  Upload,
-  FileText,
-  Link2,
-  X,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  ArrowRight,
-} from "lucide-react";
-import { useResumeStore } from "@/store/useResumeStore";
-import type { ParsedCV } from "@/lib/cv-parser";
+import { useCallback, useRef, useState } from "react";
+import { useResumeStore, type Experience, type Education, type Language, type Certification, type Project } from "@/store/useResumeStore";
+import { IconClose, IconArrowRight, IconCheck } from "@/components/ui/Icons";
+import { SectionLabel } from "@/components/ui/Pill";
+import { cn } from "@/lib/cn";
 
-/* ─── Types ───────────────────────────────────────────────── */
+type Step = "upload" | "parsing" | "preview" | "error";
 
-interface ImportCVModalProps {
-  open: boolean;
-  onClose: () => void;
+type ParsedContact = Partial<{
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedin: string;
+  website: string;
+}>;
+
+type ParsedExperience = Partial<{
+  title: string;
+  company: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  description: string;
+}>;
+
+type ParsedEducation = Partial<{
+  school: string;
+  degree: string;
+  field: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  current: boolean;
+  description: string;
+}>;
+
+type ParsedLanguage = Partial<{ name: string; level: string }>;
+type ParsedCertification = Partial<{ name: string; issuer: string; date: string; url: string }>;
+type ParsedProject = Partial<{ name: string; role: string; description: string; url: string }>;
+
+type Parsed = {
+  contact?: ParsedContact;
+  role?: string;
+  summary?: string;
+  experience?: ParsedExperience[];
+  education?: ParsedEducation[];
+  skills?: string[];
+  languages?: ParsedLanguage[];
+  certifications?: ParsedCertification[];
+  projects?: ParsedProject[];
+  interests?: string[];
+};
+
+function uid() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
 }
 
-type ImportStep = "upload" | "parsing" | "preview" | "error";
-
-/* ═══════════════════════════════════════════════════════════ */
-/* ─── Modal Component ─────────────────────────────────────── */
-/* ═══════════════════════════════════════════════════════════ */
-
-export function ImportCVModal({ open, onClose }: ImportCVModalProps) {
-  const [step, setStep] = useState<ImportStep>("upload");
-  const [parsed, setParsed] = useState<ParsedCV | null>(null);
-  const [error, setError] = useState("");
+export function ImportCVModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [step, setStep] = useState<Step>("upload");
+  const [parsed, setParsed] = useState<Parsed | null>(null);
   const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const updateContact = useResumeStore((s) => s.updateContact);
-  const updateRole = useResumeStore((s) => s.updateRole);
-  const updateSummary = useResumeStore((s) => s.updateSummary);
-  const updateSkills = useResumeStore((s) => s.updateSkills);
-
-  /* ── Upload & parse ────────────────────────────────────── */
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Bare PDF-filer er støttet.");
+      setError("Bare PDF-filer støttes.");
       setStep("error");
       return;
     }
-
     setFileName(file.name);
-    setStep("parsing");
     setError("");
-
+    setStep("parsing");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/import/cv", {
-        method: "POST",
-        body: formData,
-      });
-
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/ai/parse-cv", { method: "POST", body: fd });
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.error || "Noe gikk galt.");
+        setError(data.error ?? "Noe gikk galt.");
         setStep("error");
         return;
       }
-
-      setParsed(data.data as ParsedCV);
+      setParsed(data.data as Parsed);
       setStep("preview");
     } catch {
       setError("Nettverksfeil. Prøv igjen.");
       setStep("error");
     }
   }, []);
-
-  /* ── Apply parsed data to store ────────────────────────── */
-
-  const applyToStore = useCallback(() => {
-    if (!parsed) return;
-
-    const store = useResumeStore.getState();
-    const { contact, role, summary, skills, experience, education, languages, references, certifications } = parsed;
-
-    // Contact
-    updateContact({
-      firstName: contact.firstName || store.data.contact.firstName,
-      lastName: contact.lastName || store.data.contact.lastName,
-      email: contact.email || store.data.contact.email,
-      phone: contact.phone || store.data.contact.phone,
-      location: contact.location || store.data.contact.location,
-      linkedin: contact.linkedin || store.data.contact.linkedin,
-      website: contact.website || store.data.contact.website,
-    });
-
-    // Role & summary
-    if (role) updateRole(role);
-    if (summary) updateSummary(summary);
-
-    // Skills
-    if (skills.length > 0) {
-      const existing = store.data.skills;
-      const merged = [...new Set([...existing, ...skills])];
-      updateSkills(merged);
-    }
-
-    // Experience — use setState for array fields
-    if (experience.length > 0) {
-      useResumeStore.setState((s) => ({
-        data: {
-          ...s.data,
-          experience: experience.length > 0 ? experience : s.data.experience,
-        },
-      }));
-    }
-
-    // Education
-    if (education.length > 0) {
-      useResumeStore.setState((s) => ({
-        data: {
-          ...s.data,
-          education: education.length > 0 ? education : s.data.education,
-        },
-      }));
-    }
-
-    // Languages
-    if (languages.length > 0) {
-      useResumeStore.setState((s) => ({
-        data: {
-          ...s.data,
-          languages: languages.length > 0 ? languages : s.data.languages,
-        },
-      }));
-    }
-
-    // References
-    if (references.length > 0) {
-      useResumeStore.setState((s) => ({
-        data: {
-          ...s.data,
-          references: references.length > 0 ? references : s.data.references,
-          sectionVisibility: { ...s.data.sectionVisibility, references: true },
-        },
-      }));
-    }
-
-    // Certifications
-    if (certifications.length > 0) {
-      useResumeStore.setState((s) => ({
-        data: {
-          ...s.data,
-          certifications: certifications.length > 0 ? certifications : s.data.certifications,
-          sectionVisibility: { ...s.data.sectionVisibility, certifications: true },
-        },
-      }));
-    }
-
-    onClose();
-    // Reset state for next time
-    setStep("upload");
-    setParsed(null);
-    setFileName("");
-  }, [parsed, updateContact, updateRole, updateSummary, updateSkills, onClose]);
-
-  /* ── Drag & drop ───────────────────────────────────────── */
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-  const handleDragLeave = () => setDragOver(false);
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  };
-
-  /* ── Reset ─────────────────────────────────────────────── */
 
   const reset = () => {
     setStep("upload");
@@ -190,337 +110,362 @@ export function ImportCVModal({ open, onClose }: ImportCVModalProps) {
     setFileName("");
   };
 
+  const applyToStore = useCallback(() => {
+    if (!parsed) return;
+    const store = useResumeStore.getState();
+
+    if (parsed.contact) {
+      store.updateContact({
+        firstName: parsed.contact.firstName || store.data.contact.firstName,
+        lastName: parsed.contact.lastName || store.data.contact.lastName,
+        email: parsed.contact.email || store.data.contact.email,
+        phone: parsed.contact.phone || store.data.contact.phone,
+        location: parsed.contact.location || store.data.contact.location,
+        linkedin: parsed.contact.linkedin || store.data.contact.linkedin,
+        website: parsed.contact.website || store.data.contact.website,
+      });
+    }
+    if (parsed.role) store.updateRole(parsed.role);
+    if (parsed.summary) store.updateSummary(parsed.summary);
+    if (parsed.skills?.length) {
+      const merged = Array.from(
+        new Set([...store.data.skills, ...parsed.skills.filter(Boolean)]),
+      );
+      store.updateSkills(merged);
+    }
+
+    useResumeStore.setState((s) => {
+      const next = { ...s.data };
+      if (parsed.experience?.length) {
+        next.experience = parsed.experience.map<Experience>((e) => ({
+          id: uid(),
+          title: e.title ?? "",
+          company: e.company ?? "",
+          location: e.location ?? "",
+          startDate: e.startDate ?? "",
+          endDate: e.endDate ?? "",
+          current: !!e.current,
+          description: e.description ?? "",
+        }));
+      }
+      if (parsed.education?.length) {
+        next.education = parsed.education.map<Education>((e) => ({
+          id: uid(),
+          school: e.school ?? "",
+          degree: e.degree ?? "",
+          field: e.field ?? "",
+          location: e.location ?? "",
+          startDate: e.startDate ?? "",
+          endDate: e.endDate ?? "",
+          current: !!e.current,
+          description: e.description ?? "",
+        }));
+      }
+      if (parsed.languages?.length) {
+        next.languages = parsed.languages.map<Language>((l) => ({
+          id: uid(),
+          name: l.name ?? "",
+          level: l.level ?? "",
+        }));
+      }
+      if (parsed.certifications?.length) {
+        next.certifications = parsed.certifications.map<Certification>((c) => ({
+          id: uid(),
+          name: c.name ?? "",
+          issuer: c.issuer ?? "",
+          date: c.date ?? "",
+          url: c.url ?? "",
+        }));
+      }
+      if (parsed.projects?.length) {
+        next.projects = parsed.projects.map<Project>((p) => ({
+          id: uid(),
+          name: p.name ?? "",
+          role: p.role ?? "",
+          url: p.url ?? "",
+          startDate: "",
+          endDate: "",
+          current: false,
+          description: p.description ?? "",
+        }));
+      }
+      if (parsed.interests?.length) {
+        next.interests = parsed.interests;
+      }
+      return { data: next };
+    });
+
+    onClose();
+    reset();
+  }, [parsed, onClose]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="text-lg font-bold text-neutral-800 flex items-center gap-2">
-            <Upload className="size-5 text-indigo-600" />
-            Importer CV
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
-            <X className="size-5 text-neutral-500" />
+      <div
+        className="absolute inset-0 bg-[#14110e]/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-[#faf8f5] rounded-3xl w-full max-w-[620px] max-h-[85vh] overflow-hidden flex flex-col border border-black/8">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8">
+          <div>
+            <SectionLabel>Importer CV</SectionLabel>
+            <h2 className="text-[20px] font-medium tracking-tight mt-1">
+              {step === "preview" ? "Vi fant følgende" : "Last opp CV"}
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              onClose();
+              reset();
+            }}
+            className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#14110e]/60"
+            aria-label="Lukk"
+          >
+            <IconClose size={18} />
           </button>
-        </div>
+        </header>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
           {step === "upload" && (
             <UploadStep
               dragOver={dragOver}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onFileSelect={handleFile}
-              fileInputRef={fileInputRef}
+              setDragOver={setDragOver}
+              onFile={handleFile}
+              inputRef={inputRef}
             />
           )}
           {step === "parsing" && <ParsingStep fileName={fileName} />}
           {step === "preview" && parsed && <PreviewStep parsed={parsed} />}
-          {step === "error" && <ErrorStep error={error} onRetry={reset} />}
+          {step === "error" && <ErrorStep message={error} onRetry={reset} />}
         </div>
 
-        {/* Footer */}
         {step === "preview" && parsed && (
-          <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between">
+          <footer className="px-6 py-4 border-t border-black/8 flex items-center justify-between gap-3 bg-[#eee9df]/50">
             <button
               onClick={reset}
-              className="px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="text-[12px] text-[#14110e]/60 hover:text-[#14110e]"
             >
-              Last opp en annen
+              Prøv en annen fil
             </button>
-            <button
-              onClick={applyToStore}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition-colors"
-            >
-              Bruk denne CVen
-              <ArrowRight className="size-4" />
-            </button>
-          </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  onClose();
+                  reset();
+                }}
+                className="px-4 py-2 rounded-full text-[12px] border border-black/15 hover:border-black/30"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={applyToStore}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a]"
+              >
+                Bruk denne CVen
+                <IconArrowRight size={14} />
+              </button>
+            </div>
+          </footer>
         )}
       </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════ */
-/* ─── Sub-components ──────────────────────────────────────── */
-/* ═══════════════════════════════════════════════════════════ */
-
 function UploadStep({
   dragOver,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onFileSelect,
-  fileInputRef,
+  setDragOver,
+  onFile,
+  inputRef,
 }: {
   dragOver: boolean;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent) => void;
-  onFileSelect: (file: File) => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  setDragOver: (v: boolean) => void;
+  onFile: (f: File) => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-neutral-600">
-        Last opp en eksisterende CV eller en LinkedIn-profil eksportert som PDF. Vi leser innholdet og fyller ut feltene automatisk.
+    <div className="space-y-5">
+      <p className="text-[13px] text-[#14110e]/65 leading-relaxed">
+        Last opp en eksisterende CV eller en LinkedIn-profil eksportert som PDF.
+        AI leser innholdet og fyller ut feltene. Vi legger aldri til informasjon
+        som ikke står i kilden — alt kan redigeres manuelt etterpå.
       </p>
-
-      {/* Drop zone */}
       <div
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all ${
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const f = e.dataTransfer.files[0];
+          if (f) onFile(f);
+        }}
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-colors",
           dragOver
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-neutral-300 hover:border-indigo-400 hover:bg-neutral-50"
-        }`}
+            ? "border-[#c15a3a] bg-[#c15a3a]/5"
+            : "border-black/15 hover:border-black/40 bg-white",
+        )}
       >
-        <Upload className={`size-10 mx-auto mb-3 ${dragOver ? "text-indigo-600" : "text-neutral-400"}`} />
-        <p className="text-sm font-medium text-neutral-700">
-          Dra og slipp PDF-filen her
-        </p>
-        <p className="text-xs text-neutral-400 mt-1">
+        <div className="size-10 mx-auto mb-3 rounded-full bg-[#eee9df] flex items-center justify-center">
+          <IconArrowRight
+            size={18}
+            className="rotate-[-90deg] text-[#14110e]/70"
+          />
+        </div>
+        <p className="text-[14px] font-medium">Dra og slipp PDF her</p>
+        <p className="text-[12px] text-[#14110e]/55 mt-1">
           eller klikk for å velge en fil
         </p>
         <input
-          ref={fileInputRef}
+          ref={inputRef}
           type="file"
           accept=".pdf"
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onFileSelect(file);
+            const f = e.target.files?.[0];
+            if (f) onFile(f);
           }}
         />
       </div>
-
-      {/* Supported format */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-neutral-50 border border-neutral-200">
-          <FileText className="size-5 text-indigo-600 shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-semibold text-neutral-800">PDF-CV</div>
-            <div className="text-xs text-neutral-500 mt-0.5">
-              Standard CV i PDF-format. Mest vanlige formater støttes.
-            </div>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-neutral-50 border border-neutral-200">
-          <Link2 className="size-5 text-[#0a66c2] shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-semibold text-neutral-800">LinkedIn PDF</div>
-            <div className="text-xs text-neutral-500 mt-0.5">
-              Eksporter profilen din fra LinkedIn som PDF og last opp her.
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Tile
+          title="PDF-CV"
+          desc="Vanlige CV-formater leses inn."
+        />
+        <Tile
+          title="LinkedIn PDF"
+          desc="Profil → mer → lagre som PDF → last opp."
+        />
       </div>
+    </div>
+  );
+}
 
-      {/* LinkedIn instructions */}
-      <details className="group">
-        <summary className="cursor-pointer text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-          <Link2 className="size-4" />
-          Hvordan eksportere fra LinkedIn?
-        </summary>
-        <div className="mt-3 p-4 bg-blue-50 rounded-xl text-xs text-blue-800 space-y-2">
-          <ol className="list-decimal list-inside space-y-1.5">
-            <li>Gå til din LinkedIn-profil</li>
-            <li>Klikk &quot;Mer&quot; (knappen ved siden av profilbildet)</li>
-            <li>Velg &quot;Lagre som PDF&quot;</li>
-            <li>Last opp den nedlastede PDFen her</li>
-          </ol>
-        </div>
-      </details>
+function Tile({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="p-4 rounded-2xl bg-white border border-black/5">
+      <div className="text-[13px] font-medium">{title}</div>
+      <div className="text-[11px] text-[#14110e]/55 mt-1">{desc}</div>
     </div>
   );
 }
 
 function ParsingStep({ fileName }: { fileName: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Loader2 className="size-10 text-indigo-600 animate-spin mb-4" />
-      <p className="text-sm font-medium text-neutral-700">Leser og analyserer CVen...</p>
-      <p className="text-xs text-neutral-400 mt-1">{fileName}</p>
+    <div className="py-14 text-center">
+      <div className="inline-flex size-10 rounded-full border-2 border-[#c15a3a] border-t-transparent animate-spin mb-5" />
+      <div className="text-[15px] font-medium">Leser {fileName} …</div>
+      <p className="text-[12px] text-[#14110e]/55 mt-2">
+        AI ekstraherer strukturerte felter. Tar vanligvis 10-20 sekunder.
+      </p>
     </div>
   );
 }
 
-function ErrorStep({ error, onRetry }: { error: string; onRetry: () => void }) {
+function PreviewStep({ parsed }: { parsed: Parsed }) {
+  const rows: { label: string; value: string | null }[] = [
+    {
+      label: "Navn",
+      value:
+        [parsed.contact?.firstName, parsed.contact?.lastName]
+          .filter(Boolean)
+          .join(" ") || null,
+    },
+    { label: "E-post", value: parsed.contact?.email || null },
+    { label: "Telefon", value: parsed.contact?.phone || null },
+    { label: "Sted", value: parsed.contact?.location || null },
+    { label: "Ønsket rolle", value: parsed.role || null },
+    { label: "Profil", value: parsed.summary ? `${parsed.summary.slice(0, 80)}…` : null },
+    {
+      label: "Erfaring",
+      value: parsed.experience?.length
+        ? `${parsed.experience.length} stillinger`
+        : null,
+    },
+    {
+      label: "Utdanning",
+      value: parsed.education?.length
+        ? `${parsed.education.length} oppføringer`
+        : null,
+    },
+    {
+      label: "Ferdigheter",
+      value: parsed.skills?.length ? parsed.skills.slice(0, 5).join(", ") + (parsed.skills.length > 5 ? ` +${parsed.skills.length - 5}` : "") : null,
+    },
+    {
+      label: "Språk",
+      value: parsed.languages?.length
+        ? parsed.languages.map((l) => l.name).filter(Boolean).join(", ")
+        : null,
+    },
+    {
+      label: "Sertifiseringer",
+      value: parsed.certifications?.length
+        ? `${parsed.certifications.length}`
+        : null,
+    },
+    {
+      label: "Prosjekter",
+      value: parsed.projects?.length ? `${parsed.projects.length}` : null,
+    },
+  ];
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <AlertCircle className="size-10 text-red-500 mb-4" />
-      <p className="text-sm font-medium text-neutral-800">Importfeil</p>
-      <p className="text-xs text-red-600 mt-1 max-w-sm">{error}</p>
+    <div className="space-y-4">
+      <p className="text-[12px] text-[#14110e]/65">
+        Sjekk over at dette stemmer. Vi erstatter eksisterende CV-innhold når du
+        klikker &quot;Bruk denne CVen&quot;.
+      </p>
+      <ul className="divide-y divide-black/5 bg-white rounded-2xl border border-black/5">
+        {rows.map((r) => (
+          <li key={r.label} className="flex items-start justify-between gap-4 px-4 py-3">
+            <span className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/55 shrink-0 min-w-[110px]">
+              {r.label}
+            </span>
+            <span
+              className={cn(
+                "text-[13px] text-right flex-1 min-w-0",
+                r.value ? "text-[#14110e]" : "text-[#14110e]/30 italic",
+              )}
+            >
+              {r.value ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <IconCheck size={12} className="text-[#16a34a]" />
+                  {r.value}
+                </span>
+              ) : (
+                "ikke funnet"
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="py-10 text-center">
+      <div className="inline-flex size-10 rounded-full bg-[#c15a3a]/10 text-[#c15a3a] items-center justify-center mb-4">
+        <IconClose size={20} />
+      </div>
+      <div className="text-[15px] font-medium mb-2">Import mislyktes</div>
+      <p className="text-[12px] text-[#14110e]/65 max-w-sm mx-auto mb-6">
+        {message}
+      </p>
       <button
         onClick={onRetry}
-        className="mt-6 px-5 py-2 text-sm font-medium bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+        className="px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a]"
       >
         Prøv igjen
       </button>
-    </div>
-  );
-}
-
-/* ─── Preview of parsed data ──────────────────────────────── */
-
-function PreviewStep({ parsed }: { parsed: ParsedCV }) {
-  const sourceLabel = parsed.source === "linkedin" ? "LinkedIn-profil" : "CV";
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2 text-sm">
-        <CheckCircle2 className="size-5 text-green-600" />
-        <span className="font-medium text-green-700">
-          Fant data fra {sourceLabel}
-        </span>
-      </div>
-
-      {/* Contact */}
-      {(parsed.contact.firstName || parsed.contact.email) && (
-        <SectionPreview title="Kontaktinfo">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600">
-            {parsed.contact.firstName && (
-              <div><span className="font-medium">Navn:</span> {parsed.contact.firstName} {parsed.contact.lastName}</div>
-            )}
-            {parsed.contact.email && (
-              <div><span className="font-medium">E-post:</span> {parsed.contact.email}</div>
-            )}
-            {parsed.contact.phone && (
-              <div><span className="font-medium">Telefon:</span> {parsed.contact.phone}</div>
-            )}
-            {parsed.contact.location && (
-              <div><span className="font-medium">Sted:</span> {parsed.contact.location}</div>
-            )}
-            {parsed.contact.linkedin && (
-              <div className="col-span-2 truncate"><span className="font-medium">LinkedIn:</span> {parsed.contact.linkedin}</div>
-            )}
-          </div>
-        </SectionPreview>
-      )}
-
-      {/* Role */}
-      {parsed.role && (
-        <SectionPreview title="Rolle">
-          <p className="text-xs text-neutral-600">{parsed.role}</p>
-        </SectionPreview>
-      )}
-
-      {/* Summary */}
-      {parsed.summary && (
-        <SectionPreview title="Profil">
-          <p className="text-xs text-neutral-600 line-clamp-3">{parsed.summary}</p>
-        </SectionPreview>
-      )}
-
-      {/* Experience */}
-      {parsed.experience.length > 0 && (
-        <SectionPreview title={`Erfaring (${parsed.experience.length})`}>
-          <div className="space-y-3">
-            {parsed.experience.map((exp) => (
-              <div key={exp.id} className="border-l-2 border-indigo-200 pl-3 py-0.5">
-                <div className="text-xs font-semibold text-neutral-800">
-                  {exp.title || "Ukjent tittel"}
-                </div>
-                <div className="text-[11px] text-neutral-500">
-                  {exp.company && <span>{exp.company}</span>}
-                  {exp.location && <span> · {exp.location}</span>}
-                  <span className="ml-2">{exp.startDate} — {exp.current ? "Nå" : exp.endDate}</span>
-                </div>
-                {exp.description && (
-                  <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-2">{exp.description}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </SectionPreview>
-      )}
-
-      {/* Education */}
-      {parsed.education.length > 0 && (
-        <SectionPreview title={`Utdanning (${parsed.education.length})`}>
-          <div className="space-y-3">
-            {parsed.education.map((edu) => (
-              <div key={edu.id} className="border-l-2 border-emerald-200 pl-3 py-0.5">
-                <div className="text-xs font-semibold text-neutral-800">
-                  {edu.degree || edu.field || "Ukjent"}
-                  {edu.field && edu.degree && <span className="font-normal text-neutral-500"> — {edu.field}</span>}
-                </div>
-                <div className="text-[11px] text-neutral-500">
-                  {edu.school && <span>{edu.school}</span>}
-                  {edu.location && <span> · {edu.location}</span>}
-                  {(edu.startDate || edu.endDate) && (
-                    <span className="ml-2">{edu.startDate} — {edu.endDate}</span>
-                  )}
-                </div>
-                {edu.description && (
-                  <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-2">{edu.description}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </SectionPreview>
-      )}
-
-      {/* Skills */}
-      {parsed.skills.length > 0 && (
-        <SectionPreview title={`Ferdigheter (${parsed.skills.length})`}>
-          <div className="flex flex-wrap gap-1.5">
-            {parsed.skills.map((skill, i) => (
-              <span key={i} className="px-2 py-0.5 text-[10px] font-medium bg-indigo-50 text-indigo-700 rounded-full">
-                {skill}
-              </span>
-            ))}
-          </div>
-        </SectionPreview>
-      )}
-
-      {/* Languages */}
-      {parsed.languages.length > 0 && (
-        <SectionPreview title="Språk">
-          <div className="flex gap-3">
-            {parsed.languages.map((lang) => (
-              <span key={lang.id} className="text-xs text-neutral-600">
-                {lang.name} <span className="text-neutral-400">({lang.level})</span>
-              </span>
-            ))}
-          </div>
-        </SectionPreview>
-      )}
-
-      {/* References */}
-      {parsed.references.length > 0 && (
-        <SectionPreview title={`Referanser (${parsed.references.length})`}>
-          <div className="space-y-1">
-            {parsed.references.map((ref) => (
-              <div key={ref.id} className="text-xs text-neutral-600">
-                <span className="font-medium">{ref.name}</span>
-                {ref.title && <span className="text-neutral-400"> — {ref.title}</span>}
-              </div>
-            ))}
-          </div>
-        </SectionPreview>
-      )}
-    </div>
-  );
-}
-
-function SectionPreview({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-      <h4 className="text-xs font-bold text-neutral-800 uppercase tracking-wider mb-2">{title}</h4>
-      {children}
     </div>
   );
 }
