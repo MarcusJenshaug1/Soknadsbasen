@@ -633,6 +633,14 @@ export function DesignExportForm() {
   const replaceData = useResumeStore((s) => s.replaceData);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [jobAd, setJobAd] = useState("");
+  const [jobUrl, setJobUrl] = useState("");
+  const [jobUrlLoading, setJobUrlLoading] = useState(false);
+  const [jobUrlError, setJobUrlError] = useState<string | null>(null);
+  const [jobSource, setJobSource] = useState<{
+    title: string | null;
+    companyName: string | null;
+    source: string | null;
+  } | null>(null);
   const [draggingKey, setDraggingKey] = useState<SectionKey | null>(null);
   const [versions, setVersions] = useState<Array<{ id: string; versionNum: number; templateId: string; createdAt: string; content: ResumeData }>>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -670,6 +678,44 @@ export function DesignExportForm() {
       cancelled = true;
     };
   }, [activeResumeId]);
+
+  async function fetchJobFromUrl() {
+    const url = jobUrl.trim();
+    if (!url) return;
+    setJobUrlLoading(true);
+    setJobUrlError(null);
+    try {
+      const res = await fetch("/api/ai/parse-job-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Kunne ikke hente stillingen");
+      }
+      const data = await res.json() as {
+        title?: string | null;
+        companyName?: string | null;
+        source?: string | null;
+        jobDescription?: string | null;
+      };
+      if (data.jobDescription) {
+        setJobAd(data.jobDescription);
+        setJobSource({
+          title: data.title ?? null,
+          companyName: data.companyName ?? null,
+          source: data.source ?? null,
+        });
+      } else {
+        setJobUrlError("Fant ingen stillingstekst på siden");
+      }
+    } catch (err) {
+      setJobUrlError(err instanceof Error ? err.message : "Ukjent feil");
+    } finally {
+      setJobUrlLoading(false);
+    }
+  }
 
   function reorderSection(targetKey: SectionKey) {
     if (!draggingKey || draggingKey === targetKey) return;
@@ -842,16 +888,59 @@ export function DesignExportForm() {
       <div className="space-y-4 p-5 rounded-2xl border border-emerald-200 bg-emerald-50/40">
         <div className="space-y-1">
           <h4 className="text-sm font-semibold text-emerald-900 flex items-center gap-2"><Target className="size-4" /> ATS-score & nøkkelordanalyse</h4>
-          <p className="text-xs text-emerald-800/70">Lim inn stillingsannonse for å se hvor godt CV-en matcher kravene.</p>
+          <p className="text-xs text-emerald-800/70">Lim inn hele stillingsannonsen, eller hent direkte fra URL (FINN.no, LinkedIn, NAV, Webcruiter m.fl).</p>
         </div>
 
-        <textarea
-          value={jobAd}
-          onChange={(e) => setJobAd(e.target.value)}
-          rows={7}
-          className={`${inputClass} resize-y bg-white`}
-          placeholder="Lim inn hele stillingsannonsen her…"
-        />
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-emerald-900/80">Hent fra URL</label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={jobUrl}
+              onChange={(e) => setJobUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  fetchJobFromUrl();
+                }
+              }}
+              placeholder="https://www.finn.no/job/..."
+              className={`${inputClass} bg-white flex-1`}
+              disabled={jobUrlLoading}
+            />
+            <button
+              type="button"
+              onClick={fetchJobFromUrl}
+              disabled={jobUrlLoading || !jobUrl.trim()}
+              className="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {jobUrlLoading ? "Henter…" : "Hent"}
+            </button>
+          </div>
+          {jobUrlError && (
+            <p className="text-xs text-red-700">{jobUrlError}</p>
+          )}
+          {jobSource && !jobUrlError && (
+            <p className="text-xs text-emerald-800/80">
+              Hentet: <span className="font-semibold">{jobSource.title ?? "stilling"}</span>
+              {jobSource.companyName ? ` hos ${jobSource.companyName}` : ""}
+              {jobSource.source ? ` (${jobSource.source})` : ""}
+            </p>
+          )}
+        </div>
+
+        <div className="relative">
+          <div className="absolute -top-2 left-3 bg-emerald-50 px-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+            Stillingstekst
+          </div>
+          <textarea
+            value={jobAd}
+            onChange={(e) => setJobAd(e.target.value)}
+            rows={7}
+            className={`${inputClass} resize-y bg-white`}
+            placeholder="Lim inn hele stillingsannonsen her, eller bruk URL-feltet over."
+          />
+        </div>
 
         {atsAnalysis && (
           <div className="space-y-4">
