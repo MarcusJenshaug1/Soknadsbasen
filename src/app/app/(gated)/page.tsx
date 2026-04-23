@@ -63,27 +63,67 @@ function pickNextMilestone(apps: Application[]) {
   return soonest ?? null;
 }
 
+/**
+ * CV-data lagres i en wrapper-payload (ResumePayloadV2 eller V1).
+ * Pakker ut riktig ResumeData-objekt og teller fylte seksjoner.
+ */
 function computeCvPercent(userDataResume: string | null | undefined): number {
   if (!userDataResume) return 0;
   try {
-    const data = JSON.parse(userDataResume) as Record<string, unknown>;
-    const buckets = [
-      "contact",
-      "role",
-      "summary",
-      "experience",
-      "education",
-      "skills",
-      "languages",
-    ] as const;
-    let filled = 0;
-    for (const k of buckets) {
-      const v = data[k];
-      if (Array.isArray(v) ? v.length > 0 : v && typeof v === "object")
-        filled++;
-      else if (typeof v === "string" && v.trim().length > 0) filled++;
+    const outer = JSON.parse(userDataResume) as Record<string, unknown>;
+    if (!outer || typeof outer !== "object") return 0;
+
+    let data: Record<string, unknown> | null = null;
+
+    // v2 payload: { resumes, activeResumeId, _resumeDataMap, data }
+    if (
+      "_resumeDataMap" in outer &&
+      outer._resumeDataMap &&
+      typeof outer._resumeDataMap === "object"
+    ) {
+      const activeId =
+        typeof outer.activeResumeId === "string" ? outer.activeResumeId : null;
+      const map = outer._resumeDataMap as Record<string, unknown>;
+      const active = activeId ? map[activeId] : null;
+      if (active && typeof active === "object") {
+        data = active as Record<string, unknown>;
+      }
     }
-    return Math.round((filled / buckets.length) * 100);
+
+    // v1 payload: { data: ResumeData }
+    if (!data && "data" in outer && outer.data && typeof outer.data === "object") {
+      data = outer.data as Record<string, unknown>;
+    }
+
+    // Fallback: rå ResumeData direkte
+    if (!data) data = outer;
+
+    const contact = data.contact as Record<string, unknown> | undefined;
+    const contactFilled =
+      !!contact &&
+      Object.values(contact).some(
+        (v) => typeof v === "string" && v.trim().length > 0,
+      );
+    const hasText = (k: string) => {
+      const v = data![k];
+      return typeof v === "string" && v.trim().length > 0;
+    };
+    const hasArray = (k: string) => {
+      const v = data![k];
+      return Array.isArray(v) && v.length > 0;
+    };
+
+    const checks: boolean[] = [
+      contactFilled,
+      hasText("role"),
+      hasText("summary"),
+      hasArray("experience"),
+      hasArray("education"),
+      hasArray("skills"),
+      hasArray("languages"),
+    ];
+    const filled = checks.filter(Boolean).length;
+    return Math.round((filled / checks.length) * 100);
   } catch {
     return 0;
   }
@@ -117,10 +157,14 @@ export default async function AppHomePage() {
     }),
   ]);
 
+  const TERMINAL = ["accepted", "declined", "rejected", "withdrawn"] as const;
   const active = apps.filter(
-    (a) => !["accepted", "withdrawn", "rejected"].includes(a.status),
+    (a) => !(TERMINAL as readonly string[]).includes(a.status),
   );
   const interviewCount = apps.filter((a) => a.status === "interview").length;
+  const acceptedCount = apps.filter((a) => a.status === "accepted").length;
+  const declinedCount = apps.filter((a) => a.status === "declined").length;
+  const rejectedCount = apps.filter((a) => a.status === "rejected").length;
 
   const milestone = pickNextMilestone(active);
   const cvPercent = computeCvPercent(userData?.resumeData ?? null);
@@ -228,6 +272,37 @@ export default async function AppHomePage() {
           />
         </div>
       </div>
+
+      {/* Resultater */}
+      {acceptedCount + declinedCount + rejectedCount > 0 && (
+        <div className="mt-6 md:mt-8">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <SectionLabel className="mb-2">Resultater</SectionLabel>
+              <h2 className="text-[22px] md:text-[24px] tracking-tight font-medium">
+                Avsluttede søknader
+              </h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <ResultCard
+              label="Takket ja"
+              value={acceptedCount}
+              tone="positive"
+            />
+            <ResultCard
+              label="Takket nei"
+              value={declinedCount}
+              tone="neutral"
+            />
+            <ResultCard
+              label="Avslag"
+              value={rejectedCount}
+              tone="muted"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Pipeline preview */}
       <div className="mt-10">
@@ -404,6 +479,39 @@ function StatCard({
       {sub && (
         <div className="text-[11px] text-[#14110e]/45 mt-1">{sub}</div>
       )}
+    </div>
+  );
+}
+
+function ResultCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "positive" | "neutral" | "muted";
+}) {
+  const dot =
+    tone === "positive"
+      ? "#16a34a"
+      : tone === "neutral"
+        ? "#94a3b8"
+        : "#d1d5db";
+  return (
+    <div className="bg-white rounded-2xl p-4 md:p-5 border border-black/5">
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: dot }}
+        />
+        <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/60">
+          {label}
+        </span>
+      </div>
+      <div className="text-[28px] md:text-[32px] leading-none tracking-[-0.03em] font-medium">
+        {value}
+      </div>
     </div>
   );
 }

@@ -19,6 +19,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { PIPELINE_COLUMNS, isPipelineStatus } from "@/lib/pipeline";
+
+const TERMINAL_STATUSES: StatusKey[] = ["accepted", "declined", "rejected"];
+const ACTIVE_COLUMNS = PIPELINE_COLUMNS.filter(
+  (c) => !TERMINAL_STATUSES.includes(c.status),
+);
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
 import { IconPlus, IconSearch } from "@/components/ui/Icons";
@@ -104,6 +109,12 @@ export function PipelineView({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newModalOpen, setNewModalOpen] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  const visibleColumns = showCompleted ? PIPELINE_COLUMNS : ACTIVE_COLUMNS;
+  const completedCount = apps.filter((a) =>
+    TERMINAL_STATUSES.includes(a.status as StatusKey),
+  ).length;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -121,14 +132,14 @@ export function PipelineView({
 
   const byColumn = useMemo(() => {
     const map = new Map<StatusKey, Application[]>();
-    for (const col of PIPELINE_COLUMNS) map.set(col.status, []);
+    for (const col of visibleColumns) map.set(col.status, []);
     for (const a of filtered) {
-      if (isPipelineStatus(a.status)) {
-        map.get(a.status)!.push(a);
+      if (isPipelineStatus(a.status) && map.has(a.status as StatusKey)) {
+        map.get(a.status as StatusKey)!.push(a);
       }
     }
     return map;
-  }, [filtered]);
+  }, [filtered, visibleColumns]);
 
   const draggingApp = draggingId ? apps.find((a) => a.id === draggingId) ?? null : null;
 
@@ -223,6 +234,22 @@ export function PipelineView({
             ))}
           </div>
 
+          {view === "pipeline" && completedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowCompleted((v) => !v)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-[12px] transition-colors border",
+                showCompleted
+                  ? "bg-[#14110e] text-[#faf8f5] border-transparent"
+                  : "bg-white text-[#14110e]/70 border-black/10 hover:border-black/25",
+              )}
+              aria-pressed={showCompleted}
+            >
+              {showCompleted ? "Skjul avsluttede" : `Vis avsluttede (${completedCount})`}
+            </button>
+          )}
+
           <label className="relative">
             <IconSearch
               size={14}
@@ -271,7 +298,7 @@ export function PipelineView({
         >
           {/* Mobile: stacked */}
           <div className="md:hidden space-y-5">
-            {PIPELINE_COLUMNS.map((col) => (
+            {visibleColumns.map((col) => (
               <Column
                 key={col.status}
                 label={col.label}
@@ -283,9 +310,14 @@ export function PipelineView({
             ))}
           </div>
 
-          {/* Desktop: fills full width, 7 equal columns */}
-          <div className="hidden md:grid grid-cols-7 gap-2 items-start">
-            {PIPELINE_COLUMNS.map((col) => (
+          {/* Desktop: fills full width, kolonner matcher visibleColumns */}
+          <div
+            className="hidden md:grid gap-2 items-start"
+            style={{
+              gridTemplateColumns: `repeat(${visibleColumns.length}, minmax(0, 1fr))`,
+            }}
+          >
+            {visibleColumns.map((col) => (
               <Column
                 key={col.status}
                 label={col.label}
