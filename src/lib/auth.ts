@@ -37,6 +37,11 @@ export async function getSession(): Promise<SessionPayload | null> {
   });
 
   if (!profile) {
+    if (user.email) {
+      // Orphan from a prior Supabase auth user (same email, different id).
+      // The auth user is gone, so the orphan profile is unreachable — clean it up.
+      await prisma.user.deleteMany({ where: { email: user.email } });
+    }
     profile = await prisma.user.create({
       data: {
         id: user.id,
