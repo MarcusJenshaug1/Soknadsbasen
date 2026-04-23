@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { SupabaseErrorSilencer } from "./SupabaseErrorSilencer";
 
 /**
  * Place this in the root layout to fetch the current session on app load
@@ -18,5 +19,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Cloud sync — loads data from server on login, auto-saves on changes
   useCloudSync();
 
-  return <>{children}</>;
+  return (
+    <>
+      <SupabaseErrorSilencer />
+      {children}
+    </>
+  );
 }
