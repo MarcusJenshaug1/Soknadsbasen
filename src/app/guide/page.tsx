@@ -15,7 +15,7 @@ export const metadata = buildMetadata({
   path: "/guide",
   title: "Guide",
   description:
-    "Rolige, grundige guider om CV, søknadsbrev, intervju, karriereskifte og lønnsforhandling. Skrevet for å hjelpe deg videre — ikke stresse deg.",
+    "Rolige, grundige guider om CV, søknadsbrev, intervju, karriereskifte og lønnsforhandling. Skrevet for å hjelpe deg videre, ikke stresse deg.",
 });
 
 type Props = {
@@ -72,7 +72,7 @@ export default async function GuideHubPage({ searchParams }: Props) {
           </h1>
           <p className="text-[16px] md:text-[18px] leading-[1.6] text-[#14110e]/70 max-w-[60ch]">
             Grundige guider om CV, søknadsbrev, intervju, karriereskifte og
-            lønnsforhandling. Skrevet for å hjelpe deg videre — uten stress, uten
+            lønnsforhandling. Skrevet for å hjelpe deg videre, uten stress, uten
             fyllstoff.
           </p>
         </section>
@@ -157,7 +157,7 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
           : "Første guider publiseres snart."}
       </p>
       <p className="text-[13px] text-[#14110e]/55">
-        Vi skriver heller færre, bedre guider — enn et bibliotek med fyllstoff.
+        Vi skriver heller færre, bedre guider, ikke et bibliotek med fyllstoff.
       </p>
     </div>
   );

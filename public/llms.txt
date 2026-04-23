@@ -1,6 +1,6 @@
 # Søknadsbasen
 
-> Norsk jobbsøker-plattform som samler CV-er, søknadsbrev og oppfølging i ett rolig arbeidsrom. Posisjonering: «Jobbsøking, med ro.» — en motvekt til stressende jobbportaler.
+> Norsk jobbsøker-plattform som samler CV-er, søknadsbrev og oppfølging i ett rolig arbeidsrom. Posisjonering: «Jobbsøking, med ro.»,en motvekt til stressende jobbportaler.
 
 - Hjemmeside: https://søknadsbasen.no
 - Språk: Norsk bokmål
@@ -10,7 +10,7 @@
 
 ## Om tjenesten
 
-Søknadsbasen er et verktøy for jobbsøkere — ikke en jobbportal. Tjenesten hjelper brukeren å:
+Søknadsbasen er et verktøy for jobbsøkere,ikke en jobbportal. Tjenesten hjelper brukeren å:
 
 - Bygge CV med åtte maler, seks fargepaletter og ubegrenset PDF-eksport
 - Skrive søknadsbrev i kontekst av stillingen, med automatisk versjonering
@@ -32,9 +32,9 @@ Søknadsbasen er et rolig alternativ til hektiske jobbportaler som finn.no/jobb,
 
 ## Sider
 
-- [Forsiden](https://søknadsbasen.no/) — produktoversikt, filosofi, priser
-- [Personvern](https://søknadsbasen.no/personvern) — GDPR, lagring, rettigheter
-- [Vilkår](https://søknadsbasen.no/vilkar) — abonnement, oppsigelse, ansvar
+- [Forsiden](https://søknadsbasen.no/),produktoversikt, filosofi, priser
+- [Personvern](https://søknadsbasen.no/personvern),GDPR, lagring, rettigheter
+- [Vilkår](https://søknadsbasen.no/vilkar),abonnement, oppsigelse, ansvar
 
 ## Guide
 

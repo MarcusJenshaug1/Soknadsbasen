@@ -3,7 +3,7 @@ import { siteConfig } from "@/lib/seo/siteConfig";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `${siteConfig.name} — ${siteConfig.tagline}`;
+export const alt = `${siteConfig.name}: ${siteConfig.tagline}`;
 
 export default function OgImage() {
   const { bg, ink, accent } = siteConfig.brandColors;

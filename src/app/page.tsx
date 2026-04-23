@@ -18,7 +18,7 @@ export const metadata = buildMetadata({ path: "/" });
 const FAQ = [
   {
     q: "Hva er Søknadsbasen?",
-    a: "Et arbeidsrom for jobbsøkeren — CV, søknadsbrev, pipeline, oppfølging og innsikt samlet ett sted. Bygget for å gi ro, ikke flere distraksjoner.",
+    a: "Et arbeidsrom for jobbsøkeren: CV, søknadsbrev, pipeline, oppfølging og innsikt samlet ett sted. Bygget for å gi ro, ikke flere distraksjoner.",
   },
   {
     q: "Hvem står bak?",
@@ -46,7 +46,7 @@ const FAQ = [
   },
   {
     q: "Hvorfor «jobbsøking, med ro»?",
-    a: "Fordi flere søknader sjelden er svaret. Søknadsbasen hjelper deg se hvor du er, hva som mangler og hva neste time fortjener — i stedet for å dytte deg mot å søke mer.",
+    a: "Fordi flere søknader sjelden er svaret. Søknadsbasen hjelper deg se hvor du er, hva som mangler og hva neste time fortjener, i stedet for å dytte deg mot å søke mer.",
   },
 ];
 
@@ -108,7 +108,7 @@ export default function Home() {
           </h1>
           <p className="text-[16px] md:text-[19px] leading-[1.6] max-w-[560px] mx-auto text-[#14110e]/65 mb-10 md:mb-12">
             Søknadsbasen samler CV-er, brev og oppfølging i ett tydelig arbeidsrom.
-            Bygget for å bli mindre stresset — ikke mer distrahert.
+            Bygget for å bli mindre stresset, ikke mer distrahert.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <HeroCTA />
@@ -149,7 +149,7 @@ export default function Home() {
             </p>
             <p>
               Du eier dataene. Vi selger dem aldri. CV-er eksporteres til PDF og
-              forblir dine — også etter at abonnementet tar slutt.
+              forblir dine, også etter at abonnementet tar slutt.
             </p>
           </div>
         </section>
@@ -300,7 +300,7 @@ export default function Home() {
           </h2>
           <ClosingCTA />
           <div className="mt-6 text-[12px] text-[#14110e]/50">
-            Kanseller før prøveperioden utløper — ingen belastning.
+            Kanseller før prøveperioden utløper, ingen belastning.
           </div>
         </section>
       </main>

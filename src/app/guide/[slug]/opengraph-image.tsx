@@ -5,7 +5,7 @@ import { siteConfig } from "@/lib/seo/siteConfig";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export const alt = "Søknadsbasen — guide";
+export const alt = "Søknadsbasen: guide";
 
 type Props = { params: Promise<{ slug: string }> };
 

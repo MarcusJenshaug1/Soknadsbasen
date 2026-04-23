@@ -19,8 +19,8 @@ export function buildMetadata({
   noindex,
 }: BuildMetadataArgs): Metadata {
   const fullTitle = title
-    ? `${title} – ${siteConfig.name}`
-    : `${siteConfig.name} — ${siteConfig.tagline}`;
+    ? `${title} | ${siteConfig.name}`
+    : `${siteConfig.name}: ${siteConfig.tagline}`;
   const desc = description ?? siteConfig.description;
   const canonical = absoluteUrl(path);
 
