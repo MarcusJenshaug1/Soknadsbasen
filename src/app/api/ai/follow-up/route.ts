@@ -64,10 +64,15 @@ Regler:
     const raw = await geminiGenerate(userPrompt, {
       system,
       temperature: 0.7,
-      maxOutputTokens: 800,
+      maxOutputTokens: 1000,
+      json: true,
     });
     const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const parsed = JSON.parse(cleaned) as { subject: string; body: string };
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    const candidate =
+      start !== -1 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+    const parsed = JSON.parse(candidate) as { subject: string; body: string };
     const html = marked.parse(parsed.body, { async: false }) as string;
     return NextResponse.json({
       subject: parsed.subject,

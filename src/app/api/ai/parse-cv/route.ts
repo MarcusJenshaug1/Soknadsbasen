@@ -122,19 +122,33 @@ ${truncated}
 === SLUTT KILDETEKST ===`;
 
   let json: unknown;
+  let rawResponse = "";
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    rawResponse = await geminiGenerate(userPrompt, {
       system,
       temperature: 0.1,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
+      json: true,
     });
-    const cleaned = raw
+    const cleaned = rawResponse
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/```\s*$/i, "")
       .trim();
-    json = JSON.parse(cleaned);
+    // Fallback: if prose wraps the JSON, slice between first { and last }.
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    const candidate =
+      start !== -1 && end !== -1 && end > start
+        ? cleaned.slice(start, end + 1)
+        : cleaned;
+    json = JSON.parse(candidate);
   } catch (err) {
-    console.error("[parse-cv] gemini/parse failed:", err);
+    console.error(
+      "[parse-cv] gemini/parse failed:",
+      err,
+      "\n--- Gemini raw (first 500 chars) ---\n",
+      rawResponse.slice(0, 500),
+    );
     return NextResponse.json(
       {
         error:

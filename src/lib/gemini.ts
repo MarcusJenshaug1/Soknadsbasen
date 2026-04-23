@@ -15,6 +15,8 @@ export type GeminiOptions = {
   temperature?: number;
   /** Max output tokens, default 2048 */
   maxOutputTokens?: number;
+  /** Force structured JSON output — Gemini 2.0+ feature */
+  json?: boolean;
 };
 
 export async function geminiGenerate(
@@ -24,16 +26,19 @@ export async function geminiGenerate(
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY ikke satt");
 
+  const generationConfig: Record<string, unknown> = {
+    temperature: opts.temperature ?? 0.7,
+    maxOutputTokens: opts.maxOutputTokens ?? 2048,
+  };
+  if (opts.json) generationConfig.responseMimeType = "application/json";
+
   const body: {
     contents: GeminiContent[];
     systemInstruction?: GeminiContent;
     generationConfig?: Record<string, unknown>;
   } = {
     contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-    generationConfig: {
-      temperature: opts.temperature ?? 0.7,
-      maxOutputTokens: opts.maxOutputTokens ?? 2048,
-    },
+    generationConfig,
   };
   if (opts.system) {
     body.systemInstruction = { parts: [{ text: opts.system }] };

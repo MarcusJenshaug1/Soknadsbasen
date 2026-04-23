@@ -71,10 +71,15 @@ Regler:
     const raw = await geminiGenerate(userPrompt, {
       system,
       temperature: 0.6,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 2500,
+      json: true,
     });
     const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    const candidate =
+      start !== -1 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+    const parsed = JSON.parse(candidate);
     return NextResponse.json(parsed);
   } catch (err) {
     return NextResponse.json(
