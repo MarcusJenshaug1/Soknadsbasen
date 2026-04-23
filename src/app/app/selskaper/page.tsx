@@ -4,17 +4,9 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 
 export const dynamic = "force-dynamic";
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0] ?? "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 function formatRelative(d: Date) {
   const diff = Date.now() - d.getTime();
@@ -35,6 +27,7 @@ export default async function SelskaperPage() {
     select: {
       id: true,
       companyName: true,
+      companyWebsite: true,
       title: true,
       status: true,
       updatedAt: true,
@@ -44,6 +37,7 @@ export default async function SelskaperPage() {
 
   type Entry = {
     name: string;
+    website: string | null;
     count: number;
     latestStatus: string;
     latestUpdate: Date;
@@ -58,6 +52,7 @@ export default async function SelskaperPage() {
     if (!existing) {
       byCompany.set(key, {
         name: key,
+        website: a.companyWebsite,
         count: 1,
         latestStatus: a.status,
         latestUpdate: a.updatedAt,
@@ -67,6 +62,7 @@ export default async function SelskaperPage() {
     } else {
       existing.count++;
       existing.apps.push(a);
+      if (a.companyWebsite && !existing.website) existing.website = a.companyWebsite;
       if (a.updatedAt > existing.latestUpdate) {
         existing.latestUpdate = a.updatedAt;
         existing.latestStatus = a.status;
@@ -117,9 +113,12 @@ export default async function SelskaperPage() {
             className="bg-white rounded-2xl border border-black/5 p-5 flex flex-col"
           >
             <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#eee9df] text-[11px] font-medium flex items-center justify-center text-[#14110e]/70">
-                {initials(c.name)}
-              </div>
+              <CompanyLogo
+                website={c.website}
+                name={c.name}
+                size="md"
+                className="rounded-xl"
+              />
               <StatusDot status={c.latestStatus as StatusKey} />
             </div>
             <div className="text-[15px] font-medium leading-tight mb-1">

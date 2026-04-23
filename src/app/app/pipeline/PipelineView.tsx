@@ -22,12 +22,14 @@ import { PIPELINE_COLUMNS, isPipelineStatus } from "@/lib/pipeline";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
 import { IconPlus, IconSearch } from "@/components/ui/Icons";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/cn";
 import { NewApplicationModal } from "./NewApplicationModal";
 
 type Application = {
   id: string;
   companyName: string;
+  companyWebsite?: string | null;
   title: string;
   status: string;
   statusUpdatedAt: Date | string;
@@ -402,9 +404,11 @@ function ApplicationCard({
       )}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="w-8 h-8 rounded-xl bg-[#eee9df] text-[10px] font-medium flex items-center justify-center text-[#14110e]/70">
-          {initials(app.companyName)}
-        </div>
+        <CompanyLogo
+          website={app.companyWebsite}
+          name={app.companyName}
+          size="sm"
+        />
         {urgent && <Pill variant="accent">Hast</Pill>}
       </div>
       <Link

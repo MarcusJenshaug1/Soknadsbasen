@@ -59,6 +59,7 @@ export async function POST(req: Request) {
 
   const body = (await req.json()) as {
     companyName: string;
+    companyWebsite?: string;
     title: string;
     status?: string;
     source?: string;
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
     data: {
       userId: session.userId,
       companyName: body.companyName.trim(),
+      companyWebsite: body.companyWebsite?.trim() || null,
       title: body.title.trim(),
       status: body.status ?? "draft",
       source: body.source ?? null,

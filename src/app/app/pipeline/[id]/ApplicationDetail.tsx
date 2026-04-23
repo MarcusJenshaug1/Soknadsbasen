@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { IconPlus, IconCheck, IconClose, IconArrowRight } from "@/components/ui/Icons";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { PIPELINE_COLUMNS } from "@/lib/pipeline";
 import { cn } from "@/lib/cn";
 import { AiTools } from "./AiTools";
@@ -31,6 +32,7 @@ type Activity = {
 type Application = {
   id: string;
   companyName: string;
+  companyWebsite: string | null;
   title: string;
   source: string | null;
   jobUrl: string | null;
@@ -198,9 +200,11 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
-          <div className="w-14 h-14 rounded-2xl bg-[#eee9df] text-[14px] font-medium flex items-center justify-center text-[#14110e]/70 shrink-0">
-            {initials(app.companyName)}
-          </div>
+          <CompanyLogo
+            website={app.companyWebsite}
+            name={app.companyName}
+            size="lg"
+          />
           <div className="min-w-0">
             <InlineTitle
               value={app.title}
@@ -282,6 +286,14 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 value={app.jobUrl ?? ""}
                 placeholder="https://…"
                 onCommit={(v) => patch("jobUrl", { jobUrl: v || null })}
+              />
+              <TextField
+                label="Selskapets nettside"
+                value={app.companyWebsite ?? ""}
+                placeholder="schibsted.no"
+                onCommit={(v) =>
+                  patch("companyWebsite", { companyWebsite: v || null })
+                }
               />
               <DateField
                 label="Søknadsdato"

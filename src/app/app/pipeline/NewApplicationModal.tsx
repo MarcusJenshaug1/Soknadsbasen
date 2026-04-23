@@ -11,6 +11,7 @@ type Mode = "manual" | "url" | "paste";
 type Draft = {
   title: string;
   companyName: string;
+  companyWebsite: string;
   source: string;
   jobUrl: string;
   jobDescription: string;
@@ -22,6 +23,7 @@ type Draft = {
 const EMPTY: Draft = {
   title: "",
   companyName: "",
+  companyWebsite: "",
   source: "",
   jobUrl: "",
   jobDescription: "",
@@ -73,6 +75,7 @@ export function NewApplicationModal({
       setDraft({
         title: data.title ?? "",
         companyName: data.companyName ?? "",
+        companyWebsite: data.companyWebsite ?? "",
         source: data.source ?? "",
         jobUrl: url,
         jobDescription: data.jobDescription ?? "",
@@ -106,6 +109,7 @@ export function NewApplicationModal({
       setDraft({
         title: data.title ?? "",
         companyName: data.companyName ?? "",
+        companyWebsite: data.companyWebsite ?? "",
         source: data.source ?? "",
         jobUrl: "",
         jobDescription: data.jobDescription ?? "",
@@ -135,6 +139,7 @@ export function NewApplicationModal({
         body: JSON.stringify({
           title: draft.title,
           companyName: draft.companyName,
+          companyWebsite: draft.companyWebsite || undefined,
           source: draft.source || undefined,
           jobUrl: draft.jobUrl || undefined,
           jobDescription: draft.jobDescription || undefined,
@@ -370,6 +375,16 @@ function ManualStep({
             value={draft.companyName}
             onChange={(e) => update("companyName", e.target.value)}
             placeholder="Schibsted"
+            className={INPUT}
+          />
+        </div>
+        <div>
+          <label className={LABEL}>Nettside</label>
+          <input
+            type="url"
+            value={draft.companyWebsite}
+            onChange={(e) => update("companyWebsite", e.target.value)}
+            placeholder="schibsted.no"
             className={INPUT}
           />
         </div>

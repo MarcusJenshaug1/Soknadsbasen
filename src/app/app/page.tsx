@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { PIPELINE_COLUMNS, PIPELINE_STATUSES } from "@/lib/pipeline";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 type Application = {
   id: string;
   companyName: string;
+  companyWebsite: string | null;
   title: string;
   status: string;
   statusUpdatedAt: Date;
@@ -98,6 +100,7 @@ export default async function AppHomePage() {
       select: {
         id: true,
         companyName: true,
+        companyWebsite: true,
         title: true,
         status: true,
         statusUpdatedAt: true,
@@ -267,14 +270,22 @@ export default async function AppHomePage() {
                   {items.slice(0, 3).map((a) => (
                     <Link
                       key={a.id}
-                      href={`/app/pipeline`}
-                      className="block p-3 rounded-xl bg-[#faf8f5] hover:bg-[#eee9df] transition-colors"
+                      href={`/app/pipeline/${a.id}`}
+                      className="flex items-start gap-2.5 p-3 rounded-xl bg-[#faf8f5] hover:bg-[#eee9df] transition-colors"
                     >
-                      <div className="text-[13px] font-medium leading-tight">
-                        {a.title}
-                      </div>
-                      <div className="text-[11px] text-[#14110e]/55 mt-0.5">
-                        {a.companyName}
+                      <CompanyLogo
+                        website={a.companyWebsite}
+                        name={a.companyName}
+                        size="sm"
+                        className="w-8 h-8 rounded-lg"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium leading-tight truncate">
+                          {a.title}
+                        </div>
+                        <div className="text-[11px] text-[#14110e]/55 mt-0.5 truncate">
+                          {a.companyName}
+                        </div>
                       </div>
                     </Link>
                   ))}

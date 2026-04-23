@@ -51,6 +51,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
   const body = (await req.json()) as Partial<{
     companyName: string;
+    companyWebsite: string | null;
     title: string;
     status: string;
     statusNote: string;
@@ -78,6 +79,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       where: { id },
       data: {
         ...(body.companyName !== undefined ? { companyName: body.companyName.trim() } : {}),
+        ...("companyWebsite" in body ? { companyWebsite: body.companyWebsite || null } : {}),
         ...(body.title !== undefined ? { title: body.title.trim() } : {}),
         ...(body.status !== undefined ? { status: body.status, statusUpdatedAt: new Date() } : {}),
         ...(body.statusNote !== undefined ? { statusNote: body.statusNote } : {}),

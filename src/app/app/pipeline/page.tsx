@@ -19,6 +19,7 @@ export default async function PipelinePage() {
     select: {
       id: true,
       companyName: true,
+      companyWebsite: true,
       title: true,
       status: true,
       statusUpdatedAt: true,

@@ -118,6 +118,9 @@ model JobApplication {
   companyId        String?
   /// Denormalised company name — always populated, even without a Company row.
   companyName      String
+  /// Denormalised company website (hostname/URL). Used to derive the logo
+  /// via favicon services and to link back to the company page.
+  companyWebsite   String?
   title            String
   source           String?   // "finn.no" | "linkedin" | "referral" | …
   jobUrl           String?

@@ -56,6 +56,7 @@ SCHEMA:
 {
   "title": "stillingstittelen",
   "companyName": "navnet på selskapet som utlyser",
+  "companyWebsite": "selskapets offisielle nettsted (domene, f.eks. schibsted.no). Tom streng hvis ikke eksplisitt oppgitt eller åpenbart utledbart fra annonsen.",
   "source": "LinkedIn | FINN.no | Webcruiter | Annet",
   "location": "arbeidssted — by, land — tom streng hvis ikke oppgitt",
   "deadline": "YYYY-MM-DD hvis søknadsfrist oppgis, ellers tom streng",
@@ -81,6 +82,7 @@ Regler:
     const parsed = parseLooseJson<{
       title?: string;
       companyName?: string;
+      companyWebsite?: string;
       source?: string;
       location?: string;
       deadline?: string;
@@ -91,6 +93,7 @@ Regler:
     return NextResponse.json({
       title: parsed.title ?? "",
       companyName: parsed.companyName ?? "",
+      companyWebsite: parsed.companyWebsite ?? "",
       source: parsed.source || source || "",
       location: parsed.location ?? "",
       deadline: parsed.deadline ?? "",
