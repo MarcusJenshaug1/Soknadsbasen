@@ -156,6 +156,7 @@ model JobApplication {
   notes            String?
   /// Optional link to a ResumeVersion snapshot sent with this application.
   resumeSnapshotId String?
+  archivedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

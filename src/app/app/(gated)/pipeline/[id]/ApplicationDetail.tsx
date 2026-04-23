@@ -78,6 +78,7 @@ type Application = {
   contactPhone: string | null;
   jobDescription: string | null;
   notes: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
   tasks: Task[];
@@ -172,6 +173,11 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
     if (!confirm("Slette denne søknaden? Kan ikke angres.")) return;
     const res = await fetch(`/api/applications/${app.id}`, { method: "DELETE" });
     if (res.ok) router.push("/app/pipeline");
+  }
+
+  async function toggleArchive() {
+    const nextArchived = !app.archivedAt;
+    await patch("archived", { archived: nextArchived });
   }
 
   async function addTask(e: React.FormEvent) {
@@ -301,6 +307,11 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
             />
             <div className="flex items-center gap-3 mt-3 flex-wrap">
               <StatusDot status={app.status as StatusKey} />
+              {app.archivedAt && (
+                <Pill variant="muted">
+                  Arkivert {formatDate(app.archivedAt)}
+                </Pill>
+              )}
               <span className="text-[11px] text-[#14110e]/45">
                 Opprettet {formatDate(app.createdAt)}
               </span>
@@ -310,6 +321,12 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
 
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-[11px] text-[#14110e]/45">{saved}</span>
+          <button
+            onClick={toggleArchive}
+            className="px-4 py-2 rounded-full border border-black/15 text-[12px] text-[#14110e]/75 hover:bg-black/5"
+          >
+            {app.archivedAt ? "Gjenopprett" : "Arkiver"}
+          </button>
           <button
             onClick={deleteApp}
             className="px-4 py-2 rounded-full border border-[#c15a3a]/30 text-[12px] text-[#c15a3a] hover:bg-[#c15a3a]/5"

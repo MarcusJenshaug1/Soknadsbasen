@@ -42,6 +42,7 @@ type Application = {
   deadlineAt: Date | string | null;
   interviewAt: Date | string | null;
   followUpAt: Date | string | null;
+  archivedAt: Date | string | null;
   updatedAt: Date | string;
 };
 
@@ -110,9 +111,12 @@ export function PipelineView({
   const [error, setError] = useState<string | null>(null);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const visibleColumns = showCompleted ? PIPELINE_COLUMNS : ACTIVE_COLUMNS;
-  const completedCount = apps.filter((a) =>
+  const notArchivedApps = apps.filter((a) => !a.archivedAt);
+  const archivedCount = apps.length - notArchivedApps.length;
+  const completedCount = notArchivedApps.filter((a) =>
     TERMINAL_STATUSES.includes(a.status as StatusKey),
   ).length;
 
@@ -121,14 +125,15 @@ export function PipelineView({
   );
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return apps;
+    const base = showArchived ? apps : apps.filter((a) => !a.archivedAt);
+    if (!search.trim()) return base;
     const q = search.toLowerCase();
-    return apps.filter(
+    return base.filter(
       (a) =>
         a.companyName.toLowerCase().includes(q) ||
         a.title.toLowerCase().includes(q),
     );
-  }, [apps, search]);
+  }, [apps, search, showArchived]);
 
   const byColumn = useMemo(() => {
     const map = new Map<StatusKey, Application[]>();
@@ -247,6 +252,22 @@ export function PipelineView({
               aria-pressed={showCompleted}
             >
               {showCompleted ? "Skjul avsluttede" : `Vis avsluttede (${completedCount})`}
+            </button>
+          )}
+
+          {archivedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-[12px] transition-colors border",
+                showArchived
+                  ? "bg-[#14110e] text-[#faf8f5] border-transparent"
+                  : "bg-white text-[#14110e]/70 border-black/10 hover:border-black/25",
+              )}
+              aria-pressed={showArchived}
+            >
+              {showArchived ? "Skjul arkiverte" : `Vis arkiverte (${archivedCount})`}
             </button>
           )}
 
@@ -423,6 +444,7 @@ function ApplicationCard({
       };
   const next = nextLabel(app);
   const urgent = isUrgent(app);
+  const isArchived = !!app.archivedAt;
 
   return (
     <div
@@ -433,6 +455,7 @@ function ApplicationCard({
       className={cn(
         "group bg-white rounded-2xl p-4 border border-black/5 cursor-grab active:cursor-grabbing hover:border-[#c15a3a]/40 transition-colors",
         overlay && "shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] rotate-[1deg]",
+        isArchived && "opacity-60",
       )}
     >
       <div className="flex items-start justify-between mb-2">
@@ -441,7 +464,11 @@ function ApplicationCard({
           name={app.companyName}
           size="sm"
         />
-        {urgent && <Pill variant="accent">Hast</Pill>}
+        {isArchived ? (
+          <Pill variant="muted">Arkivert</Pill>
+        ) : urgent ? (
+          <Pill variant="accent">Hast</Pill>
+        ) : null}
       </div>
       <Link
         href={`/app/pipeline/${app.id}`}

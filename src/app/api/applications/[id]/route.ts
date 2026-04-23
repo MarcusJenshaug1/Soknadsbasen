@@ -69,6 +69,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     contactPhone: string;
     jobDescription: string;
     notes: string;
+    archived: boolean;
   }>;
 
   // If status changed, log an activity and update statusUpdatedAt
@@ -105,6 +106,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
         ...(body.contactPhone !== undefined ? { contactPhone: body.contactPhone } : {}),
         ...(body.jobDescription !== undefined ? { jobDescription: body.jobDescription } : {}),
         ...(body.notes !== undefined ? { notes: body.notes } : {}),
+        ...("archived" in body
+          ? { archivedAt: body.archived ? new Date() : null }
+          : {}),
       },
     });
 
@@ -116,6 +120,16 @@ export async function PATCH(req: Request, ctx: Ctx) {
           note: body.statusNote
             ? `${existing.status} → ${body.status}: ${body.statusNote}`
             : `${existing.status} → ${body.status}`,
+        },
+      });
+    }
+
+    if ("archived" in body) {
+      await tx.applicationActivity.create({
+        data: {
+          applicationId: id,
+          type: "note",
+          note: body.archived ? "Arkivert" : "Gjenopprettet fra arkiv",
         },
       });
     }

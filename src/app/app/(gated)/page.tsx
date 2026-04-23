@@ -133,9 +133,9 @@ export default async function AppHomePage() {
   const session = await getSession();
   if (!session) redirect("/logg-inn");
 
-  const [apps, userData] = await Promise.all([
+  const [allApps, userData] = await Promise.all([
     prisma.jobApplication.findMany({
-      where: { userId: session.userId },
+      where: { userId: session.userId, archivedAt: null },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -156,6 +156,7 @@ export default async function AppHomePage() {
       select: { resumeData: true },
     }),
   ]);
+  const apps = allApps;
 
   const TERMINAL = ["accepted", "declined", "rejected", "withdrawn"] as const;
   const active = apps.filter(

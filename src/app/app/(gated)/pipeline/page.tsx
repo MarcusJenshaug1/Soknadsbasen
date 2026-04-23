@@ -27,6 +27,7 @@ export default async function PipelinePage() {
       deadlineAt: true,
       interviewAt: true,
       followUpAt: true,
+      archivedAt: true,
       updatedAt: true,
     },
   });
