@@ -3,7 +3,10 @@ import { getSession } from "@/lib/auth";
 import { hasActiveAccess } from "@/lib/access";
 import { Onboarding } from "./Onboarding";
 
-export const metadata = { title: "Velkommen – CV maker" };
+export const metadata = {
+  title: "Velkommen – Søknadsbasen",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function VelkommenPage() {
   const session = await getSession();

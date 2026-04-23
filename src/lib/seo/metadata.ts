@@ -1,0 +1,80 @@
+import type { Metadata } from "next";
+import { siteConfig, siteUrl, absoluteUrl } from "./siteConfig";
+
+type BuildMetadataArgs = {
+  path: string;
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  ogImageAlt?: string;
+  noindex?: boolean;
+};
+
+export function buildMetadata({
+  path,
+  title,
+  description,
+  ogImage,
+  ogImageAlt,
+  noindex,
+}: BuildMetadataArgs): Metadata {
+  const fullTitle = title
+    ? `${title} – ${siteConfig.name}`
+    : `${siteConfig.name} — ${siteConfig.tagline}`;
+  const desc = description ?? siteConfig.description;
+  const canonical = absoluteUrl(path);
+
+  const openGraph: NonNullable<Metadata["openGraph"]> = {
+    type: "website",
+    locale: siteConfig.locale,
+    url: canonical,
+    siteName: siteConfig.name,
+    title: fullTitle,
+    description: desc,
+  };
+  if (ogImage) {
+    openGraph.images = [
+      { url: ogImage, alt: ogImageAlt ?? fullTitle },
+    ];
+  }
+
+  const twitter: NonNullable<Metadata["twitter"]> = {
+    card: "summary_large_image",
+    title: fullTitle,
+    description: desc,
+  };
+  if (ogImage) twitter.images = [ogImage];
+
+  return {
+    title: fullTitle,
+    description: desc,
+    alternates: { canonical },
+    openGraph,
+    twitter,
+    robots: noindex
+      ? { index: false, follow: false, nocache: true }
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            "max-video-preview": -1,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+          },
+        },
+  };
+}
+
+export function rootMetadata(): Metadata {
+  return {
+    metadataBase: siteUrl,
+    applicationName: siteConfig.name,
+    authors: [{ name: siteConfig.founder.name }],
+    creator: siteConfig.founder.name,
+    publisher: siteConfig.name,
+    formatDetection: { email: false, telephone: false, address: false },
+    ...buildMetadata({ path: "/" }),
+  };
+}

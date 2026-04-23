@@ -1,10 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe/server";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Velkommen ombord – Søknadsbasen",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 type Props = {
   searchParams: Promise<{ session_id?: string }>;

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
+import { buildMetadata } from "@/lib/seo/metadata";
 
-export const metadata = {
-  title: "Vilkår – Søknadsbasen",
+export const metadata = buildMetadata({
+  path: "/vilkar",
+  title: "Brukervilkår",
   description:
     "Brukervilkår for Søknadsbasen: abonnement, prøveperiode, angrerett, ansvar og oppsigelse.",
-};
+});
 
 export default function VilkarPage() {
   return (

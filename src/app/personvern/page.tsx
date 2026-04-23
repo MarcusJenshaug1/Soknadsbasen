@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
+import { buildMetadata } from "@/lib/seo/metadata";
 
-export const metadata = {
-  title: "Personvernerklæring – Søknadsbasen",
+export const metadata = buildMetadata({
+  path: "/personvern",
+  title: "Personvernerklæring",
   description:
     "Hvordan Søknadsbasen behandler personopplysninger i tråd med GDPR og norsk personvernlovgivning.",
-};
+});
 
 export default function PersonvernPage() {
   return (
