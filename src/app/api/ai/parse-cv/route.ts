@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { geminiGenerate } from "@/lib/gemini";
+import { parseLooseJson } from "@/lib/json";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -130,18 +131,7 @@ ${truncated}
       maxOutputTokens: 8192,
       json: true,
     });
-    const cleaned = rawResponse
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
-    // Fallback: if prose wraps the JSON, slice between first { and last }.
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    const candidate =
-      start !== -1 && end !== -1 && end > start
-        ? cleaned.slice(start, end + 1)
-        : cleaned;
-    json = JSON.parse(candidate);
+    json = parseLooseJson(rawResponse);
   } catch (err) {
     console.error(
       "[parse-cv] gemini/parse failed:",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { geminiGenerate } from "@/lib/gemini";
+import { parseLooseJson } from "@/lib/json";
 
 /**
  * POST /api/ai/analyze-job
@@ -60,12 +61,7 @@ Regler:
       maxOutputTokens: 1500,
       json: true,
     });
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    const candidate =
-      start !== -1 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-    const parsed = JSON.parse(candidate);
+    const parsed = parseLooseJson(raw);
     return NextResponse.json(parsed);
   } catch (err) {
     return NextResponse.json(
