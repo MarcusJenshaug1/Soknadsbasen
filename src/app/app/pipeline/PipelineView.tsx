@@ -19,10 +19,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { PIPELINE_COLUMNS, isPipelineStatus } from "@/lib/pipeline";
-import type { StatusKey } from "@/components/ui/StatusDot";
+import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
 import { IconPlus, IconSearch } from "@/components/ui/Icons";
 import { cn } from "@/lib/cn";
+import { NewApplicationModal } from "./NewApplicationModal";
 
 type Application = {
   id: string;
@@ -100,6 +101,7 @@ export function PipelineView({
   const [view, setView] = useState<"pipeline" | "liste" | "tidslinje">("pipeline");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newModalOpen, setNewModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -175,7 +177,15 @@ export function PipelineView({
   const isEmpty = apps.length === 0;
 
   if (isEmpty) {
-    return <EmptyState />;
+    return (
+      <>
+        <EmptyState onCreate={() => setNewModalOpen(true)} />
+        <NewApplicationModal
+          open={newModalOpen}
+          onClose={() => setNewModalOpen(false)}
+        />
+      </>
+    );
   }
 
   return (
@@ -226,6 +236,7 @@ export function PipelineView({
 
           <button
             type="button"
+            onClick={() => setNewModalOpen(true)}
             className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
           >
             <IconPlus size={14} />
@@ -240,8 +251,15 @@ export function PipelineView({
         </div>
       )}
 
-      {view !== "pipeline" ? (
-        <PlaceholderView view={view} />
+      <NewApplicationModal
+        open={newModalOpen}
+        onClose={() => setNewModalOpen(false)}
+      />
+
+      {view === "liste" ? (
+        <ListView apps={filtered} />
+      ) : view === "tidslinje" ? (
+        <TimelineView apps={filtered} />
       ) : (
         <DndContext
           sensors={sensors}
@@ -408,7 +426,7 @@ function ApplicationCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="max-w-[1400px] mx-auto px-4 md:px-10 py-6 md:py-10">
       <SectionLabel className="mb-3">Pipeline</SectionLabel>
@@ -418,9 +436,13 @@ function EmptyState() {
       <div className="flex flex-col items-center text-center max-w-md mx-auto py-10">
         <div className="flex justify-center gap-3 mb-8">
           <div className="w-16 h-20 rounded-2xl border-2 border-dashed border-black/15" />
-          <div className="w-16 h-20 rounded-2xl border-2 border-[#c15a3a] bg-[#c15a3a]/10 flex items-center justify-center text-[#c15a3a]">
+          <button
+            onClick={onCreate}
+            className="w-16 h-20 rounded-2xl border-2 border-[#c15a3a] bg-[#c15a3a]/10 flex items-center justify-center text-[#c15a3a] hover:bg-[#c15a3a]/20 transition-colors"
+            aria-label="Ny søknad"
+          >
             <IconPlus size={24} />
-          </div>
+          </button>
           <div className="w-16 h-20 rounded-2xl border-2 border-dashed border-black/15" />
         </div>
         <h2 className="text-[28px] md:text-[32px] leading-[1.05] tracking-[-0.03em] font-medium mb-3">
@@ -430,13 +452,22 @@ function EmptyState() {
           Den første søknaden er alltid tyngst. La oss legge til én sammen.
         </p>
         <div className="flex flex-col gap-2 w-full max-w-xs">
-          <button className="px-5 py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors">
+          <button
+            onClick={onCreate}
+            className="px-5 py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+          >
             Opprett manuelt
           </button>
-          <button className="px-5 py-3 rounded-full bg-white border border-black/10 text-[13px] hover:border-black/25 transition-colors">
-            Importer fra FINN-lenke
+          <button
+            onClick={onCreate}
+            className="px-5 py-3 rounded-full bg-white border border-black/10 text-[13px] hover:border-black/25 transition-colors"
+          >
+            Importer fra lenke
           </button>
-          <button className="px-5 py-3 rounded-full text-[13px] text-[#14110e]/65 hover:text-[#14110e] transition-colors">
+          <button
+            onClick={onCreate}
+            className="px-5 py-3 rounded-full text-[13px] text-[#14110e]/65 hover:text-[#14110e] transition-colors"
+          >
             Lim inn stillingstekst
           </button>
         </div>
@@ -445,12 +476,203 @@ function EmptyState() {
   );
 }
 
-function PlaceholderView({ view }: { view: "liste" | "tidslinje" }) {
+function formatDate(d: Date | string | null | undefined): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("nb-NO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function ListView({ apps }: { apps: Application[] }) {
+  if (!apps.length) {
+    return (
+      <div className="rounded-3xl bg-[#eee9df] p-12 text-center text-[13px] text-[#14110e]/60">
+        Ingen søknader matcher søket.
+      </div>
+    );
+  }
   return (
-    <div className="rounded-3xl bg-[#eee9df] p-12 text-center">
-      <p className="text-[13px] text-[#14110e]/60">
-        {view === "liste" ? "Listevisning" : "Tidslinjevisning"} kommer snart.
-      </p>
+    <div className="rounded-3xl border border-black/8 bg-white overflow-hidden">
+      <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-[#14110e]/55 bg-[#eee9df]/40 border-b border-black/8">
+        <div className="col-span-4">Rolle · Selskap</div>
+        <div className="col-span-2">Status</div>
+        <div className="col-span-2">Frist</div>
+        <div className="col-span-2">Intervju</div>
+        <div className="col-span-2 text-right">Oppdatert</div>
+      </div>
+      <ul className="divide-y divide-black/5">
+        {apps.map((a) => (
+          <li key={a.id}>
+            <Link
+              href={`/app/pipeline/${a.id}`}
+              className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-5 py-4 hover:bg-[#eee9df]/30 transition-colors"
+            >
+              <div className="col-span-4 min-w-0">
+                <div className="text-[14px] font-medium leading-tight truncate">
+                  {a.title}
+                </div>
+                <div className="text-[12px] text-[#14110e]/55 truncate">
+                  {a.companyName}
+                </div>
+              </div>
+              <div className="col-span-2 flex md:block items-center gap-2">
+                <StatusDot status={a.status as StatusKey} />
+              </div>
+              <div className="col-span-2 text-[12px] text-[#14110e]/70">
+                {formatDate(a.deadlineAt)}
+              </div>
+              <div className="col-span-2 text-[12px] text-[#14110e]/70">
+                {formatDate(a.interviewAt)}
+              </div>
+              <div className="col-span-2 text-[12px] text-[#14110e]/55 md:text-right">
+                {formatDate(a.updatedAt)}
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TimelineView({ apps }: { apps: Application[] }) {
+  if (!apps.length) {
+    return (
+      <div className="rounded-3xl bg-[#eee9df] p-12 text-center text-[13px] text-[#14110e]/60">
+        Ingen søknader matcher søket.
+      </div>
+    );
+  }
+
+  // Build flat list of events: creation + application + interview + deadline
+  type Event = {
+    id: string;
+    at: Date;
+    app: Application;
+    label: string;
+    color: string;
+  };
+
+  const events: Event[] = [];
+  for (const a of apps) {
+    const statusColor =
+      PIPELINE_COLUMNS.find((c) => c.status === a.status)?.dotColor ??
+      "#94a3b8";
+    if (a.applicationDate) {
+      events.push({
+        id: `${a.id}:applied`,
+        at: new Date(a.applicationDate),
+        app: a,
+        label: "Søknad sendt",
+        color: "#c15a3a",
+      });
+    } else {
+      events.push({
+        id: `${a.id}:created`,
+        at: new Date(a.statusUpdatedAt ?? a.updatedAt),
+        app: a,
+        label: `Opprettet (${STATUS_LABEL[a.status as StatusKey] ?? a.status})`,
+        color: statusColor,
+      });
+    }
+    if (a.deadlineAt) {
+      events.push({
+        id: `${a.id}:deadline`,
+        at: new Date(a.deadlineAt),
+        app: a,
+        label: "Søknadsfrist",
+        color: "#c15a3a",
+      });
+    }
+    if (a.interviewAt) {
+      events.push({
+        id: `${a.id}:interview`,
+        at: new Date(a.interviewAt),
+        app: a,
+        label: "Intervju",
+        color: "#14110e",
+      });
+    }
+    if (a.followUpAt) {
+      events.push({
+        id: `${a.id}:followup`,
+        at: new Date(a.followUpAt),
+        app: a,
+        label: "Oppfølging",
+        color: "#c15a3a",
+      });
+    }
+  }
+
+  events.sort((a, b) => b.at.getTime() - a.at.getTime());
+
+  // Group by month for section dividers.
+  const monthKey = (d: Date) =>
+    d.toLocaleDateString("nb-NO", { month: "long", year: "numeric" });
+
+  const groups = new Map<string, Event[]>();
+  for (const e of events) {
+    const k = monthKey(e.at);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k)!.push(e);
+  }
+
+  const now = Date.now();
+
+  return (
+    <div className="space-y-10">
+      {Array.from(groups.entries()).map(([month, items]) => (
+        <section key={month}>
+          <SectionLabel className="mb-4 capitalize">{month}</SectionLabel>
+          <ul className="relative">
+            <span
+              className="absolute left-[6px] top-2 bottom-2 w-px bg-black/10"
+              aria-hidden
+            />
+            {items.map((e) => {
+              const future = e.at.getTime() > now;
+              return (
+                <li key={e.id} className="relative pl-8 pb-5 last:pb-0">
+                  <span
+                    className="absolute left-0 top-1.5 size-[13px] rounded-full border-2 border-[#faf8f5]"
+                    style={{ background: e.color }}
+                    aria-hidden
+                  />
+                  <Link
+                    href={`/app/pipeline/${e.app.id}`}
+                    className="block group"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 mb-0.5">
+                          {e.label}
+                          {future && (
+                            <span className="ml-2 text-[#c15a3a]">kommende</span>
+                          )}
+                        </div>
+                        <div className="text-[14px] font-medium group-hover:text-[#c15a3a] transition-colors truncate">
+                          {e.app.title}
+                        </div>
+                        <div className="text-[12px] text-[#14110e]/55 truncate">
+                          {e.app.companyName}
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-[#14110e]/60 shrink-0">
+                        {e.at.toLocaleDateString("nb-NO", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
