@@ -43,6 +43,7 @@ export async function POST(req: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/app?success=1`,
       cancel_url: `${origin}/app/billing`,
+      allow_promotion_codes: true,
       metadata: { userId: session.userId, type },
       ...(mode === "subscription"
         ? {
