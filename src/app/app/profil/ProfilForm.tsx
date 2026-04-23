@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SectionLabel } from "@/components/ui/Pill";
@@ -204,12 +203,10 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
           <div className="flex items-center gap-4 mb-6">
             <div className="w-20 h-20 rounded-full bg-[#eee9df] flex items-center justify-center text-[24px] font-medium text-[#14110e]/70 overflow-hidden shrink-0">
               {avatarUrl ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={avatarUrl}
-                  alt={name || initialUser.email}
-                  width={80}
-                  height={80}
-                  unoptimized
+                  alt=""
                   className="w-full h-full object-cover"
                 />
               ) : (

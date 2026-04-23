@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
@@ -72,12 +71,10 @@ export function Sidebar() {
       >
         <div className="w-9 h-9 rounded-full bg-[#eee9df] text-[11px] font-medium flex items-center justify-center overflow-hidden shrink-0">
           {user?.avatarUrl ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={user.avatarUrl}
-              alt={displayName(user.name, user.email)}
-              width={36}
-              height={36}
-              unoptimized
+              alt=""
               className="w-full h-full object-cover"
             />
           ) : (
