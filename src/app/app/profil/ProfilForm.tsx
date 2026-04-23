@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SectionLabel } from "@/components/ui/Pill";
@@ -10,6 +11,7 @@ type User = {
   id: string;
   email: string;
   name: string | null;
+  avatarUrl?: string | null;
   createdAt: Date | string;
 };
 
@@ -26,10 +28,16 @@ function initials(name: string | null, email: string) {
 export function ProfilForm({ initialUser }: { initialUser: User }) {
   const router = useRouter();
   const setStoreUser = useAuthStore((s) => s.setUser);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const logout = useAuthStore((s) => s.logout);
 
   const [name, setName] = useState(initialUser.name ?? "");
   const [email, setEmail] = useState(initialUser.email);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    initialUser.avatarUrl ?? null,
+  );
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null,
@@ -56,11 +64,57 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Kunne ikke lagre");
       setMsg({ kind: "ok", text: data.message ?? "Lagret" });
-      setStoreUser({ id: initialUser.id, email: data.user.email, name: data.user.name });
+      setStoreUser({
+        id: initialUser.id,
+        email: data.user.email,
+        name: data.user.name,
+        avatarUrl,
+      });
     } catch (err) {
       setMsg({ kind: "err", text: err instanceof Error ? err.message : "Ukjent feil" });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onAvatarSelected(file: File) {
+    setUploadingAvatar(true);
+    setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/user/profile", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Opplasting feilet");
+      setAvatarUrl(data.user.avatarUrl);
+      await refreshProfile();
+      setMsg({ kind: "ok", text: "Profilbilde oppdatert" });
+    } catch (err) {
+      setMsg({ kind: "err", text: err instanceof Error ? err.message : "Ukjent feil" });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setUploadingAvatar(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/user/profile", { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Kunne ikke slette");
+      }
+      setAvatarUrl(null);
+      await refreshProfile();
+      setMsg({ kind: "ok", text: "Profilbilde fjernet" });
+    } catch (err) {
+      setMsg({ kind: "err", text: err instanceof Error ? err.message : "Ukjent feil" });
+    } finally {
+      setUploadingAvatar(false);
     }
   }
 
@@ -146,19 +200,58 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
           subtitle="Kontaktinfo som vises på CV og søknader."
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-20 h-20 rounded-full bg-[#eee9df] flex items-center justify-center text-[24px] font-medium text-[#14110e]/70">
-              {initials(name || initialUser.name, email)}
+            <div className="w-20 h-20 rounded-full bg-[#eee9df] flex items-center justify-center text-[24px] font-medium text-[#14110e]/70 overflow-hidden shrink-0">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={name || initialUser.email}
+                  width={80}
+                  height={80}
+                  unoptimized
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                initials(name || initialUser.name, email)
+              )}
             </div>
             <div>
-              <button
-                type="button"
-                disabled
-                className="px-4 py-2 rounded-full bg-[#14110e]/40 text-[#faf8f5] text-[12px] font-medium cursor-not-allowed"
-              >
-                Last opp bilde
-              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onAvatarSelected(f);
+                  e.target.value = "";
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-50 transition-colors"
+                >
+                  {uploadingAvatar
+                    ? "Laster opp …"
+                    : avatarUrl
+                      ? "Bytt bilde"
+                      : "Last opp bilde"}
+                </button>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={removeAvatar}
+                    disabled={uploadingAvatar}
+                    className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:border-black/30 disabled:opacity-50 transition-colors"
+                  >
+                    Fjern
+                  </button>
+                )}
+              </div>
               <p className="text-[11px] text-[#14110e]/50 mt-2">
-                Kommer snart. JPG/PNG · maks 2 MB.
+                JPG/PNG/WEBP · maks 2 MB.
               </p>
             </div>
           </div>

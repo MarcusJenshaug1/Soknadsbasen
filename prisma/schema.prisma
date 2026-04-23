@@ -14,6 +14,8 @@ model User {
   id           String   @id @db.Uuid
   email        String   @unique
   name         String?
+  /// Supabase Storage path for the avatar (inside the `avatars` bucket).
+  avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   resumes      Resume[]

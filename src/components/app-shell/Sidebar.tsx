@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
@@ -17,19 +18,26 @@ const NAV = [
   { href: "/app/profil", label: "Profil" },
 ] as const;
 
-function initials(name?: string | null, email?: string | null) {
+function initialsFor(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email?.split("@")[0] || "?";
   return source
     .split(/\s+/)
-    .map((w) => w[0])
+    .map((w) => w[0] ?? "")
     .join("")
     .slice(0, 2)
     .toUpperCase();
 }
 
+function displayName(name?: string | null, email?: string | null): string {
+  if (name?.trim()) return name.trim();
+  if (email) return email.split("@")[0];
+  return "Uinnlogget";
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
+  const initials = initialsFor(user?.name, user?.email);
 
   return (
     <aside className="hidden md:flex w-[240px] shrink-0 border-r border-black/8 flex-col p-6 bg-[#faf8f5] h-dvh sticky top-0 print:hidden">
@@ -62,12 +70,23 @@ export function Sidebar() {
         href="/app/profil"
         className="border-t border-black/8 pt-5 flex items-center gap-3 hover:opacity-80 transition-opacity"
       >
-        <div className="w-9 h-9 rounded-full bg-[#eee9df] text-[11px] font-medium flex items-center justify-center">
-          {initials(user?.name, user?.email)}
+        <div className="w-9 h-9 rounded-full bg-[#eee9df] text-[11px] font-medium flex items-center justify-center overflow-hidden shrink-0">
+          {user?.avatarUrl ? (
+            <Image
+              src={user.avatarUrl}
+              alt={displayName(user.name, user.email)}
+              width={36}
+              height={36}
+              unoptimized
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            initials
+          )}
         </div>
         <div className="min-w-0">
           <div className="text-[12px] font-medium truncate">
-            {user?.name ?? "Uinnlogget"}
+            {displayName(user?.name, user?.email)}
           </div>
           <div className="text-[11px] text-[#14110e]/55 truncate">
             {user?.email ?? "—"}

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool } from "lucide-react";
 import { LivePreview, PrintOutput } from "./LivePreview";
 import { useResumeStore, type ResumeEntry } from "@/store/useResumeStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { ImportCVModal } from "./ImportCVModal";
 import {
   RoleForm,
@@ -196,6 +197,7 @@ export function ResumeEditor() {
 function ContactForm() {
   const data = useResumeStore((state) => state.data.contact);
   const updateContact = useResumeStore((state) => state.updateContact);
+  const profileAvatar = useAuthStore((s) => s.user?.avatarUrl);
 
   const inputClass =
     "w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all";
@@ -274,7 +276,7 @@ function ContactForm() {
                     Foto
                   </div>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 space-y-2">
                   <input
                     type="file"
                     accept="image/*"
@@ -288,6 +290,20 @@ function ContactForm() {
                     }}
                     className="text-sm text-neutral-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer w-full transition-colors"
                   />
+                  {profileAvatar && profileAvatar !== data.photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateContact({
+                          photoUrl: profileAvatar,
+                          photoPosition: "center",
+                        })
+                      }
+                      className="text-xs text-[#c15a3a] hover:text-[#14110e]"
+                    >
+                      Bruk profilbildet
+                    </button>
+                  )}
                 </div>
               </div>
 

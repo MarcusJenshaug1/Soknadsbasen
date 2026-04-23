@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string | null;
+  avatarUrl: string | null;
 }
 
 interface AuthStore {
@@ -13,48 +14,59 @@ interface AuthStore {
   setUser: (user: AuthUser | null) => void;
   setLoading: (loading: boolean) => void;
 
-  /** Fetch the current session from Supabase. */
+  /** Fetch the current session from Supabase + enrich with Prisma profile. */
   fetchSession: () => Promise<void>;
+  /** Re-read the profile row (name/avatar). Call after editing profile. */
+  refreshProfile: () => Promise<void>;
 
-  /** Register a new account via Supabase Auth. */
   register: (
     email: string,
     password: string,
     name: string,
   ) => Promise<{ ok: boolean; error?: string }>;
-
-  /** Log in via Supabase Auth. */
   login: (
     email: string,
     password: string,
   ) => Promise<{ ok: boolean; error?: string }>;
-
-  /** Log out. */
   logout: () => Promise<void>;
 }
 
-function toAuthUser(
-  supaUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null,
-): AuthUser | null {
-  if (!supaUser) return null;
-  const metadataName =
-    typeof supaUser.user_metadata?.name === "string"
-      ? (supaUser.user_metadata.name as string)
-      : null;
-  return {
-    id: supaUser.id,
-    email: supaUser.email ?? "",
-    name: metadataName,
-  };
+async function fetchProfile(): Promise<AuthUser | null> {
+  try {
+    const res = await fetch("/api/user/profile", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { user: AuthUser };
+    return data.user;
+  } catch {
+    return null;
+  }
 }
 
-export const useAuthStore = create<AuthStore>((set) => {
-  // Keep the browser client fresh across listener and call sites.
+export const useAuthStore = create<AuthStore>((set, get) => {
   const supabase = supabaseBrowser();
 
-  // React to sign-in / sign-out / token-refresh events globally.
-  supabase.auth.onAuthStateChange((_event, session) => {
-    set({ user: toAuthUser(session?.user ?? null), loading: false });
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (!session?.user) {
+      set({ user: null, loading: false });
+      return;
+    }
+    // Only refetch profile when the session meaningfully changes — skip
+    // TOKEN_REFRESHED so we don't hammer the server on every tab focus.
+    if (event === "TOKEN_REFRESHED" && get().user?.id === session.user.id) {
+      return;
+    }
+    const profile = await fetchProfile();
+    set({
+      user:
+        profile ?? {
+          id: session.user.id,
+          email: session.user.email ?? "",
+          name:
+            (session.user.user_metadata?.name as string | undefined) ?? null,
+          avatarUrl: null,
+        },
+      loading: false,
+    });
   });
 
   return {
@@ -68,10 +80,30 @@ export const useAuthStore = create<AuthStore>((set) => {
       try {
         set({ loading: true });
         const { data } = await supabase.auth.getUser();
-        set({ user: toAuthUser(data.user), loading: false });
+        if (!data.user) {
+          set({ user: null, loading: false });
+          return;
+        }
+        const profile = await fetchProfile();
+        set({
+          user:
+            profile ?? {
+              id: data.user.id,
+              email: data.user.email ?? "",
+              name:
+                (data.user.user_metadata?.name as string | undefined) ?? null,
+              avatarUrl: null,
+            },
+          loading: false,
+        });
       } catch {
         set({ user: null, loading: false });
       }
+    },
+
+    refreshProfile: async () => {
+      const profile = await fetchProfile();
+      if (profile) set({ user: profile });
     },
 
     register: async (email, password, name) => {
@@ -81,10 +113,15 @@ export const useAuthStore = create<AuthStore>((set) => {
         options: { data: { name } },
       });
       if (error) return { ok: false, error: error.message };
-      if (!data.user) {
-        return { ok: false, error: "Registrering feilet." };
-      }
-      set({ user: toAuthUser(data.user) });
+      if (!data.user) return { ok: false, error: "Registrering feilet." };
+      set({
+        user: {
+          id: data.user.id,
+          email: data.user.email ?? email,
+          name,
+          avatarUrl: null,
+        },
+      });
       return { ok: true };
     },
 
@@ -94,7 +131,17 @@ export const useAuthStore = create<AuthStore>((set) => {
         password,
       });
       if (error) return { ok: false, error: error.message };
-      set({ user: toAuthUser(data.user) });
+      const profile = await fetchProfile();
+      set({
+        user:
+          profile ?? {
+            id: data.user.id,
+            email: data.user.email ?? email,
+            name:
+              (data.user.user_metadata?.name as string | undefined) ?? null,
+            avatarUrl: null,
+          },
+      });
       return { ok: true };
     },
 

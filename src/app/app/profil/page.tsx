@@ -11,8 +11,26 @@ export default async function ProfilPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      avatarUrl: true,
+      createdAt: true,
+    },
   });
 
-  return <ProfilForm initialUser={user ?? { id: session.userId, email: session.email, name: session.name, createdAt: new Date() }} />;
+  return (
+    <ProfilForm
+      initialUser={
+        user ?? {
+          id: session.userId,
+          email: session.email,
+          name: session.name,
+          avatarUrl: null,
+          createdAt: new Date(),
+        }
+      }
+    />
+  );
 }
