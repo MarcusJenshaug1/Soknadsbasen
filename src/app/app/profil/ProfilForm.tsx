@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SectionLabel } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
+import { AvatarCropper } from "@/components/AvatarCropper";
 
 type User = {
   id: string;
@@ -37,6 +38,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
     initialUser.avatarUrl ?? null,
   );
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(
@@ -77,12 +79,12 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
     }
   }
 
-  async function onAvatarSelected(file: File) {
+  async function uploadBlob(blob: Blob) {
     setUploadingAvatar(true);
     setMsg(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", new File([blob], "avatar.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/user/profile", {
         method: "POST",
         body: fd,
@@ -222,7 +224,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) onAvatarSelected(f);
+                  if (f) setCropFile(f);
                   e.target.value = "";
                 }}
               />
@@ -406,6 +408,15 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
           </button>
         </Section>
       </div>
+
+      <AvatarCropper
+        file={cropFile}
+        onCancel={() => setCropFile(null)}
+        onConfirm={async (blob) => {
+          setCropFile(null);
+          await uploadBlob(blob);
+        }}
+      />
     </div>
   );
 }
