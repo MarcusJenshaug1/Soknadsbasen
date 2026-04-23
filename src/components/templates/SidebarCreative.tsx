@@ -48,7 +48,7 @@ export function SidebarCreativeTemplate({ data, colors, fonts }: TemplateRenderP
                 <img
                   src={data.contact.photoUrl}
                   alt=""
-                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: data.contact.photoPosition || "center" }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               </div>
             </div>

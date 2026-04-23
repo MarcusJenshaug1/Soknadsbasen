@@ -74,7 +74,6 @@ export function ModernProfessionalTemplate({ data, colors, fonts }: TemplateRend
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                objectPosition: data.contact.photoPosition || "center",
               }}
             />
           </div>

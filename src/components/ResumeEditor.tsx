@@ -7,6 +7,7 @@ import { LivePreview, PrintOutput } from "./LivePreview";
 import { useResumeStore, type ResumeEntry } from "@/store/useResumeStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ImportCVModal } from "./ImportCVModal";
+import { AvatarCropper } from "./AvatarCropper";
 import {
   RoleForm,
   ExperienceForm,
@@ -198,6 +199,8 @@ function ContactForm() {
   const data = useResumeStore((state) => state.data.contact);
   const updateContact = useResumeStore((state) => state.updateContact);
   const profileAvatar = useAuthStore((s) => s.user?.avatarUrl);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const inputClass =
     "w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all";
@@ -258,75 +261,73 @@ function ContactForm() {
             </label>
           </div>
           
+          {data.includePhoto && cropFile && (
+            <AvatarCropper
+              file={cropFile}
+              onCancel={() => setCropFile(null)}
+              onConfirm={async (blob) => {
+                setCropFile(null);
+                const reader = new FileReader();
+                reader.onloadend = () =>
+                  updateContact({ photoUrl: reader.result as string });
+                reader.readAsDataURL(blob);
+              }}
+            />
+          )}
           {data.includePhoto && (
-            <div className="mt-5 pt-5 border-t border-neutral-100 flex flex-col gap-4">
-              <div className="flex items-center gap-5">
-                {data.photoUrl ? (
-                  <div className="relative size-16 rounded-full overflow-hidden border-2 border-indigo-100 shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={data.photoUrl} 
-                      alt="Profil" 
-                      className="w-full h-full object-cover" 
-                      style={{ objectPosition: data.photoPosition || 'center' }} 
-                    />
-                  </div>
-                ) : (
-                  <div className="size-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 text-xs text-center border-2 border-dashed border-neutral-300 shrink-0">
-                    Foto
-                  </div>
-                )}
-                <div className="flex-1 space-y-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => updateContact({ photoUrl: reader.result as string, photoPosition: 'center' });
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="text-sm text-neutral-600 file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer w-full transition-colors"
+            <div className="mt-5 pt-5 border-t border-neutral-100 flex items-center gap-5">
+              {data.photoUrl ? (
+                <div className="relative size-16 rounded-full overflow-hidden border-2 border-[#eee9df] shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={data.photoUrl}
+                    alt="Profil"
+                    className="w-full h-full object-cover"
                   />
-                  {profileAvatar && profileAvatar !== data.photoUrl && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateContact({
-                          photoUrl: profileAvatar,
-                          photoPosition: "center",
-                        })
-                      }
-                      className="text-xs text-[#c15a3a] hover:text-[#14110e]"
-                    >
-                      Bruk profilbildet
-                    </button>
-                  )}
                 </div>
-              </div>
-
-              {data.photoUrl && (
-                <div className="flex items-center gap-3 pl-[84px]">
-                  <span className="text-xs font-medium text-neutral-500">Bildesentrering:</span>
-                  <div className="flex bg-neutral-100 rounded-lg p-1">
-                    {['top', 'center', 'bottom'].map((pos) => (
-                      <button
-                        key={pos}
-                        onClick={(e) => { e.preventDefault(); updateContact({ photoPosition: pos }); }}
-                        className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-                          (data.photoPosition || 'center') === pos 
-                            ? 'bg-white text-indigo-700 shadow-sm' 
-                            : 'text-neutral-500 hover:text-neutral-700'
-                        }`}
-                      >
-                        {pos === 'top' ? 'Topp' : pos === 'bottom' ? 'Bunn' : 'Senter'}
-                      </button>
-                    ))}
-                  </div>
+              ) : (
+                <div className="size-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 text-[10px] text-center border-2 border-dashed border-neutral-300 shrink-0">
+                  Foto
                 </div>
               )}
+              <div className="flex-1 flex flex-wrap items-center gap-2">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setCropFile(f);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
+                >
+                  {data.photoUrl ? "Bytt bilde" : "Velg bilde"}
+                </button>
+                {profileAvatar && profileAvatar !== data.photoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => updateContact({ photoUrl: profileAvatar })}
+                    className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:border-black/30 transition-colors"
+                  >
+                    Bruk profilbildet
+                  </button>
+                )}
+                {data.photoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => updateContact({ photoUrl: "" })}
+                    className="text-[12px] text-[#14110e]/55 hover:text-[#c15a3a]"
+                  >
+                    Fjern
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
