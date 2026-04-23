@@ -14,12 +14,28 @@ type Task = {
   dueAt: string | null;
   completedAt: string | null;
   priority: string;
+  type: string | null;
   application: {
     id: string;
     companyName: string;
     title: string;
     status: string;
   };
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  followup: "Oppfølging",
+  document: "Dokument",
+  research: "Research",
+  interview: "Intervju",
+  other: "Annet",
+};
+
+const PRIORITY: Record<string, { label: string; color: string }> = {
+  low: { label: "Lav", color: "#94a3b8" },
+  medium: { label: "Medium", color: "#14110e" },
+  high: { label: "Høy", color: "#c15a3a" },
+  urgent: { label: "Haster", color: "#c15a3a" },
 };
 
 function startOfDay(d = new Date()) {
@@ -174,9 +190,12 @@ function TaskRow({
   onToggle: (t: Task) => void;
   onRemove: (t: Task) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const done = !!task.completedAt;
   const overdue =
     task.dueAt && !done && new Date(task.dueAt).getTime() < Date.now();
+  const prio = task.priority ? PRIORITY[task.priority] : null;
+  const typeLabel = task.type ? TYPE_LABEL[task.type] : null;
   return (
     <li className="group flex items-start gap-3 p-4">
       <button
@@ -193,31 +212,60 @@ function TaskRow({
         {done && <IconCheck size={10} />}
       </button>
       <div className="flex-1 min-w-0">
-        <div
-          className={cn(
-            "text-[14px] font-medium leading-tight",
-            done && "line-through text-[#14110e]/40",
-          )}
+        <button
+          type="button"
+          onClick={() => task.description && setExpanded((v) => !v)}
+          className="block text-left w-full"
         >
-          {task.title}
-        </div>
-        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-          <Link
-            href={`/app/pipeline/${task.application.id}`}
-            className="text-[11px] text-[#c15a3a] hover:text-[#14110e] truncate"
-          >
-            {task.application.title} · {task.application.companyName}
-          </Link>
-          <StatusDot status={task.application.status as StatusKey} />
-          <span
+          <div
             className={cn(
-              "text-[11px]",
-              overdue ? "text-[#c15a3a]" : "text-[#14110e]/50",
+              "text-[14px] font-medium leading-tight",
+              done && "line-through text-[#14110e]/40",
             )}
           >
-            {formatDue(task.dueAt)}
-          </span>
-        </div>
+            {task.title}
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <Link
+              href={`/app/pipeline/${task.application.id}`}
+              className="text-[11px] text-[#c15a3a] hover:text-[#14110e] truncate"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {task.application.title} · {task.application.companyName}
+            </Link>
+            <StatusDot status={task.application.status as StatusKey} />
+            {prio && task.priority !== "medium" && (
+              <span
+                className="text-[10px] uppercase tracking-[0.12em] inline-flex items-center gap-1"
+                style={{ color: prio.color }}
+              >
+                <span
+                  className="w-1 h-1 rounded-full"
+                  style={{ background: prio.color }}
+                />
+                {prio.label}
+              </span>
+            )}
+            {typeLabel && (
+              <span className="text-[10px] uppercase tracking-[0.12em] text-[#14110e]/55">
+                {typeLabel}
+              </span>
+            )}
+            <span
+              className={cn(
+                "text-[11px]",
+                overdue ? "text-[#c15a3a]" : "text-[#14110e]/50",
+              )}
+            >
+              {formatDue(task.dueAt)}
+            </span>
+          </div>
+        </button>
+        {expanded && task.description && (
+          <div className="mt-2 text-[12px] text-[#14110e]/70 leading-[1.55] whitespace-pre-wrap">
+            {task.description}
+          </div>
+        )}
       </div>
       <button
         type="button"

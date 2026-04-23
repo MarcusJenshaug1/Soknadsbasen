@@ -283,8 +283,8 @@ export function PipelineView({
             ))}
           </div>
 
-          {/* Desktop: fills full width, 5 equal columns */}
-          <div className="hidden md:grid grid-cols-5 gap-3 items-start">
+          {/* Desktop: fills full width, 7 equal columns */}
+          <div className="hidden md:grid grid-cols-7 gap-2 items-start">
             {PIPELINE_COLUMNS.map((col) => (
               <Column
                 key={col.status}

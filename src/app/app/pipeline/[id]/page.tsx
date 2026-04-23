@@ -20,6 +20,7 @@ export default async function ApplicationDetailPage({
       tasks: { orderBy: [{ completedAt: "asc" }, { dueAt: "asc" }] },
       activities: { orderBy: { occurredAt: "desc" } },
       company: { select: { id: true, name: true, website: true } },
+      coverLetter: { select: { id: true, updatedAt: true, body: true } },
     },
   });
 

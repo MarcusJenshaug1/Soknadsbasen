@@ -22,10 +22,40 @@ type Task = {
   createdAt: string;
 };
 
+const TASK_TYPES: { id: string; label: string }[] = [
+  { id: "followup", label: "Oppfølging" },
+  { id: "document", label: "Dokument" },
+  { id: "research", label: "Research" },
+  { id: "interview", label: "Intervju" },
+  { id: "other", label: "Annet" },
+];
+
+const TASK_PRIORITIES: { id: string; label: string; color: string }[] = [
+  { id: "low", label: "Lav", color: "#94a3b8" },
+  { id: "medium", label: "Medium", color: "#14110e" },
+  { id: "high", label: "Høy", color: "#c15a3a" },
+  { id: "urgent", label: "Haster", color: "#c15a3a" },
+];
+
+const CHANNELS: { id: string; label: string }[] = [
+  { id: "email", label: "E-post" },
+  { id: "sms", label: "Telefon (melding)" },
+  { id: "call", label: "Telefon (samtale)" },
+  { id: "meeting", label: "Møte" },
+  { id: "linkedin", label: "LinkedIn" },
+  { id: "other", label: "Annet" },
+];
+
+function channelLabel(id: string | null): string {
+  return CHANNELS.find((c) => c.id === id)?.label ?? id ?? "";
+}
+
 type Activity = {
   id: string;
   type: string;
   note: string | null;
+  direction: string | null;
+  channel: string | null;
   occurredAt: string;
 };
 
@@ -52,6 +82,7 @@ type Application = {
   updatedAt: string;
   tasks: Task[];
   activities: Activity[];
+  coverLetter: { id: string; updatedAt: string; body: string | null } | null;
 };
 
 function toDateInput(s: string | null): string {
@@ -96,6 +127,17 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
   const [error, setError] = useState<string | null>(null);
   const [newTask, setNewTask] = useState("");
   const [newTaskDue, setNewTaskDue] = useState("");
+  const [newTaskDesc, setNewTaskDesc] = useState("");
+  const [newTaskType, setNewTaskType] = useState("followup");
+  const [newTaskPriority, setNewTaskPriority] = useState("medium");
+  const [newTaskExpanded, setNewTaskExpanded] = useState(false);
+
+  const [commDir, setCommDir] = useState<"outbound" | "inbound">("outbound");
+  const [commChannel, setCommChannel] = useState("email");
+  const [commNote, setCommNote] = useState("");
+  const [commDate, setCommDate] = useState(
+    new Date().toISOString().slice(0, 16),
+  );
 
   async function patch(
     field: string,
@@ -137,7 +179,10 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
     if (!newTask.trim()) return;
     const body = {
       title: newTask.trim(),
+      description: newTaskDesc.trim() || null,
       dueAt: newTaskDue ? fromDateInput(newTaskDue) : null,
+      type: newTaskType,
+      priority: newTaskPriority,
     };
     const res = await fetch(`/api/applications/${app.id}/tasks`, {
       method: "POST",
@@ -149,7 +194,47 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       setApp((a) => ({ ...a, tasks: [task, ...a.tasks] }));
       setNewTask("");
       setNewTaskDue("");
+      setNewTaskDesc("");
+      setNewTaskType("followup");
+      setNewTaskPriority("medium");
+      setNewTaskExpanded(false);
     }
+  }
+
+  async function logCommunication(e: React.FormEvent) {
+    e.preventDefault();
+    if (!commNote.trim()) return;
+    const body = {
+      type: "communication",
+      direction: commDir,
+      channel: commChannel,
+      note: commNote.trim(),
+      occurredAt: commDate ? new Date(commDate).toISOString() : undefined,
+    };
+    const res = await fetch(`/api/applications/${app.id}/activity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const activity = await res.json();
+      setApp((a) => ({ ...a, activities: [activity, ...a.activities] }));
+      setCommNote("");
+      setCommDate(new Date().toISOString().slice(0, 16));
+    }
+  }
+
+  async function deleteActivity(activityId: string) {
+    const prev = app.activities;
+    setApp((a) => ({
+      ...a,
+      activities: a.activities.filter((x) => x.id !== activityId),
+    }));
+    const res = await fetch(
+      `/api/applications/${app.id}/activity?eventId=${activityId}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) setApp((a) => ({ ...a, activities: prev }));
   }
 
   async function toggleTask(task: Task) {
@@ -267,6 +352,29 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
             );
           })}
         </div>
+        {(app.status === "declined" ||
+          app.status === "rejected" ||
+          app.status === "withdrawn") && (
+          <div className="mt-4">
+            <label className="text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-2">
+              {app.status === "declined"
+                ? "Begrunnelse for å takke nei"
+                : app.status === "rejected"
+                  ? "Begrunnelse fra arbeidsgiver"
+                  : "Hvorfor trukket"}
+            </label>
+            <Textarea
+              value={app.statusNote ?? ""}
+              placeholder={
+                app.status === "declined"
+                  ? "Lønn, rolle, reisevei, annet tilbud …"
+                  : "Kort notat til eget bruk"
+              }
+              rows={3}
+              onCommit={(v) => patch("statusNote", { statusNote: v })}
+            />
+          </div>
+        )}
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -385,6 +493,41 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 placeholder="Ny oppgave…"
                 className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]"
               />
+              {newTaskExpanded ? (
+                <>
+                  <textarea
+                    value={newTaskDesc}
+                    onChange={(e) => setNewTaskDesc(e.target.value)}
+                    placeholder="Detaljer (valgfritt)"
+                    rows={2}
+                    className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] resize-y"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={newTaskType}
+                      onChange={(e) => setNewTaskType(e.target.value)}
+                      className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a]"
+                    >
+                      {TASK_TYPES.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={newTaskPriority}
+                      onChange={(e) => setNewTaskPriority(e.target.value)}
+                      className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a]"
+                    >
+                      {TASK_PRIORITIES.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : null}
               <div className="flex gap-2">
                 <input
                   type="date"
@@ -392,6 +535,13 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   onChange={(e) => setNewTaskDue(e.target.value)}
                   className="flex-1 bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] text-[#14110e]/70"
                 />
+                <button
+                  type="button"
+                  onClick={() => setNewTaskExpanded((v) => !v)}
+                  className="px-3 py-2 rounded-full border border-black/15 text-[11px] text-[#14110e]/65 hover:border-black/30"
+                >
+                  {newTaskExpanded ? "Mindre" : "Mer"}
+                </button>
                 <button
                   type="submit"
                   disabled={!newTask.trim()}
@@ -403,62 +553,138 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               </div>
             </form>
             <ul className="space-y-1">
-              {app.tasks.map((t) => {
-                const done = !!t.completedAt;
-                const overdue =
-                  t.dueAt && !done && new Date(t.dueAt).getTime() < Date.now();
-                return (
-                  <li
-                    key={t.id}
-                    className="group flex items-start gap-3 py-2 border-b border-black/5 last:border-0"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleTask(t)}
-                      aria-label={done ? "Marker som ikke fullført" : "Marker som fullført"}
-                      className={cn(
-                        "mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors",
-                        done
-                          ? "border-[#14110e] bg-[#14110e] text-[#faf8f5]"
-                          : "border-black/30 hover:border-[#14110e]",
-                      )}
-                    >
-                      {done && <IconCheck size={10} />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={cn(
-                          "text-[13px]",
-                          done && "line-through text-[#14110e]/40",
-                        )}
-                      >
-                        {t.title}
-                      </div>
-                      {t.dueAt && (
-                        <div
-                          className={cn(
-                            "text-[11px] mt-0.5",
-                            overdue ? "text-[#c15a3a]" : "text-[#14110e]/50",
-                          )}
-                        >
-                          Frist {formatDate(t.dueAt)}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteTask(t)}
-                      className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#c15a3a] transition-opacity"
-                      aria-label="Slett oppgave"
-                    >
-                      <IconClose size={14} />
-                    </button>
-                  </li>
-                );
-              })}
+              {app.tasks.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onToggle={toggleTask}
+                  onDelete={deleteTask}
+                />
+              ))}
               {app.tasks.length === 0 && (
                 <li className="py-6 text-center text-[12px] text-[#14110e]/40">
                   Ingen oppgaver ennå.
+                </li>
+              )}
+            </ul>
+          </Card>
+
+          <Card>
+            <SectionLabel className="mb-3">Kommunikasjon</SectionLabel>
+            <p className="text-[11px] text-[#14110e]/55 mb-3">
+              Logg melding du har sendt eller mottatt.
+            </p>
+            <form onSubmit={logCommunication} className="mb-4 space-y-2">
+              <div className="inline-flex bg-[#eee9df] rounded-full p-1 w-full">
+                <button
+                  type="button"
+                  onClick={() => setCommDir("outbound")}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-full text-[11px] transition-colors",
+                    commDir === "outbound"
+                      ? "bg-[#faf8f5] text-[#14110e] font-medium"
+                      : "text-[#14110e]/55",
+                  )}
+                >
+                  Jeg sendte
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCommDir("inbound")}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-full text-[11px] transition-colors",
+                    commDir === "inbound"
+                      ? "bg-[#faf8f5] text-[#14110e] font-medium"
+                      : "text-[#14110e]/55",
+                  )}
+                >
+                  De svarte
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={commChannel}
+                  onChange={(e) => setCommChannel(e.target.value)}
+                  className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a]"
+                >
+                  {CHANNELS.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="datetime-local"
+                  value={commDate}
+                  onChange={(e) => setCommDate(e.target.value)}
+                  className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] text-[#14110e]/70"
+                />
+              </div>
+              <textarea
+                value={commNote}
+                onChange={(e) => setCommNote(e.target.value)}
+                placeholder={
+                  commDir === "outbound"
+                    ? "Hva sendte du? Lim inn e-post, kort oppsummering av samtalen …"
+                    : "Hva svarte de?"
+                }
+                rows={3}
+                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] resize-y"
+              />
+              <button
+                type="submit"
+                disabled={!commNote.trim()}
+                className="w-full inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-40"
+              >
+                Loggfør
+              </button>
+            </form>
+
+            <ul className="space-y-3">
+              {app.activities
+                .filter((a) => a.type === "communication")
+                .map((a) => (
+                  <li
+                    key={a.id}
+                    className="group rounded-xl bg-[#faf8f5] border border-black/5 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "inline-block w-1.5 h-1.5 rounded-full",
+                            a.direction === "outbound"
+                              ? "bg-[#c15a3a]"
+                              : "bg-[#14110e]",
+                          )}
+                        />
+                        <span className="text-[10px] uppercase tracking-[0.15em] text-[#14110e]/65">
+                          {a.direction === "outbound" ? "Jeg sendte" : "Svar"} ·{" "}
+                          {channelLabel(a.channel)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteActivity(a.id)}
+                        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#c15a3a]"
+                        aria-label="Slett"
+                      >
+                        <IconClose size={12} />
+                      </button>
+                    </div>
+                    {a.note && (
+                      <div className="text-[12px] text-[#14110e]/85 whitespace-pre-wrap leading-[1.55]">
+                        {a.note}
+                      </div>
+                    )}
+                    <div className="text-[10px] text-[#14110e]/45 mt-1">
+                      {formatDate(a.occurredAt, true)}
+                    </div>
+                  </li>
+                ))}
+              {!app.activities.some((a) => a.type === "communication") && (
+                <li className="text-[12px] text-[#14110e]/40 text-center py-2">
+                  Ingen kommunikasjon loggført.
                 </li>
               )}
             </ul>
@@ -472,7 +698,9 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   <div className="w-1.5 h-1.5 rounded-full bg-[#c15a3a] mt-[7px] shrink-0" />
                   <div className="min-w-0">
                     <div className="text-[12px] text-[#14110e]/80">
-                      {a.note ?? STATUS_LABEL[a.type as StatusKey] ?? a.type}
+                      {a.type === "communication"
+                        ? `${a.direction === "outbound" ? "Du sendte" : "Du mottok"} — ${channelLabel(a.channel)}`
+                        : (a.note ?? STATUS_LABEL[a.type as StatusKey] ?? a.type)}
                     </div>
                     <div className="text-[11px] text-[#14110e]/45">
                       {formatDate(a.occurredAt, true)}
@@ -493,14 +721,38 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           </Card>
 
           <Card>
-            <SectionLabel className="mb-4">Søknadsbrev</SectionLabel>
-            <Link
-              href={`/app/brev/${app.id}`}
-              className="inline-flex items-center gap-1.5 text-[13px] text-[#c15a3a] hover:text-[#14110e]"
-            >
-              Åpne brev-editor
-              <IconArrowRight size={14} />
-            </Link>
+            <SectionLabel className="mb-3">Søknadsbrev</SectionLabel>
+            {app.coverLetter?.body?.trim() ? (
+              <>
+                <p className="text-[12px] text-[#14110e]/60 mb-3">
+                  Oppdatert{" "}
+                  {new Date(app.coverLetter.updatedAt).toLocaleDateString(
+                    "nb-NO",
+                    { day: "numeric", month: "short", year: "numeric" },
+                  )}
+                </p>
+                <Link
+                  href={`/app/brev/${app.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+                >
+                  Endre søknadsbrev
+                  <IconArrowRight size={14} />
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-[12px] text-[#14110e]/60 mb-3">
+                  Ingen brev skrevet ennå.
+                </p>
+                <Link
+                  href={`/app/brev/${app.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+                >
+                  Opprett søknadsbrev
+                  <IconArrowRight size={14} />
+                </Link>
+              </>
+            )}
           </Card>
         </div>
       </div>
@@ -515,6 +767,100 @@ function Card({ children }: { children: React.ReactNode }) {
     <div className="bg-white rounded-2xl border border-black/5 p-5 md:p-6">
       {children}
     </div>
+  );
+}
+
+function TaskRow({
+  task,
+  onToggle,
+  onDelete,
+}: {
+  task: Task;
+  onToggle: (t: Task) => void;
+  onDelete: (t: Task) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const done = !!task.completedAt;
+  const overdue =
+    task.dueAt && !done && new Date(task.dueAt).getTime() < Date.now();
+  const prio = TASK_PRIORITIES.find((p) => p.id === task.priority);
+  const type = TASK_TYPES.find((t) => t.id === task.type);
+
+  return (
+    <li className="group flex items-start gap-3 py-2 border-b border-black/5 last:border-0">
+      <button
+        type="button"
+        onClick={() => onToggle(task)}
+        aria-label={done ? "Marker som ikke fullført" : "Marker som fullført"}
+        className={cn(
+          "mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors",
+          done
+            ? "border-[#14110e] bg-[#14110e] text-[#faf8f5]"
+            : "border-black/30 hover:border-[#14110e]",
+        )}
+      >
+        {done && <IconCheck size={10} />}
+      </button>
+      <div className="flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="block text-left w-full"
+        >
+          <div
+            className={cn(
+              "text-[13px] leading-snug",
+              done && "line-through text-[#14110e]/40",
+            )}
+          >
+            {task.title}
+          </div>
+          <div className="flex items-center gap-2 mt-1 flex-wrap text-[10px] uppercase tracking-[0.12em]">
+            {task.priority && task.priority !== "medium" && prio && (
+              <span
+                className="inline-flex items-center gap-1"
+                style={{ color: prio.color }}
+              >
+                <span
+                  className="w-1 h-1 rounded-full"
+                  style={{ background: prio.color }}
+                />
+                {prio.label}
+              </span>
+            )}
+            {type && (
+              <span className="text-[#14110e]/55">{type.label}</span>
+            )}
+            {task.dueAt && (
+              <span
+                className={cn(
+                  overdue ? "text-[#c15a3a]" : "text-[#14110e]/50",
+                )}
+              >
+                Frist{" "}
+                {new Date(task.dueAt).toLocaleDateString("nb-NO", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            )}
+          </div>
+        </button>
+        {expanded && task.description && (
+          <div className="mt-2 text-[12px] text-[#14110e]/70 leading-[1.55] whitespace-pre-wrap">
+            {task.description}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onDelete(task)}
+        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#c15a3a] transition-opacity"
+        aria-label="Slett oppgave"
+      >
+        <IconClose size={14} />
+      </button>
+    </li>
   );
 }
 

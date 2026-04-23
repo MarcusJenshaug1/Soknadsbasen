@@ -6,6 +6,7 @@ export type StatusKey =
   | "interview"
   | "offer"
   | "accepted"
+  | "declined"
   | "rejected"
   | "withdrawn";
 
@@ -15,6 +16,7 @@ export const STATUS_COLOR: Record<StatusKey, string> = {
   interview: "#14110e",
   offer: "#16a34a",
   accepted: "#16a34a",
+  declined: "#94a3b8",
   rejected: "#d1d5db",
   withdrawn: "#d1d5db",
 };
@@ -24,7 +26,8 @@ export const STATUS_LABEL: Record<StatusKey, string> = {
   applied: "Sendt",
   interview: "Intervju",
   offer: "Tilbud",
-  accepted: "Akseptert",
+  accepted: "Takket ja",
+  declined: "Takket nei",
   rejected: "Avslag",
   withdrawn: "Trukket",
 };

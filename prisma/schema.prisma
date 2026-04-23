@@ -187,8 +187,12 @@ model Attachment {
 model ApplicationActivity {
   id            String   @id @default(uuid())
   applicationId String
-  /// "status" | "deadline" | "interview" | "followup" | "offer" | "note"
+  /// "status" | "deadline" | "interview" | "followup" | "offer" | "note" | "communication"
   type          String
+  /// For type="communication": "outbound" (du sendte) | "inbound" (du mottok). Null for other types.
+  direction     String?
+  /// For type="communication": "email" | "sms" | "call" | "meeting" | "linkedin" | "other".
+  channel       String?
   note          String?
   occurredAt    DateTime @default(now())
 
