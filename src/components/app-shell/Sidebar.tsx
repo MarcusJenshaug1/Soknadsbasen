@@ -6,15 +6,18 @@ import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
 
-const NAV = [
-  { href: "/app", label: "Hjem" },
-  { href: "/app/cv", label: "Min CV" },
-  { href: "/app/pipeline", label: "Søknader" },
-  { href: "/app/brev", label: "Søknadsbrev" },
-  { href: "/app/oppgaver", label: "Oppgaver" },
-  { href: "/app/selskaper", label: "Selskaper" },
-  { href: "/app/innsikt", label: "Innsikt" },
-  { href: "/app/profil", label: "Profil" },
+type NavItem = { href: string; label: string; gated: boolean };
+
+const NAV: readonly NavItem[] = [
+  { href: "/app", label: "Hjem", gated: true },
+  { href: "/app/cv", label: "Min CV", gated: true },
+  { href: "/app/pipeline", label: "Søknader", gated: true },
+  { href: "/app/brev", label: "Søknadsbrev", gated: true },
+  { href: "/app/oppgaver", label: "Oppgaver", gated: true },
+  { href: "/app/selskaper", label: "Selskaper", gated: true },
+  { href: "/app/innsikt", label: "Innsikt", gated: true },
+  { href: "/app/profil", label: "Profil", gated: false },
+  { href: "/app/billing", label: "Abonnement", gated: false },
 ] as const;
 
 function initialsFor(name?: string | null, email?: string | null): string {
@@ -33,10 +36,11 @@ function displayName(name?: string | null, email?: string | null): string {
   return "Uinnlogget";
 }
 
-export function Sidebar() {
+export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const initials = initialsFor(user?.name, user?.email);
+  const nav = NAV.filter((n) => hasAccess || !n.gated);
 
   return (
     <aside className="hidden md:flex w-[240px] shrink-0 border-r border-black/8 flex-col p-6 bg-[#faf8f5] h-dvh sticky top-0 print:hidden">
@@ -44,7 +48,7 @@ export function Sidebar() {
         <Logo href="/app" />
       </div>
       <nav className="space-y-0.5 text-[13px] flex-1">
-        {NAV.map((n) => {
+        {nav.map((n) => {
           const active =
             n.href === "/app"
               ? pathname === "/app"

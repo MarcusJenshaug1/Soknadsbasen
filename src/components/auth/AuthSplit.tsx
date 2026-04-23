@@ -33,7 +33,7 @@ export function AuthSplit({ focus }: { focus: Mode }) {
       <header className="max-w-[560px] mx-auto w-full px-6 md:px-10 pt-6 md:pt-10 flex items-center justify-between">
         <Logo href="/" />
         {mode === "register" && (
-          <SectionLabel tone="accent">Gratis for alltid</SectionLabel>
+          <SectionLabel tone="accent">7 dager gratis</SectionLabel>
         )}
       </header>
 
@@ -222,7 +222,7 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
         Opprett basen din.
       </h1>
       <p className="text-[14px] text-[#14110e]/65 mb-8">
-        Tre felt. Null kredittkort.
+        Tre felt. Så er du i gang med 7 dager gratis.
       </p>
       <form onSubmit={onSubmit} className="space-y-5">
         <div>

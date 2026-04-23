@@ -1,0 +1,123 @@
+import Link from "next/link";
+import { Check } from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { LinkButton } from "@/components/ui/Button";
+import { PricingCardButton } from "./PricingCardButton";
+
+type Props = {
+  loggedIn: boolean;
+  monthlyPriceId: string;
+  oneTimePriceId: string;
+  /** Where to send unauthenticated users. Defaults to /registrer with redirect back. */
+  signedOutHref?: string;
+};
+
+const monthlyFeatures = [
+  "Ubegrenset tilgang til CV-editor og maler",
+  "Eksport til PDF",
+  "Jobbsøknads-pipeline med oppgaver",
+  "Avslutt når du vil",
+];
+
+const oneTimeFeatures = [
+  "6 måneders full tilgang",
+  "Alt i månedlig plan",
+  "Ingen automatisk fornyelse",
+  "Én betaling — ferdig",
+];
+
+export function PricingCards({
+  loggedIn,
+  monthlyPriceId,
+  oneTimePriceId,
+  signedOutHref = "/registrer",
+}: Props) {
+  return (
+    <div>
+      <div className="grid gap-6 md:grid-cols-2">
+      <Card variant="surface" radius="3xl" className="p-8">
+        <div className="mb-6">
+          <h3 className="text-[20px] font-semibold text-[#14110e]">Månedlig</h3>
+          <p className="mt-1 text-[13px] text-black/55">
+            Prøv gratis i 7 dager, deretter 79 kr/mnd
+          </p>
+          <div className="mt-4 flex items-baseline gap-1">
+            <span className="text-4xl font-semibold text-[#14110e]">79 kr</span>
+            <span className="text-[13px] text-black/55">/mnd</span>
+          </div>
+        </div>
+        <ul className="mb-8 space-y-3">
+          <li className="flex items-start gap-2 text-[13px] font-medium text-[#c15a3a]">
+            <Check className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>7 dager gratis — kanseller før belastning</span>
+          </li>
+          {monthlyFeatures.map((f) => (
+            <li key={f} className="flex items-start gap-2 text-[13px] text-[#14110e]">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#c15a3a]" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+        {loggedIn ? (
+          <PricingCardButton
+            priceId={monthlyPriceId}
+            mode="subscription"
+            label="Prøv gratis i 7 dager"
+          />
+        ) : (
+          <LinkButton href={signedOutHref} size="lg" className="w-full">
+            Kom i gang
+          </LinkButton>
+        )}
+      </Card>
+
+      <Card variant="ink" radius="3xl" className="p-8">
+        <div className="mb-6">
+          <h3 className="text-[20px] font-semibold">Engangsbetaling</h3>
+          <p className="mt-1 text-[13px] text-white/60">6 måneders tilgang</p>
+          <div className="mt-4 flex items-baseline gap-1">
+            <span className="text-4xl font-semibold">299 kr</span>
+            <span className="text-[13px] text-white/60">/ 6 mnd</span>
+          </div>
+        </div>
+        <ul className="mb-8 space-y-3">
+          {oneTimeFeatures.map((f) => (
+            <li key={f} className="flex items-start gap-2 text-[13px]">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#c15a3a]" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+        {loggedIn ? (
+          <PricingCardButton
+            priceId={oneTimePriceId}
+            mode="payment"
+            label="Kjøp 6 måneder"
+          />
+        ) : (
+          <LinkButton
+            href={signedOutHref}
+            variant="inverse"
+            size="lg"
+            className="w-full"
+          >
+            Kom i gang
+          </LinkButton>
+        )}
+      </Card>
+      </div>
+      <p className="mt-6 text-center text-[11px] text-[#14110e]/55">
+        Ved å starte bekrefter du at{" "}
+        <Link href="/vilkar" className="underline underline-offset-2 hover:text-[#14110e]">
+          vilkårene
+        </Link>{" "}
+        og{" "}
+        <Link href="/personvern" className="underline underline-offset-2 hover:text-[#14110e]">
+          personvernerklæringen
+        </Link>{" "}
+        gjelder. Du samtykker til at leveringen starter umiddelbart og at
+        angreretten dermed faller bort (jf. angrerettsloven § 22 n).
+      </p>
+    </div>
+  );
+}

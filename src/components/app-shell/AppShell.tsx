@@ -1,12 +1,18 @@
 import { Sidebar } from "./Sidebar";
 import { BottomTabBar } from "./BottomTabBar";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  hasAccess,
+}: {
+  children: React.ReactNode;
+  hasAccess: boolean;
+}) {
   return (
     <div className="min-h-dvh bg-[#faf8f5] text-[#14110e] flex">
-      <Sidebar />
+      <Sidebar hasAccess={hasAccess} />
       <main className="flex-1 min-w-0 pb-20 md:pb-0">{children}</main>
-      <BottomTabBar />
+      <BottomTabBar hasAccess={hasAccess} />
     </div>
   );
 }

@@ -50,3 +50,6 @@ prisma/migrations.sqlite-archive/
 
 # Personal test fixtures — don't publish
 *.pdf
+
+# local tooling (Claude Code, etc.)
+.claude/

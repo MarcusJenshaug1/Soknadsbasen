@@ -2,11 +2,14 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { SectionLabel } from "@/components/ui/Pill";
 import { getSession } from "@/lib/auth";
+import { PricingCards } from "@/components/pricing/PricingCards";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const session = await getSession();
+  const monthlyPriceId = process.env.STRIPE_PRICE_MONTHLY!;
+  const oneTimePriceId = process.env.STRIPE_PRICE_ONETIME!;
 
   return (
     <div className="min-h-dvh bg-[#faf8f5] text-[#14110e]">
@@ -22,6 +25,9 @@ export default async function Home() {
           </Link>
           <Link href="#funksjoner" className="hover:text-[#14110e]">
             Funksjoner
+          </Link>
+          <Link href="#priser" className="hover:text-[#14110e]">
+            Priser
           </Link>
         </div>
         <div className="flex items-center gap-2">
@@ -166,7 +172,7 @@ export default async function Home() {
             </h2>
           </div>
           {[
-            { n: "01", t: "CV-bygger", d: "Åtte maler. Seks fargepaletter. Fem typografiset. Gratis." },
+            { n: "01", t: "CV-bygger", d: "Åtte maler. Seks fargepaletter. Fem typografiset. Ubegrenset eksport." },
             { n: "02", t: "Søknadsbrev", d: "Skrives i konteksten av stillingen. Lagrer versjoner automatisk." },
             { n: "03", t: "Pipeline", d: "Kanban med dra-og-slipp. Eller listevisning. Du velger." },
             { n: "04", t: "Oppgaver & frister", d: "Aldri glem en oppfølging. Aldri miss en frist." },
@@ -189,6 +195,29 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* Pricing */}
+      <div
+        id="priser"
+        className="max-w-[1100px] mx-auto px-5 md:px-10 py-20 md:py-28"
+      >
+        <div className="mb-10 text-center">
+          <SectionLabel tone="accent" className="mb-3">
+            Priser
+          </SectionLabel>
+          <h2 className="text-[36px] md:text-[56px] tracking-[-0.03em] font-medium leading-[1.05]">
+            To enkle valg.
+          </h2>
+          <p className="mt-4 text-[14px] md:text-[15px] text-[#14110e]/65">
+            7 dager gratis prøveperiode på månedlig plan. Kanseller når du vil.
+          </p>
+        </div>
+        <PricingCards
+          loggedIn={session !== null}
+          monthlyPriceId={monthlyPriceId}
+          oneTimePriceId={oneTimePriceId}
+        />
+      </div>
+
       {/* Closing */}
       <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-20 md:py-32 text-center">
         <h2 className="text-[44px] md:text-[88px] leading-[0.95] tracking-[-0.04em] font-medium mb-8">
@@ -200,10 +229,10 @@ export default async function Home() {
           href={session ? "/app" : "/registrer"}
           className="inline-flex px-8 py-4 rounded-full bg-[#14110e] text-[#faf8f5] text-[15px] font-medium hover:bg-[#c15a3a] transition-colors"
         >
-          {session ? "Åpne basen" : "Opprett din konto — gratis"}
+          {session ? "Åpne basen" : "Start med 7 dager gratis"}
         </Link>
         <div className="mt-6 text-[12px] text-[#14110e]/50">
-          Ingen kredittkort. Ingen installasjon.
+          Kanseller før prøveperioden utløper — ingen belastning.
         </div>
       </div>
 
@@ -211,7 +240,19 @@ export default async function Home() {
         <div className="max-w-[1200px] mx-auto px-5 md:px-10 py-8 flex flex-wrap items-center justify-between text-[12px] text-[#14110e]/55 gap-4">
           <span>© 2026 Søknadsbasen</span>
           <span>Oslo · Norge</span>
-          <span>Personvern · Vilkår · Kontakt</span>
+          <span className="flex items-center gap-3">
+            <Link href="/personvern" className="hover:text-[#14110e]">
+              Personvern
+            </Link>
+            <span className="text-[#14110e]/25">·</span>
+            <Link href="/vilkar" className="hover:text-[#14110e]">
+              Vilkår
+            </Link>
+            <span className="text-[#14110e]/25">·</span>
+            <a href="mailto:marcus@jenshaug.no" className="hover:text-[#14110e]">
+              Kontakt
+            </a>
+          </span>
         </div>
       </div>
     </div>

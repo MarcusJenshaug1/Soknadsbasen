@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { storePdfData } from "@/lib/pdfTokenStore";
+import { getSession } from "@/lib/auth";
+import { hasActiveAccess } from "@/lib/access";
 
 /**
  * POST /api/pdf
@@ -11,6 +13,17 @@ import { storePdfData } from "@/lib/pdfTokenStore";
  * 3. Returns the resulting PDF
  */
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  }
+  if (!(await hasActiveAccess(session.userId))) {
+    return NextResponse.json(
+      { error: "Krever aktivt abonnement", redirect: "/app/billing" },
+      { status: 402 },
+    );
+  }
+
   try {
     const body = await req.json();
     const data = body?.data;
