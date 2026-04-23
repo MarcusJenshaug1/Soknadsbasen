@@ -219,15 +219,99 @@ export function SkillsForm() {
 export function SummaryForm() {
   const summary = useResumeStore((s) => s.data.summary);
   const updateSummary = useResumeStore((s) => s.updateSummary);
+  const [editorKey, setEditorKey] = useState(0);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [tone, setTone] = useState<"varm" | "formell" | "konsis">("varm");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function runImprove() {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/ai/improve-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary, tone }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "AI-feil");
+      updateSummary(`<p>${String(data.summary).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>`);
+      setEditorKey((k) => k + 1);
+      setAiOpen(false);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Ukjent feil");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-xl font-semibold">Profil / Oppsummering</h3>
-        <p className="text-sm text-neutral-500">En kort tekst (3-4 setninger) som oppsummerer hvem du er, hva du kan, og hva du ønsker å oppnå.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold">Profil / Oppsummering</h3>
+          <p className="text-sm text-neutral-500">
+            En kort tekst (3-4 setninger) som oppsummerer hvem du er, hva du kan, og hva du ønsker å oppnå.
+          </p>
+        </div>
+        {!aiOpen ? (
+          <button
+            type="button"
+            onClick={() => setAiOpen(true)}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a] transition-colors"
+          >
+            Forbedre med AI
+          </button>
+        ) : (
+          <div className="shrink-0 flex items-center gap-2 flex-wrap">
+            <div className="inline-flex bg-[#eee9df] rounded-full p-1">
+              {(["varm", "formell", "konsis"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTone(t)}
+                  className={`px-3 py-1 rounded-full text-[11px] transition-colors ${
+                    tone === t
+                      ? "bg-[#faf8f5] text-[#14110e] font-medium"
+                      : "text-[#14110e]/60 hover:text-[#14110e]"
+                  }`}
+                >
+                  {t[0].toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={runImprove}
+              disabled={aiLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+            >
+              {aiLoading ? "Skriver …" : "Generer"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAiOpen(false);
+                setAiError(null);
+              }}
+              className="text-[11px] text-[#14110e]/55 hover:text-[#14110e]"
+            >
+              Avbryt
+            </button>
+          </div>
+        )}
       </div>
-      <LexicalEditor value={summary} onChange={(val) => updateSummary(val)} placeholder="I over 10 år har jeg jobbet med..." />
-      <div className="flex justify-end text-xs text-neutral-400">{summary.length} tegn (inkl. HTML)</div>
+      {aiError && <p className="text-[11px] text-[#c15a3a]">{aiError}</p>}
+      <LexicalEditor
+        key={editorKey}
+        value={summary}
+        onChange={(val) => updateSummary(val)}
+        placeholder="I over 10 år har jeg jobbet med..."
+      />
+      <div className="flex justify-end text-xs text-neutral-400">
+        {summary.length} tegn (inkl. HTML)
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusD
 import { IconPlus, IconCheck, IconClose, IconArrowRight } from "@/components/ui/Icons";
 import { PIPELINE_COLUMNS } from "@/lib/pipeline";
 import { cn } from "@/lib/cn";
+import { AiTools } from "./AiTools";
 
 type Task = {
   id: string;
@@ -473,6 +474,10 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 </li>
               )}
             </ul>
+          </Card>
+
+          <Card>
+            <AiTools applicationId={app.id} />
           </Card>
 
           <Card>
