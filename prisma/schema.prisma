@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// App-level user profile. `id` matches the Supabase `auth.users.id` UUID.
+/// Authentication (email, password, sessions) lives in Supabase Auth.
+model User {
+  id           String   @id @db.Uuid
+  email        String   @unique
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  resumes      Resume[]
+  userData     UserData?
+  companies    Company[]
+  applications JobApplication[]
+}
+
+/// Stores all user data as JSON blobs — one row per user.
+/// This is what the Zustand stores sync against when logged in.
+model UserData {
+  id              String   @id @default(uuid())
+  userId          String   @unique @db.Uuid
+  resumeData      String   @default("{}") // JSON blob of ResumeData
+  coverLetterData String   @default("{}") // JSON blob of { letters, activeIndex }
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resume {
+  id          String   @id @default(uuid())
+  title       String
+  userId      String?  @db.Uuid
+  guestId     String? // For gjestemodus
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User?    @relation(fields: [userId], references: [id])
+  versions    ResumeVersion[]
+  sections    Section[]
+}
+
+model Section {
+  id          String   @id @default(uuid())
+  resumeId    String
+  title       String
+  type        String   // f.eks. "EXPERIENCE", "EDUCATION", "SKILLS"
+  order       Int
+  isVisible   Boolean  @default(true)
+  
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  items       SectionItem[]
+}
+
+model SectionItem {
+  id          String   @id @default(uuid())
+  sectionId   String
+  title       String?
+  subtitle    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  description String?
+  order       Int
+  isVisible   Boolean  @default(true)
+
+  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+}
+
+model ResumeVersion {
+  id          String   @id @default(uuid())
+  resumeId    String
+  versionNum  Int      @default(1)
+  content     Json     // Snapshot av CV innhold på publiseringstidspunktet
+  templateId  String
+  createdAt   DateTime @default(now())
+
+  resume       Resume           @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+}
+
+model Template {
+  id          String   @id @default(uuid())
+  name        String
+  htmlLayout  String?  // Layout for export engine
+  createdAt   DateTime @default(now())
+}
+
+// ─── Job application domain ────────────────────────────────
+
+/// A company the user has applied to or is tracking.
+model Company {
+  id          String   @id @default(uuid())
+  userId      String   @db.Uuid
+  name        String
+  website     String?
+  industry    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+}
+
+/// One job application per position.
+model JobApplication {
+  id               String    @id @default(uuid())
+  userId           String    @db.Uuid
+  companyId        String?
+  /// Denormalised company name — always populated, even without a Company row.
+  companyName      String
+  title            String
+  source           String?   // "finn.no" | "linkedin" | "referral" | …
+  jobUrl           String?
+  status           String    @default("draft") // draft|applied|interview|offer|accepted|rejected|withdrawn
+  statusNote       String?
+  statusUpdatedAt  DateTime  @default(now())
+  applicationDate  DateTime?
+  deadlineAt       DateTime?
+  interviewAt      DateTime?
+  followUpAt       DateTime?
+  offerSalary      String?
+  contactName      String?
+  contactEmail     String?
+  contactPhone     String?
+  jobDescription   String?
+  notes            String?
+  /// Optional link to a ResumeVersion snapshot sent with this application.
+  resumeSnapshotId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company        Company?              @relation(fields: [companyId], references: [id])
+  resumeSnapshot ResumeVersion?        @relation(fields: [resumeSnapshotId], references: [id])
+  tasks          Task[]
+  attachments    Attachment[]
+  activities     ApplicationActivity[]
+  coverLetter    CoverLetter?
+}
+
+/// Checklist tasks tied to an application (follow-up, prep, documents …).
+model Task {
+  id            String    @id @default(uuid())
+  applicationId String
+  title         String
+  description   String?   // Optional detailed notes
+  dueAt         DateTime?
+  completedAt   DateTime?
+  /// "followup" | "document" | "research" | "interview" | "other"
+  type          String?
+  /// "low" | "medium" | "high" | "urgent"
+  priority      String    @default("medium")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+/// File attachments for an application (stored on disk / object storage).
+model Attachment {
+  id            String   @id @default(uuid())
+  applicationId String
+  filename      String
+  mimeType      String
+  sizeBytes     Int
+  /// Relative path on disk, e.g. "uploads/<userId>/<uuid>.<ext>"
+  storageKey    String
+  createdAt     DateTime @default(now())
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+/// Immutable event log for an application (status changes, meetings, notes …).
+model ApplicationActivity {
+  id            String   @id @default(uuid())
+  applicationId String
+  /// "status" | "deadline" | "interview" | "followup" | "offer" | "note"
+  type          String
+  note          String?
+  occurredAt    DateTime @default(now())
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+/// Cover letter / søknadsbrev for an application.
+model CoverLetter {
+  id             String   @id @default(uuid())
+  applicationId  String   @unique
+  /// Sender info
+  senderName     String?
+  senderEmail    String?
+  senderPhone    String?
+  senderLocation String?
+  /// Recipient
+  recipientName  String?
+  recipientTitle String?
+  companyAddress String?
+  /// Letter content
+  date           String?
+  subject        String?
+  greeting       String?
+  body           String?  // HTML from Lexical
+  closing        String?
+  /// Design
+  fontFamily     String   @default("inter")
+  accentColor    String   @default("#4f46e5")
+  fontSize       String   @default("medium")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}

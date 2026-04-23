@@ -1,0 +1,2 @@
+# Please do not edit this manually. It is used by Prisma Migrate to track the provider used to create the migrations.
+provider = "postgresql"

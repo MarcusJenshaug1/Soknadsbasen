@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --panel: #eee9df;
+  --ink: #14110e;
+  --ink-muted: rgba(20, 17, 14, 0.65);
+  --ink-subtle: rgba(20, 17, 14, 0.55);
+  --ink-faint: rgba(20, 17, 14, 0.45);
+  --accent: #c15a3a;
+  --divider: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  --success: #16a34a;
+  --neutral: #94a3b8;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-neutral: var(--neutral);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Vertical text for collapsed kanban columns */
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    width: 210mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #cv-print-output {
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+  }
+  .print-table,
+  .print-table thead,
+  .print-table tfoot,
+  .print-table tbody,
+  .print-table tr,
+  .print-table td {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+  .print-header-spacer { height: 15mm; }
+  .print-footer-spacer { height: 15mm; }
+
+  .a4-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    width: 210mm !important;
+    min-height: auto !important;
+    page-break-after: auto;
+  }
+  #cv-print-output.continuous .print-table { display: block !important; }
+  #cv-print-output.continuous .print-table thead,
+  #cv-print-output.continuous .print-table tfoot { display: none !important; }
+  #cv-print-output.continuous .print-table tbody,
+  #cv-print-output.continuous .print-table tbody tr,
+  #cv-print-output.continuous .print-table tbody td { display: block !important; }
+
+  #cv-print-output.continuous #cv-print-output.continuous,
+  #cv-print-output.continuous *,
+  #cv-print-output.continuous .a4-page {
+    page-break-after: auto !important;
+    page-break-before: auto !important;
+    page-break-inside: auto !important;
+    break-after: auto !important;
+    break-before: auto !important;
+    break-inside: auto !important;
+  }
+  #cv-print-output.continuous .a4-page {
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 15mm !important;
+    overflow: visible !important;
+  }
+
+  #cv-print-output:not(.continuous) h1,
+  #cv-print-output:not(.continuous) h2,
+  #cv-print-output:not(.continuous) h3,
+  #cv-print-output:not(.continuous) h4 { page-break-after: avoid; }
+  #cv-print-output:not(.continuous) section,
+  #cv-print-output:not(.continuous) .print-avoid-break { page-break-inside: avoid; }
+}
+
+.rich-content ul,
+.ris-content ul {
+  list-style-type: disc;
+  margin-left: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.rich-content li,
+.ris-content li { margin-bottom: 0.25rem; }
+
+.rich-content p,
+.ris-content p { margin-bottom: 0.5rem; }
+
+.rich-content strong,
+.ris-content strong { font-weight: 500; }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
