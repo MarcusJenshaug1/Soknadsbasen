@@ -39,12 +39,21 @@ type ResumeData = {
 
 function buildResumeContext(raw: string | null | undefined): string {
   if (!raw) return "";
-  let data: ResumeData;
+  let parsed: unknown;
   try {
-    data = JSON.parse(raw) as ResumeData;
+    parsed = JSON.parse(raw);
   } catch {
     return "";
   }
+  const p = parsed as {
+    activeResumeId?: string;
+    _resumeDataMap?: Record<string, ResumeData>;
+    data?: ResumeData;
+  } & ResumeData;
+  const data: ResumeData =
+    (p?._resumeDataMap && p.activeResumeId && p._resumeDataMap[p.activeResumeId]) ||
+    p?.data ||
+    (p as ResumeData);
   const lines: string[] = [];
 
   const fullName = [data.contact?.firstName, data.contact?.lastName]

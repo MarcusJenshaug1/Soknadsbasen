@@ -13,13 +13,19 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
 } from "@lexical/list";
-import { $getRoot, FORMAT_TEXT_COMMAND } from "lexical";
+import {
+  $getRoot,
+  $createParagraphNode,
+  $isElementNode,
+  FORMAT_TEXT_COMMAND,
+  type LexicalEditor as LexicalEditorType,
+} from "lexical";
 import {
   $generateHtmlFromNodes,
   $generateNodesFromDOM,
 } from "@lexical/html";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useEffect } from "react";
+import { useRef } from "react";
 
 const theme = {
   paragraph: "mb-3 text-[14px] leading-[1.6] text-[#14110e]",
@@ -45,11 +51,18 @@ export function LexicalEditor({
   onChange: (val: string) => void;
   placeholder?: string;
 }) {
+  const initialValueRef = useRef(value);
+  const seededRef = useRef(false);
+
   const initialConfig = {
     namespace: "SoknadsbasenEditor",
     theme,
     onError: (error: Error) => console.error(error),
     nodes: [ListNode, ListItemNode],
+    editorState: (editor: LexicalEditorType) => {
+      seedEditor(editor, initialValueRef.current);
+      seededRef.current = true;
+    },
   };
 
   return (
@@ -71,33 +84,43 @@ export function LexicalEditor({
         <ListPlugin />
         <OnChangePlugin
           onChange={(editorState, editor) => {
+            if (!seededRef.current) return;
             editorState.read(() => {
               const html = $generateHtmlFromNodes(editor);
               onChange(html);
             });
           }}
         />
-        <InitialValue value={value} />
       </LexicalComposer>
     </div>
   );
 }
 
-function InitialValue({ value }: { value: string }) {
-  const [editor] = useLexicalComposerContext();
-  useEffect(() => {
-    if (!value) return;
-    editor.update(() => {
-      const root = $getRoot();
-      root.clear();
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(value, "text/html");
-      const nodes = $generateNodesFromDOM(editor, dom);
-      root.append(...nodes);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return null;
+function seedEditor(editor: LexicalEditorType, value: string) {
+  const root = $getRoot();
+  root.clear();
+  if (!value) {
+    root.append($createParagraphNode());
+    return;
+  }
+  const parser = new DOMParser();
+  const dom = parser.parseFromString(value, "text/html");
+  const nodes = $generateNodesFromDOM(editor, dom);
+  let currentParagraph = null as ReturnType<typeof $createParagraphNode> | null;
+  for (const node of nodes) {
+    if ($isElementNode(node)) {
+      if (currentParagraph) {
+        root.append(currentParagraph);
+        currentParagraph = null;
+      }
+      root.append(node);
+    } else {
+      if (!currentParagraph) currentParagraph = $createParagraphNode();
+      currentParagraph.append(node);
+    }
+  }
+  if (currentParagraph) root.append(currentParagraph);
+  if (root.getChildrenSize() === 0) root.append($createParagraphNode());
 }
 
 function Toolbar() {

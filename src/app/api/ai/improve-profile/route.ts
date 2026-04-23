@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { geminiGenerate } from "@/lib/gemini";
+import { parseActiveResume } from "@/lib/resume-server";
 
 /**
  * POST /api/ai/improve-profile
@@ -25,8 +26,8 @@ export async function POST(req: Request) {
   });
 
   let cvSummary = "";
-  try {
-    const data = JSON.parse(userData?.resumeData ?? "{}");
+  const data = parseActiveResume(userData?.resumeData);
+  if (data) {
     const exp = Array.isArray(data.experience) ? data.experience : [];
     const skills = Array.isArray(data.skills)
       ? data.skills.slice(0, 15).filter(Boolean)
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
         ? `Erfaring: ${exp
             .slice(0, 4)
             .map(
-              (e: { title?: string; company?: string; description?: string }) =>
+              (e) =>
                 `${e.title} hos ${e.company}${
                   e.description ? ` — ${String(e.description).slice(0, 150)}` : ""
                 }`,
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
     ]
       .filter(Boolean)
       .join("\n");
-  } catch {}
+  }
 
   if (!cvSummary) {
     return NextResponse.json(

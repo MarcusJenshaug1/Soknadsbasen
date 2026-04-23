@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { geminiGenerate } from "@/lib/gemini";
 import { parseLooseJson } from "@/lib/json";
+import { parseActiveResume } from "@/lib/resume-server";
 
 /**
  * POST /api/ai/interview-prep
@@ -30,21 +31,21 @@ export async function POST(req: Request) {
   });
 
   let resumeSummary = "";
-  try {
-    const data = JSON.parse(userData?.resumeData ?? "{}");
+  const data = parseActiveResume(userData?.resumeData);
+  if (data) {
     resumeSummary = [
       data.role ? `Ønsket rolle: ${data.role}` : "",
       data.summary ? `Profil: ${String(data.summary).slice(0, 400)}` : "",
       Array.isArray(data.experience) && data.experience.length
         ? `Erfaring: ${data.experience
             .slice(0, 4)
-            .map((e: { title?: string; company?: string }) => `${e.title} hos ${e.company}`)
+            .map((e) => `${e.title} hos ${e.company}`)
             .join("; ")}`
         : "",
     ]
       .filter(Boolean)
       .join("\n");
-  } catch {}
+  }
 
   const system = `Du genererer intervjuforberedelse på norsk bokmål for en jobbsøker. Returner GYLDIG JSON med 8-10 typiske spørsmål fordelt på kategoriene "Om deg", "Rollen", "Teknisk", "Scenario", "Om selskapet".
 
