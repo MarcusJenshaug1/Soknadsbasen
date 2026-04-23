@@ -28,9 +28,14 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const res = await supabase.auth.getUser();
+    user = res.data.user;
+  } catch {
+    // Network blip → let the request through. Client-side auth hooks will
+    // re-check once Supabase is reachable again.
+  }
 
   const pathname = request.nextUrl.pathname;
   const isAppArea = pathname.startsWith("/app");

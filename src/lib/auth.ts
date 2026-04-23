@@ -16,9 +16,16 @@ export interface SessionPayload {
  */
 export async function getSession(): Promise<SessionPayload | null> {
   const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    const res = await supabase.auth.getUser();
+    user = res.data.user;
+  } catch (err) {
+    // Network blip / Supabase unreachable → treat as anonymous instead of
+    // crashing server-rendered pages (landing etc).
+    console.warn("[getSession] Supabase getUser failed:", err);
+    return null;
+  }
   if (!user) return null;
 
   // Ensure a matching app-level profile exists. First-time sign-ins (created
