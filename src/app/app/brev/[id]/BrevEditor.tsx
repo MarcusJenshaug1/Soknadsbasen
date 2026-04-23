@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LexicalEditor } from "@/components/forms/LexicalEditor";
 import { SectionLabel } from "@/components/ui/Pill";
+import { AiDraftButton } from "./AiDraftButton";
 
 type Letter = {
   id: string;
@@ -37,6 +38,7 @@ export function BrevEditor({
   initial: Letter;
 }) {
   const [letter, setLetter] = useState<Letter>(initial);
+  const [editorKey, setEditorKey] = useState(0);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const timer = useRef<NodeJS.Timeout | null>(null);
@@ -208,8 +210,19 @@ export function BrevEditor({
               onChange={(v) => update("greeting", v || null)}
             />
             <div>
-              <label className={LABEL}>Brødtekst</label>
+              <div className="flex items-end justify-between mb-2">
+                <label className={LABEL.replace("block mb-2", "")}>Brødtekst</label>
+                <AiDraftButton
+                  applicationId={application.id}
+                  onDraft={(html) => {
+                    dirtyRef.current = true;
+                    setLetter((l) => ({ ...l, body: html }));
+                    setEditorKey((k) => k + 1);
+                  }}
+                />
+              </div>
               <LexicalEditor
+                key={editorKey}
                 value={letter.body ?? ""}
                 onChange={(v) => update("body", v)}
                 placeholder="Kjære rekrutterer, …"
