@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { SectionLabel } from "@/components/ui/Pill";
 import { PricingCards } from "@/components/pricing/PricingCards";
+import ProductDemo from "@/components/landing/ProductDemoLazy";
 import {
   HeaderCTA,
   HeroCTA,
@@ -64,49 +65,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Product photo */}
-      <div id="produkt" className="max-w-[1200px] mx-auto px-5 md:px-10 pb-20 md:pb-32">
-        <div className="bg-[#eee9df] rounded-[24px] md:rounded-[32px] p-6 md:p-16 relative overflow-hidden">
-          <div className="absolute top-4 md:top-6 left-5 md:left-8 text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45">
-            Pipeline
-          </div>
-          <div className="absolute top-4 md:top-6 right-5 md:right-8 text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45">
-            Våren 2026
-          </div>
-
-          <div className="mt-10 md:mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {[
-              { h: "Kladd", c: 2, col: "#94a3b8" },
-              { h: "Sendt", c: 5, col: "#c15a3a" },
-              { h: "Intervju", c: 2, col: "#14110e" },
-              { h: "Tilbud", c: 1, col: "#16a34a" },
-            ].map((g) => (
-              <div key={g.h} className="bg-white rounded-2xl p-3 md:p-4">
-                <div className="flex items-center justify-between mb-3 md:mb-4 pb-2 md:pb-3 border-b border-black/5">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: g.col }}
-                    />
-                    <span className="text-[12px] font-medium">{g.h}</span>
-                  </div>
-                  <span className="text-[11px] text-neutral-400">{g.c}</span>
-                </div>
-                <div className="space-y-2">
-                  {Array.from({ length: g.c }).map((_, j) => (
-                    <div
-                      key={j}
-                      className="p-2.5 md:p-3 rounded-xl bg-[#faf8f5] border border-black/5"
-                    >
-                      <div className="h-2 w-20 rounded-full bg-neutral-200 mb-2" />
-                      <div className="h-1.5 w-14 rounded-full bg-neutral-100" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Product demo */}
+      <div id="produkt">
+        <ProductDemo />
       </div>
 
       {/* Philosophy */}
