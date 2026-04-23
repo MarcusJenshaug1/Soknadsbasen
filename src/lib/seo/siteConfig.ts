@@ -1,6 +1,15 @@
-const rawUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://søknadsbasen.no";
+const DEFAULT_SITE_URL = "https://søknadsbasen.no";
 
-export const siteUrl = new URL(rawUrl);
+function safeParseUrl(raw: string | undefined): URL {
+  if (!raw) return new URL(DEFAULT_SITE_URL);
+  try {
+    return new URL(raw);
+  } catch {
+    return new URL(DEFAULT_SITE_URL);
+  }
+}
+
+export const siteUrl = safeParseUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
 export const siteConfig = {
   name: "Søknadsbasen",
