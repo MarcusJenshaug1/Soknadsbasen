@@ -18,31 +18,31 @@ export default async function SuksessPage({ searchParams }: Props) {
   let planLabel = "abonnement";
   let isTrialing = false;
 
-  if (session_id) {
-    try {
-      const checkout = await stripe.checkout.sessions.retrieve(session_id);
-      if (checkout.mode === "subscription") {
-        planLabel = "månedlig abonnement";
-        const subId =
-          typeof checkout.subscription === "string"
-            ? checkout.subscription
-            : checkout.subscription?.id;
-        if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId);
-          isTrialing = sub.status === "trialing";
-        }
-      } else if (checkout.mode === "payment") {
-        planLabel = "6 måneders tilgang";
+  // Kjør Stripe checkout-retrieve + DB-sub-sjekk parallelt.
+  const [checkoutResult, dbSub] = await Promise.all([
+    session_id
+      ? stripe.checkout.sessions
+          .retrieve(session_id, { expand: ["subscription"] })
+          .catch(() => null)
+      : Promise.resolve(null),
+    prisma.subscription.findUnique({
+      where: { userId: session.userId },
+      select: { status: true },
+    }),
+  ]);
+
+  if (checkoutResult) {
+    if (checkoutResult.mode === "subscription") {
+      planLabel = "månedlig abonnement";
+      const sub = checkoutResult.subscription;
+      if (sub && typeof sub !== "string") {
+        isTrialing = sub.status === "trialing";
       }
-    } catch {
-      // Non-fatal — vi viser generell tekst hvis retrieve feiler.
+    } else if (checkoutResult.mode === "payment") {
+      planLabel = "6 måneders tilgang";
     }
   }
 
-  const dbSub = await prisma.subscription.findUnique({
-    where: { userId: session.userId },
-    select: { status: true },
-  });
   const webhookLanded = dbSub !== null;
 
   return (

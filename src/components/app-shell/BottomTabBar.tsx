@@ -68,6 +68,7 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
             <li key={t.href}>
               <Link
                 href={t.href}
+                prefetch={true}
                 className="flex flex-col items-center gap-1 py-1"
               >
                 <span

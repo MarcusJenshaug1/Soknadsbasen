@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { supabaseServer } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -7,14 +8,14 @@ export interface SessionPayload {
   name: string | null;
 }
 
-/**
- * Server-side session resolver. Returns the app-level user profile (from the
- * `User` table) linked to the Supabase auth user, or `null` if unauthenticated.
- *
- * All existing API routes call this to gate access — the return shape is kept
- * identical to the old JWT-based implementation so nothing else needs to change.
- */
-export async function getSession(): Promise<SessionPayload | null> {
+export interface SessionWithAccess extends SessionPayload {
+  hasAccess: boolean;
+}
+
+const ACTIVE_STATUSES = new Set(["active", "trialing"]);
+
+// Deduped per request via React cache — flere layout/page-kall = 1 I/O.
+export const getSession = cache(async (): Promise<SessionPayload | null> => {
   const supabase = await supabaseServer();
   let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
   try {
@@ -57,4 +58,57 @@ export async function getSession(): Promise<SessionPayload | null> {
     email: profile.email,
     name: profile.name,
   };
-}
+});
+
+// Slår sammen auth + profil + abonnements-sjekk til én Prisma-rundtur.
+// Bruk denne i /app/layout og /app/(gated)/layout — sparer 1 DB-kall per nav.
+export const getSessionWithAccess = cache(
+  async (): Promise<SessionWithAccess | null> => {
+    const supabase = await supabaseServer();
+    let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+    try {
+      const res = await supabase.auth.getUser();
+      user = res.data.user;
+    } catch (err) {
+      console.warn("[getSessionWithAccess] Supabase getUser failed:", err);
+      return null;
+    }
+    if (!user) return null;
+
+    let profile = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        subscription: { select: { status: true, currentPeriodEnd: true } },
+      },
+    });
+
+    if (!profile) {
+      if (user.email) {
+        await prisma.user.deleteMany({ where: { email: user.email } });
+      }
+      const created = await prisma.user.create({
+        data: {
+          id: user.id,
+          email: user.email ?? "",
+          name: (user.user_metadata?.name as string | undefined) ?? null,
+        },
+        select: { id: true, email: true, name: true },
+      });
+      profile = { ...created, subscription: null };
+    }
+
+    const sub = profile.subscription;
+    const hasAccess =
+      !!sub && ACTIVE_STATUSES.has(sub.status) && sub.currentPeriodEnd > new Date();
+
+    return {
+      userId: profile.id,
+      email: profile.email,
+      name: profile.name,
+      hasAccess,
+    };
+  },
+);

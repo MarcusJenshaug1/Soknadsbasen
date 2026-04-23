@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { LinkButton } from "@/components/ui/Button";
-import { PricingCardButton } from "./PricingCardButton";
 
 type Props = {
-  loggedIn: boolean;
-  monthlyPriceId: string;
-  oneTimePriceId: string;
-  /** Where to send unauthenticated users. Defaults to /registrer with redirect back. */
-  signedOutHref?: string;
+  monthlyCta: React.ReactNode;
+  oneTimeCta: React.ReactNode;
 };
 
 const monthlyFeatures = [
@@ -26,12 +21,7 @@ const oneTimeFeatures = [
   "Én betaling — ferdig",
 ];
 
-export function PricingCards({
-  loggedIn,
-  monthlyPriceId,
-  oneTimePriceId,
-  signedOutHref = "/registrer",
-}: Props) {
+export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
   return (
     <div>
       <div className="grid gap-6 md:grid-cols-2">
@@ -58,17 +48,7 @@ export function PricingCards({
             </li>
           ))}
         </ul>
-        {loggedIn ? (
-          <PricingCardButton
-            priceId={monthlyPriceId}
-            mode="subscription"
-            label="Prøv gratis i 7 dager"
-          />
-        ) : (
-          <LinkButton href={signedOutHref} size="lg" className="w-full">
-            Kom i gang
-          </LinkButton>
-        )}
+        {monthlyCta}
       </Card>
 
       <Card variant="ink" radius="3xl" className="p-8">
@@ -88,22 +68,7 @@ export function PricingCards({
             </li>
           ))}
         </ul>
-        {loggedIn ? (
-          <PricingCardButton
-            priceId={oneTimePriceId}
-            mode="payment"
-            label="Kjøp 6 måneder"
-          />
-        ) : (
-          <LinkButton
-            href={signedOutHref}
-            variant="inverse"
-            size="lg"
-            className="w-full"
-          >
-            Kom i gang
-          </LinkButton>
-        )}
+        {oneTimeCta}
       </Card>
       </div>
       <p className="mt-6 text-center text-[11px] text-[#14110e]/55">

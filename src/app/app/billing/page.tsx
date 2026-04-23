@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PricingCards } from "@/components/pricing/PricingCards";
+import { PricingCardButton } from "@/components/pricing/PricingCardButton";
 import { BillingPortalButton } from "./BillingPortalButton";
 
 export const metadata = { title: "Abonnement – CV maker" };
@@ -79,9 +80,20 @@ export default async function BillingPage() {
             </p>
           </Card>
           <PricingCards
-            loggedIn
-            monthlyPriceId={process.env.STRIPE_PRICE_MONTHLY!}
-            oneTimePriceId={process.env.STRIPE_PRICE_ONETIME!}
+            monthlyCta={
+              <PricingCardButton
+                priceId={process.env.STRIPE_PRICE_MONTHLY!}
+                mode="subscription"
+                label="Prøv gratis i 7 dager"
+              />
+            }
+            oneTimeCta={
+              <PricingCardButton
+                priceId={process.env.STRIPE_PRICE_ONETIME!}
+                mode="payment"
+                label="Kjøp 6 måneder"
+              />
+            }
           />
         </>
       )}

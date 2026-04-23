@@ -1,15 +1,13 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell/AppShell";
-import { getSession } from "@/lib/auth";
-import { hasActiveAccess } from "@/lib/access";
+import { getSessionWithAccess } from "@/lib/auth";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  const session = await getSessionWithAccess();
   if (!session) redirect("/logg-inn?redirect=/app");
-  const access = await hasActiveAccess(session.userId);
-  return <AppShell hasAccess={access}>{children}</AppShell>;
+  return <AppShell hasAccess={session.hasAccess}>{children}</AppShell>;
 }

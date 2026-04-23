@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useResumeStore, SECTION_LABELS, type ResumeData, type SectionKey } from "@/store/useResumeStore";
 import { TEMPLATES, COLOR_PALETTES, FONT_PAIRS, getTemplate } from "@/lib/design-tokens";
 import { analyzeAtsMatch } from "@/lib/ats";
 import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp } from "lucide-react";
-import { LexicalEditor } from "./LexicalEditor";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+const LexicalEditor = dynamic(
+  () => import("./LexicalEditor").then((m) => m.LexicalEditor),
+  { ssr: false, loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+);
 
 /* ─── Shared styling constants ─────────────────────────────── */
 

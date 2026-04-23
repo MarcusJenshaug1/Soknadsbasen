@@ -14,16 +14,17 @@ export default async function BrevDetailPage({
   const session = await getSession();
   if (!session) redirect("/logg-inn");
 
-  const app = await prisma.jobApplication.findFirst({
-    where: { id, userId: session.userId },
-    include: { coverLetter: true },
-  });
+  const [app, user] = await Promise.all([
+    prisma.jobApplication.findFirst({
+      where: { id, userId: session.userId },
+      include: { coverLetter: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { email: true, name: true },
+    }),
+  ]);
   if (!app) notFound();
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { email: true, name: true },
-  });
 
   const today = new Date().toISOString().slice(0, 10);
 

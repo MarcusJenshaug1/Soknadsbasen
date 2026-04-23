@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LexicalEditor } from "@/components/forms/LexicalEditor";
+import dynamic from "next/dynamic";
 import { SectionLabel } from "@/components/ui/Pill";
 import { AiDraftButton } from "./AiDraftButton";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+const LexicalEditor = dynamic(
+  () => import("@/components/forms/LexicalEditor").then((m) => m.LexicalEditor),
+  { ssr: false, loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+);
 
 type Letter = {
   id: string;

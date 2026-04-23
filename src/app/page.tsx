@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { SectionLabel } from "@/components/ui/Pill";
-import { getSession } from "@/lib/auth";
 import { PricingCards } from "@/components/pricing/PricingCards";
+import {
+  HeaderCTA,
+  HeroCTA,
+  ClosingCTA,
+  PricingCTA,
+} from "./LandingCTAs";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  const session = await getSession();
+export default function Home() {
   const monthlyPriceId = process.env.STRIPE_PRICE_MONTHLY!;
   const oneTimePriceId = process.env.STRIPE_PRICE_ONETIME!;
 
@@ -31,29 +33,7 @@ export default async function Home() {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          {session ? (
-            <Link
-              href="/app"
-              className="text-[13px] px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a] transition-colors"
-            >
-              Åpne basen
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/logg-inn"
-                className="hidden sm:inline-flex text-[13px] px-3 py-2 text-[#14110e]/70 hover:text-[#14110e]"
-              >
-                Logg inn
-              </Link>
-              <Link
-                href="/registrer"
-                className="text-[13px] px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a] transition-colors"
-              >
-                Kom i gang
-              </Link>
-            </>
-          )}
+          <HeaderCTA />
         </div>
       </div>
 
@@ -74,12 +54,7 @@ export default async function Home() {
           Bygget for å bli mindre stresset — ikke mer distrahert.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href={session ? "/app" : "/registrer"}
-            className="px-6 py-3.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[14px] font-medium hover:bg-[#c15a3a] transition-colors"
-          >
-            {session ? "Åpne basen" : "Start din base"}
-          </Link>
+          <HeroCTA />
           <Link
             href="#produkt"
             className="px-6 py-3.5 rounded-full text-[14px] text-[#14110e]/70 hover:text-[#14110e] hover:bg-black/5 transition-colors inline-flex items-center gap-1.5"
@@ -212,9 +187,21 @@ export default async function Home() {
           </p>
         </div>
         <PricingCards
-          loggedIn={session !== null}
-          monthlyPriceId={monthlyPriceId}
-          oneTimePriceId={oneTimePriceId}
+          monthlyCta={
+            <PricingCTA
+              priceId={monthlyPriceId}
+              mode="subscription"
+              label="Prøv gratis i 7 dager"
+            />
+          }
+          oneTimeCta={
+            <PricingCTA
+              priceId={oneTimePriceId}
+              mode="payment"
+              label="Kjøp 6 måneder"
+              variant="inverse"
+            />
+          }
         />
       </div>
 
@@ -225,12 +212,7 @@ export default async function Home() {
           <br />
           rydde skrivebordet?
         </h2>
-        <Link
-          href={session ? "/app" : "/registrer"}
-          className="inline-flex px-8 py-4 rounded-full bg-[#14110e] text-[#faf8f5] text-[15px] font-medium hover:bg-[#c15a3a] transition-colors"
-        >
-          {session ? "Åpne basen" : "Start med 7 dager gratis"}
-        </Link>
+        <ClosingCTA />
         <div className="mt-6 text-[12px] text-[#14110e]/50">
           Kanseller før prøveperioden utløper — ingen belastning.
         </div>

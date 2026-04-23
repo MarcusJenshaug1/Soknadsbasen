@@ -57,6 +57,7 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
             <Link
               key={n.href}
               href={n.href}
+              prefetch={true}
               className={cn(
                 "block px-3 py-2 rounded-full transition-colors",
                 active
@@ -71,6 +72,7 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
       </nav>
       <Link
         href="/app/profil"
+        prefetch={true}
         className="border-t border-black/8 pt-5 flex items-center gap-3 hover:opacity-80 transition-opacity"
       >
         <div className="w-9 h-9 rounded-full bg-[#eee9df] text-[11px] font-medium flex items-center justify-center overflow-hidden shrink-0">
