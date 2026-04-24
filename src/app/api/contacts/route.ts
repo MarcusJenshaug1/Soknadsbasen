@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const contacts = await prisma.contact.findMany({
     where: { userId: session.userId },
@@ -28,38 +28,23 @@ export async function GET() {
   return NextResponse.json(contacts);
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json() as {
-    name: string;
-    title?: string;
-    company?: string;
-    linkedinUrl?: string;
-    email?: string;
-    phone?: string;
-    photoUrl?: string | null;
-    notes?: string;
-    lastContactedAt?: string | null;
-  };
-
-  if (!body.name?.trim()) {
-    return NextResponse.json({ error: "Navn er påkrevd" }, { status: 400 });
-  }
-
+  const body = await req.json();
   const contact = await prisma.contact.create({
     data: {
       userId: session.userId,
-      name: body.name.trim(),
-      title: body.title?.trim() || null,
-      company: body.company?.trim() || null,
-      linkedinUrl: body.linkedinUrl?.trim() || null,
-      email: body.email?.trim() || null,
-      phone: body.phone?.trim() || null,
-      photoUrl: body.photoUrl || null,
-      notes: body.notes?.trim() || null,
-      lastContactedAt: body.lastContactedAt ? new Date(body.lastContactedAt) : null,
+      name: body.name,
+      title: body.title,
+      company: body.company,
+      linkedinUrl: body.linkedinUrl,
+      email: body.email,
+      phone: body.phone,
+      photoUrl: body.photoUrl,
+      notes: body.notes,
+      lastContactedAt: body.lastContactedAt,
     },
     select: {
       id: true,
