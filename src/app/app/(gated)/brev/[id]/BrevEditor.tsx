@@ -48,6 +48,7 @@ export function BrevEditor({
   const [streamText, setStreamText] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [copied, setCopied] = useState(false);
   const timer = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced auto-save on any change after first user edit.
@@ -86,6 +87,44 @@ export function BrevEditor({
     }
   }
 
+  function htmlToPlain(html: string): string {
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    return div.innerText.trim();
+  }
+
+  function copyLetter() {
+    const lines: string[] = [];
+
+    const senderLine = [letter.senderEmail, letter.senderPhone, letter.senderLocation]
+      .filter(Boolean)
+      .join(" | ");
+    if (letter.senderName) lines.push(`Fra: ${letter.senderName}`);
+    if (senderLine) lines.push(senderLine);
+    lines.push("");
+
+    const recipientLine = [letter.recipientName, letter.recipientTitle]
+      .filter(Boolean)
+      .join(", ");
+    if (recipientLine) lines.push(`Til: ${recipientLine}`);
+    if (letter.companyAddress) lines.push(letter.companyAddress);
+    lines.push("");
+
+    if (letter.date) lines.push(letter.date, "");
+    if (letter.subject) lines.push(`Emne: ${letter.subject}`, "");
+    if (letter.greeting) lines.push(letter.greeting, "");
+
+    const bodyText = letter.body ? htmlToPlain(letter.body) : "";
+    if (bodyText) lines.push(bodyText, "");
+
+    if (letter.closing) lines.push(letter.closing);
+    if (letter.senderName) lines.push(letter.senderName);
+
+    navigator.clipboard.writeText(lines.join("\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   const savedLabel =
     status === "saving"
       ? "Lagrer …"
@@ -120,7 +159,15 @@ export function BrevEditor({
             For {application.companyName}
           </p>
         </div>
-        <span className="text-[11px] text-[#14110e]/45">{savedLabel}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-[#14110e]/45">{savedLabel}</span>
+          <button
+            onClick={copyLetter}
+            className="px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] transition-colors"
+          >
+            {copied ? "Kopiert!" : "Kopier brev"}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
