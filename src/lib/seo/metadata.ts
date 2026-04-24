@@ -89,7 +89,6 @@ export function rootMetadata(): Metadata {
       title: siteConfig.name,
       statusBarStyle: "black-translucent",
     },
-    manifest: "/manifest.webmanifest",
     ...buildMetadata({ path: "/" }),
   };
 }
