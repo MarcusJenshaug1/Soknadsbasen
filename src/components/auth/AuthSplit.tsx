@@ -10,10 +10,12 @@ import {
   PasswordStrength,
   passwordScore,
 } from "@/components/ui/PasswordStrength";
+import { OrgRegistrationForm } from "@/components/auth/OrgRegistrationForm";
 import { cn } from "@/lib/cn";
 import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 
 type Mode = "login" | "register";
+type RegisterType = "personal" | "org";
 
 const underline =
   "w-full bg-transparent border-b border-black/15 dark:border-white/15 focus:border-accent py-2.5 outline-none text-[15px]";
@@ -273,6 +275,7 @@ function OrgInquiryForm({
 function RegisterForm({ onDone }: { onDone: () => void }) {
   const router = useRouter();
   const register = useAuthStore((s) => s.register);
+  const [registerType, setRegisterType] = useState<RegisterType>("personal");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -306,7 +309,36 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div>
-      <SectionLabel className="mb-4">Ny her</SectionLabel>
+      <div className="mb-8 flex gap-3">
+        <button
+          type="button"
+          onClick={() => setRegisterType("personal" as const)}
+          className={`flex-1 py-2.5 px-4 rounded-full font-medium text-[13px] uppercase tracking-wider transition-colors ${
+            registerType === "personal"
+              ? "bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]"
+              : "bg-panel text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:bg-panel/80"
+          }`}
+        >
+          Privatperson
+        </button>
+        <button
+          type="button"
+          onClick={() => setRegisterType("org" as const)}
+          className={`flex-1 py-2.5 px-4 rounded-full font-medium text-[13px] uppercase tracking-wider transition-colors ${
+            registerType === "org"
+              ? "bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]"
+              : "bg-panel text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:bg-panel/80"
+          }`}
+        >
+          Organisasjon
+        </button>
+      </div>
+
+      {registerType === "org" ? (
+        <OrgRegistrationForm />
+      ) : (
+        <>
+          <SectionLabel className="mb-4">Ny her</SectionLabel>
       <h1 className="text-[36px] md:text-[40px] leading-[1] tracking-[-0.03em] font-medium mb-3">
         Opprett basen din.
       </h1>
@@ -389,6 +421,8 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
           </>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

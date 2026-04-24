@@ -30,17 +30,40 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        const userId = session.metadata?.userId;
-        const type = session.metadata?.type as "monthly" | "one_time" | undefined;
+        const type = session.metadata?.type as "monthly" | "one_time" | "org" | undefined;
         const customerId =
           typeof session.customer === "string"
             ? session.customer
             : session.customer?.id;
 
-        if (!userId || !type || !customerId) {
-          console.warn("[stripe/webhook] mangler metadata", { userId, type, customerId });
+        if (!type || !customerId) {
+          console.warn("[stripe/webhook] mangler metadata", { type, customerId });
           break;
         }
+
+        if (type === "org") {
+          const orgId = session.metadata?.orgId;
+          if (!orgId) break;
+          const subscriptionId =
+            typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription?.id;
+          if (!subscriptionId) break;
+
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          await prisma.organization.update({
+            where: { id: orgId },
+            data: {
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: subscriptionId,
+              status: sub.status,
+            },
+          });
+          break;
+        }
+
+        const userId = session.metadata?.userId;
+        if (!userId) break;
 
         if (type === "monthly") {
           const subscriptionId =
@@ -97,12 +120,15 @@ export async function POST(req: Request) {
       case "customer.subscription.updated": {
         const subscription = event.data.object;
         const periodEnd = getSubscriptionPeriodEnd(subscription);
+        // Update personal subscriptions
         await prisma.subscription.updateMany({
           where: { stripeSubscriptionId: subscription.id },
-          data: {
-            status: subscription.status,
-            currentPeriodEnd: periodEnd,
-          },
+          data: { status: subscription.status, currentPeriodEnd: periodEnd },
+        });
+        // Update org subscriptions
+        await prisma.organization.updateMany({
+          where: { stripeSubscriptionId: subscription.id },
+          data: { status: subscription.status },
         });
         break;
       }
@@ -110,6 +136,10 @@ export async function POST(req: Request) {
       case "customer.subscription.deleted": {
         const subscription = event.data.object;
         await prisma.subscription.updateMany({
+          where: { stripeSubscriptionId: subscription.id },
+          data: { status: "canceled" },
+        });
+        await prisma.organization.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: { status: "canceled" },
         });
@@ -121,6 +151,10 @@ export async function POST(req: Request) {
         const subscriptionId = extractSubscriptionId(invoice);
         if (!subscriptionId) break;
         await prisma.subscription.updateMany({
+          where: { stripeSubscriptionId: subscriptionId },
+          data: { status: "past_due" },
+        });
+        await prisma.organization.updateMany({
           where: { stripeSubscriptionId: subscriptionId },
           data: { status: "past_due" },
         });

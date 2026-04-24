@@ -411,6 +411,8 @@ model Organization {
   stripeSubscriptionId String?  @unique
   /// "active" | "trialing" | "past_due" | "canceled" | "incomplete"
   status               String   @default("incomplete")
+  /// 9-digit Norwegian organization number (organisasjonsnummer)
+  orgNumber            String?  @unique
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -462,6 +464,7 @@ model OrgInvite {
 model OrgInquiry {
   id           String   @id @default(uuid())
   orgName      String
+  orgNumber    String?  // 9-digit Norwegian org number
   contactName  String
   contactEmail String
   message      String?
