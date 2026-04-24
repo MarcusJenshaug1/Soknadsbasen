@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { SessionBanner } from "@/components/sessions/SessionBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +19,28 @@ function formatRelative(d: Date) {
   return d.toLocaleDateString("nb-NO", { day: "numeric", month: "short" });
 }
 
-export default async function SelskaperPage() {
-  const session = await getSession();
+export default async function SelskaperPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session?: string }>;
+}) {
+  const [session, sp, activeJobSession] = await Promise.all([
+    getSession(),
+    searchParams,
+    getActiveSession(),
+  ]);
   if (!session) redirect("/logg-inn");
 
+  const requestedSessionId = sp.session ?? undefined;
+  const isHistorical =
+    !!requestedSessionId && requestedSessionId !== activeJobSession?.id;
+  const scopedSessionId = requestedSessionId ?? activeJobSession?.id;
+
   const apps = await prisma.jobApplication.findMany({
-    where: { userId: session.userId },
+    where: {
+      userId: session.userId,
+      ...(scopedSessionId ? { sessionId: scopedSessionId } : {}),
+    },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -75,9 +93,16 @@ export default async function SelskaperPage() {
     (a, b) => b.latestUpdate.getTime() - a.latestUpdate.getTime(),
   );
 
+  const pipelineHref = `/app/pipeline${requestedSessionId ? `?session=${requestedSessionId}` : ""}`;
+
   if (companies.length === 0) {
     return (
       <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
+        {isHistorical && requestedSessionId && (
+          <div className="mb-6">
+            <SessionBanner sessionId={requestedSessionId} />
+          </div>
+        )}
         <SectionLabel className="mb-3">Selskaper</SectionLabel>
         <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-4">
           Ingen selskaper ennå.
@@ -87,7 +112,7 @@ export default async function SelskaperPage() {
           siste status per selskap.
         </p>
         <Link
-          href="/app/pipeline"
+          href={pipelineHref}
           className="inline-flex px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
         >
           Åpne pipeline
@@ -98,6 +123,11 @@ export default async function SelskaperPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
+      {isHistorical && requestedSessionId && (
+        <div className="mb-6">
+          <SessionBanner sessionId={requestedSessionId} />
+        </div>
+      )}
       <SectionLabel className="mb-3">Selskaper</SectionLabel>
       <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
         {companies.length} selskap{companies.length === 1 ? "" : "er"}

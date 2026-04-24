@@ -55,7 +55,8 @@ export const getAllSessions = cache(async (): Promise<SessionSummary[]> => {
   });
 });
 
-/** Hjelpefunksjon: auto-opprett sesjon med standard-navn for brukeren. */
+/** Hjelpefunksjon: auto-opprett sesjon med standard-navn for brukeren.
+ *  Tilordner også eksisterende søknader uten sesjon (migrering av eldre data). */
 export async function createDefaultSession(
   userId: string,
 ): Promise<{ id: string }> {
@@ -66,8 +67,15 @@ export async function createDefaultSession(
   ];
   const name = `Jobbsøk ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
-  return prisma.jobSearchSession.create({
+  const newSession = await prisma.jobSearchSession.create({
     data: { userId, name },
     select: { id: true },
   });
+
+  await prisma.jobApplication.updateMany({
+    where: { userId, sessionId: null },
+    data: { sessionId: newSession.id },
+  });
+
+  return newSession;
 }
