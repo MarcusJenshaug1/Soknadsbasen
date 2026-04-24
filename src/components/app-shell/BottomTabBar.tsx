@@ -61,6 +61,7 @@ const MORE_ITEMS = [
   { href: "/app/selskaper", label: "Selskaper", gated: true },
   { href: "/app/sesjoner", label: "Sesjoner", gated: true },
   { href: "/app/billing", label: "Abonnement", gated: false },
+  { href: "/om", label: "Om Marcus Jenshaug", gated: false },
 ];
 
 export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {

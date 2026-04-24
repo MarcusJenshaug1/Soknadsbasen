@@ -105,6 +105,20 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
           </div>
         </div>
       </Link>
+      <a
+        href="https://marcusjenshaug.no"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 flex items-center gap-2 text-[11px] text-[#14110e]/35 hover:text-[#14110e]/60 transition-colors"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://marcusjenshaug-web.vercel.app/_next/image?url=%2Fportrett.jpg&w=384&q=75"
+          alt=""
+          className="w-4 h-4 rounded-full object-cover object-top"
+        />
+        <span>laget av Marcus Jenshaug</span>
+      </a>
     </aside>
   );
 }

@@ -110,7 +110,19 @@ export default async function GuideHubPage({ searchParams }: Props) {
       <footer className="border-t border-black/10">
         <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-8 flex flex-wrap items-center justify-between text-[12px] text-[#14110e]/55 gap-4">
           <span>© 2026 Søknadsbasen</span>
+          <a
+            href="https://marcusjenshaug.no"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#14110e]"
+          >
+            laget av Marcus Jenshaug
+          </a>
           <span className="flex items-center gap-3">
+            <Link href="/om" className="hover:text-[#14110e]">
+              Om
+            </Link>
+            <span className="text-[#14110e]/25">·</span>
             <Link href="/personvern" className="hover:text-[#14110e]">
               Personvern
             </Link>
