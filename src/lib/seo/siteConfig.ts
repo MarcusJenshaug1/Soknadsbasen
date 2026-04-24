@@ -1,9 +1,16 @@
+// Bygg-ID for å tvinge cache-invalidering ved oppdatering: 2026-04-24-2
 const DEFAULT_SITE_URL = "https://søknadsbasen.no";
 
 function safeParseUrl(raw: string | undefined): URL {
-  if (!raw) return new URL(DEFAULT_SITE_URL);
+  const candidate = (raw ?? "").trim();
+  if (!candidate) return new URL(DEFAULT_SITE_URL);
   try {
-    return new URL(raw);
+    const u = new URL(candidate);
+    // Verifiser at hostname parses til gyldig punycode/unicode
+    if (!u.hostname || u.hostname.length === 0) {
+      return new URL(DEFAULT_SITE_URL);
+    }
+    return u;
   } catch {
     return new URL(DEFAULT_SITE_URL);
   }
