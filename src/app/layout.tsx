@@ -5,6 +5,7 @@ import { JsonLdScript } from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { rootMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/siteConfig";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
         <AuthProvider>{children}</AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
