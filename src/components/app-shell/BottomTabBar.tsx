@@ -119,6 +119,10 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
 
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-bg/95 backdrop-blur-md border-t border-black/8 dark:border-white/8 pb-[env(safe-area-inset-bottom)] px-2 pt-2 print:hidden"
+        style={{
+          paddingLeft: `max(0.5rem, env(safe-area-inset-left))`,
+          paddingRight: `max(0.5rem, env(safe-area-inset-right))`,
+        }}
         aria-label="Hovednavigasjon"
       >
         <ul className="grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
