@@ -37,7 +37,6 @@ export async function POST(req: Request) {
     const inquiry = await prisma.orgInquiry.create({
       data: {
         orgName: orgName.trim(),
-        orgNumber: cleanOrgNumber || null,
         contactName: contactName.trim(),
         contactEmail: cleanEmail,
         message: message?.trim() || null,
