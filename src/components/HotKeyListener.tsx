@@ -1,14 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { RoleSwitchDialog } from "./RoleSwitchDialog";
 import type { UserRoles } from "@/lib/auth";
 
 export function HotKeyListener() {
   const user = useAuthStore((state) => state.user);
-  const [roles, setRoles] = useState<UserRoles | null>(null);
+  const rolesCache = useRef<UserRoles | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  // Fetch roles once on mount
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch("/api/auth/user-roles");
+        if (response.ok) {
+          rolesCache.current = await response.json();
+        }
+      } catch (error) {
+        console.error("Failed to fetch user roles:", error);
+      }
+    };
+
+    fetchRoles();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -33,38 +51,32 @@ export function HotKeyListener() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [user]);
 
-  const handleAdminHotkey = async () => {
-    try {
-      const response = await fetch("/api/auth/user-roles");
-      if (!response.ok) return;
+  const handleAdminHotkey = () => {
+    if (!rolesCache.current) return;
 
-      const data: UserRoles = await response.json();
-      setRoles(data);
+    const data = rolesCache.current;
 
-      // If only internal admin, navigate directly
-      if (data.isInternalAdmin && data.orgMemberships.length === 0) {
-        window.location.href = "/admin";
-        return;
-      }
-
-      // If only org owner with 1 org, navigate directly
-      if (!data.isInternalAdmin && data.orgMemberships.length === 1) {
-        window.location.href = `/org/${data.orgMemberships[0].slug}`;
-        return;
-      }
-
-      // Otherwise show dialog
-      setShowDialog(true);
-    } catch (error) {
-      console.error("Failed to fetch user roles:", error);
+    // If only internal admin, navigate directly
+    if (data.isInternalAdmin && data.orgMemberships.length === 0) {
+      window.location.href = "/admin";
+      return;
     }
+
+    // If only org owner with 1 org, navigate directly
+    if (!data.isInternalAdmin && data.orgMemberships.length === 1) {
+      window.location.href = `/org/${data.orgMemberships[0].slug}`;
+      return;
+    }
+
+    // Otherwise show dialog
+    setShowDialog(true);
   };
 
-  if (!user || !roles) return null;
+  if (!user || !rolesCache.current) return null;
 
   return (
     <RoleSwitchDialog
-      roles={roles}
+      roles={rolesCache.current}
       isOpen={showDialog}
       onClose={() => setShowDialog(false)}
     />
