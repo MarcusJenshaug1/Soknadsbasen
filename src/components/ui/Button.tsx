@@ -22,12 +22,12 @@ const sizes: Record<Size, string> = {
 };
 
 const variants: Record<Variant, string> = {
-  primary: "bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]",
+  primary: "bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]",
   secondary:
-    "border border-black/15 text-[#14110e] hover:border-black/30 bg-transparent",
-  text: "text-[#D5592E] hover:text-[#14110e] px-0 py-0",
-  inverse: "bg-[#faf8f5] text-[#14110e] hover:bg-white",
-  danger: "bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]",
+    "border border-black/15 dark:border-white/15 text-ink hover:border-black/30 dark:hover:border-white/30 bg-transparent",
+  text: "text-accent hover:text-[#a94424] dark:hover:text-[#e07050] px-0 py-0",
+  inverse: "bg-bg text-ink hover:bg-surface",
+  danger: "bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]",
 };
 
 type ButtonProps = CommonProps &

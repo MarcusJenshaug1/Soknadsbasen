@@ -22,16 +22,16 @@ export function Input({
   const inputId = id ?? React.useId();
 
   const boxStyle =
-    "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#D5592E]";
+    "w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-accent";
   const underlineStyle =
-    "w-full bg-transparent border-b border-black/15 focus:border-[#D5592E] py-2.5 outline-none text-[15px]";
+    "w-full bg-transparent border-b border-black/15 dark:border-white/15 focus:border-accent py-2.5 outline-none text-[15px]";
 
   return (
     <div>
       {label && (
         <label
           htmlFor={inputId}
-          className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/55 block mb-2"
+          className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2"
         >
           {label}
         </label>
@@ -40,16 +40,16 @@ export function Input({
         id={inputId}
         className={cn(
           variant === "underline" ? underlineStyle : boxStyle,
-          error && "border-[#D5592E]",
+          error && "border-accent",
           className,
         )}
         {...rest}
       />
       {hint && !error && (
-        <p className="text-[11px] text-[#14110e]/50 mt-2">{hint}</p>
+        <p className="text-[11px] text-[#14110e]/50 dark:text-[#f0ece6]/50 mt-2">{hint}</p>
       )}
       {error && (
-        <p className="text-[11px] text-[#D5592E] mt-2">{error}</p>
+        <p className="text-[11px] text-accent mt-2">{error}</p>
       )}
     </div>
   );
@@ -67,7 +67,7 @@ export function Textarea({ label, hint, className, id, ...rest }: TextareaProps)
       {label && (
         <label
           htmlFor={inputId}
-          className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/55 block mb-2"
+          className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2"
         >
           {label}
         </label>
@@ -75,12 +75,12 @@ export function Textarea({ label, hint, className, id, ...rest }: TextareaProps)
       <textarea
         id={inputId}
         className={cn(
-          "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#D5592E] resize-none",
+          "w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-accent resize-none",
           className,
         )}
         {...rest}
       />
-      {hint && <p className="text-[11px] text-[#14110e]/50 mt-2">{hint}</p>}
+      {hint && <p className="text-[11px] text-[#14110e]/50 dark:text-[#f0ece6]/50 mt-2">{hint}</p>}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --bg: #faf8f5;
   --surface: #ffffff;
@@ -9,10 +11,32 @@
   --ink-subtle: rgba(20, 17, 14, 0.55);
   --ink-faint: rgba(20, 17, 14, 0.45);
   --accent: #D5592E;
+  --accent-hover: #a94424;
   --divider: rgba(0, 0, 0, 0.08);
   --border: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.15);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --hover-overlay: rgba(0, 0, 0, 0.05);
   --success: #16a34a;
+  --neutral: #94a3b8;
+}
+
+.dark {
+  --bg: #141210;
+  --surface: #1e1b18;
+  --panel: #2a2520;
+  --ink: #f0ece6;
+  --ink-muted: rgba(240, 236, 230, 0.65);
+  --ink-subtle: rgba(240, 236, 230, 0.55);
+  --ink-faint: rgba(240, 236, 230, 0.45);
+  --accent: #e06b3e;
+  --accent-hover: #c45830;
+  --divider: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+  --success: #22c55e;
   --neutral: #94a3b8;
 }
 

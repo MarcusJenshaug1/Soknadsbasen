@@ -37,11 +37,11 @@ const TASK_TYPE_LABELS: Record<string, string> = {
 };
 
 const TASK_TYPE_COLORS: Record<string, string> = {
-  followup: "bg-blue-100 text-blue-700",
-  document: "bg-purple-100 text-purple-700",
-  research: "bg-green-100 text-green-700",
-  interview: "bg-orange-100 text-orange-700",
-  other: "bg-neutral-100 text-neutral-700",
+  followup: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  document: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  research: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  interview: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  other: "bg-panel text-ink/80",
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -52,10 +52,10 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  low: "text-neutral-500",
-  medium: "text-blue-600",
-  high: "text-orange-600",
-  urgent: "text-red-600",
+  low: "text-ink/55",
+  medium: "text-blue-600 dark:text-blue-400",
+  high: "text-orange-600 dark:text-orange-400",
+  urgent: "text-red-600 dark:text-red-400",
 };
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -127,12 +127,12 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
 
   if (editing) {
     return (
-      <div className="bg-white border border-indigo-300 rounded-lg p-4 space-y-3 shadow-sm">
+      <div className="bg-surface border border-indigo-300 rounded-lg p-4 space-y-3 shadow-sm">
         <input
           type="text"
           value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
-          className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
           placeholder="Oppgavetittel..."
           autoFocus
         />
@@ -140,28 +140,28 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
         <textarea
           value={editDescription}
           onChange={(e) => setEditDescription(e.target.value)}
-          className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
           placeholder="Beskrivelse (valgfritt)..."
           rows={3}
         />
         
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">Forfallsdato</label>
+            <label className="block text-xs font-medium text-ink/70 mb-1">Forfallsdato</label>
             <input
               type="date"
               value={editDueAt}
               onChange={(e) => setEditDueAt(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          
+
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1">Type</label>
+            <label className="block text-xs font-medium text-ink/70 mb-1">Type</label>
             <select
               value={editType}
               onChange={(e) => setEditType(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="other">Annet</option>
               <option value="followup">Oppfølging</option>
@@ -173,7 +173,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-neutral-600 mb-1">Prioritet</label>
+          <label className="block text-xs font-medium text-ink/70 mb-1">Prioritet</label>
           <div className="flex gap-2">
             {(["low", "medium", "high", "urgent"] as const).map((p) => (
               <button
@@ -184,7 +184,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
                   flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all
                   ${editPriority === p
                     ? "bg-indigo-100 text-indigo-700 border-2 border-indigo-500"
-                    : "bg-neutral-50 text-neutral-600 border border-neutral-300 hover:bg-neutral-100"
+                    : "bg-panel text-ink/70 border border-black/12 dark:border-white/12 hover:bg-panel"
                   }
                 `}
               >
@@ -198,7 +198,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
           <button
             onClick={handleCancel}
             disabled={loading}
-            className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm text-ink/70 hover:bg-panel rounded-lg transition-colors disabled:opacity-50"
           >
             Avbryt
           </button>
@@ -219,8 +219,8 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
     <div
       className={`
         group flex items-start gap-3 p-3 rounded-lg border
-        ${isCompleted ? "bg-neutral-50 border-neutral-200" : "bg-white border-neutral-200"}
-        ${isOverdue && !isCompleted ? "border-red-300 bg-red-50" : ""}
+        ${isCompleted ? "bg-panel border-black/8 dark:border-white/8" : "bg-surface border-black/8 dark:border-white/8"}
+        ${isOverdue && !isCompleted ? "border-red-300 bg-red-50 dark:bg-red-900/20" : ""}
         hover:shadow-sm transition-all
       `}
     >
@@ -228,10 +228,10 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
       <button
         onClick={handleToggle}
         disabled={loading}
-        className="mt-0.5 shrink-0 text-neutral-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+        className="mt-0.5 shrink-0 text-ink/40 hover:text-indigo-600 transition-colors disabled:opacity-50"
       >
         {isCompleted ? (
-          <CheckCircle2 className="size-5 text-green-600" />
+          <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
         ) : (
           <Circle className="size-5" />
         )}
@@ -243,7 +243,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
           <p
             className={`
               flex-1 text-sm font-medium
-              ${isCompleted ? "line-through text-neutral-500" : "text-neutral-900"}
+              ${isCompleted ? "line-through text-ink/55" : "text-ink"}
             `}
           >
             {task.title}
@@ -261,7 +261,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
         {task.description && (
           <button
             onClick={() => setShowDescription(!showDescription)}
-            className="text-left mt-1 text-xs text-neutral-600 hover:text-neutral-800 transition-colors"
+            className="text-left mt-1 text-xs text-ink/70 hover:text-ink transition-colors"
           >
             {showDescription ? (
               <p className="whitespace-pre-wrap">{task.description}</p>
@@ -278,10 +278,10 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
             <div
               className={`
                 flex items-center gap-1 text-xs
-                ${isOverdue ? "text-red-700 font-medium" : ""}
-                ${isDueToday ? "text-orange-700 font-medium" : ""}
-                ${isDueTomorrow ? "text-blue-700" : ""}
-                ${!isOverdue && !isDueToday && !isDueTomorrow ? "text-neutral-500" : ""}
+                ${isOverdue ? "text-red-600 dark:text-red-400 font-medium" : ""}
+                ${isDueToday ? "text-orange-600 dark:text-orange-400 font-medium" : ""}
+                ${isDueTomorrow ? "text-blue-600 dark:text-blue-400" : ""}
+                ${!isOverdue && !isDueToday && !isDueTomorrow ? "text-ink/55" : ""}
               `}
             >
               {isOverdue && <AlertCircle className="size-3" />}
@@ -301,7 +301,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
             <span
               className={`
                 px-2 py-0.5 rounded-full text-xs font-medium
-                ${TASK_TYPE_COLORS[task.type] || "bg-neutral-100 text-neutral-700"}
+                ${TASK_TYPE_COLORS[task.type] || "bg-panel text-ink/80"}
               `}
             >
               {TASK_TYPE_LABELS[task.type] || task.type}
@@ -315,14 +315,14 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
         <button
           onClick={() => setEditing(true)}
           disabled={loading}
-          className="p-1.5 text-neutral-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+          className="p-1.5 text-ink/40 hover:text-indigo-600 transition-colors disabled:opacity-50"
         >
           <Edit2 className="size-4" />
         </button>
         <button
           onClick={handleDelete}
           disabled={loading}
-          className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors disabled:opacity-50"
+          className="p-1.5 text-ink/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
         >
           <Trash2 className="size-4" />
         </button>

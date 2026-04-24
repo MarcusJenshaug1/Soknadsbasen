@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { PIPELINE_COLUMNS, PIPELINE_STATUSES } from "@/lib/pipeline";
+import { GoalWidget } from "./GoalWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +137,9 @@ export default async function AppHomePage() {
 
   const activeJobSession = await getActiveSession();
 
-  const [allApps, userData] = await Promise.all([
+  const weekStart = new Date(Date.now() - 7 * 86_400_000);
+
+  const [allApps, userData, userProfile] = await Promise.all([
     prisma.jobApplication.findMany({
       where: {
         userId: session.userId,
@@ -162,8 +165,15 @@ export default async function AppHomePage() {
       where: { userId: session.userId },
       select: { resumeData: true },
     }),
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { weeklyGoal: true },
+    }),
   ]);
   const apps = allApps;
+  const thisWeekSent = apps.filter(
+    (a) => a.status !== "draft" && a.createdAt >= weekStart,
+  ).length;
 
   const TERMINAL = ["accepted", "declined", "rejected", "withdrawn"] as const;
   const active = apps.filter(
@@ -218,25 +228,31 @@ export default async function AppHomePage() {
             {greeting()}
             {firstName(session.name) ? `, ${firstName(session.name)}` : ""}.
           </h1>
-          <p className="text-[14px] md:text-[15px] text-[#14110e]/65 mt-3">
+          <p className="text-[14px] md:text-[15px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mt-3">
             {active.length} aktive søknader · {interviewCount} intervjuer
             {activeJobSession && (
-              <span className="ml-2 text-[13px] text-[#14110e]/40">
+              <span className="ml-2 text-[13px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
                 · {activeJobSession.name}
               </span>
             )}
           </p>
+          <div className="mt-3">
+            <GoalWidget
+              thisWeekSent={thisWeekSent}
+              initialGoal={userProfile?.weeklyGoal ?? null}
+            />
+          </div>
         </div>
         <div className="flex gap-2">
           <Link
             href="/app/pipeline"
-            className="px-5 py-2.5 rounded-full border border-black/15 text-[13px] hover:border-black/30 transition-colors"
+            className="px-5 py-2.5 rounded-full border border-black/15 dark:border-white/15 text-[13px] hover:border-black/30 dark:hover:border-white/30 transition-colors"
           >
             Ny søknad
           </Link>
           <Link
             href="/app/cv"
-            className="px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
+            className="px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
           >
             Rediger CV
           </Link>
@@ -251,23 +267,23 @@ export default async function AppHomePage() {
 
       {/* CV + stats row */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mt-4 md:mt-6">
-        <div className="md:col-span-5 bg-[#eee9df] rounded-3xl p-6 md:p-8">
+        <div className="md:col-span-5 bg-panel rounded-3xl p-6 md:p-8">
           <SectionLabel className="mb-3">CV-fullføring</SectionLabel>
           <div className="flex items-baseline gap-2 mb-5">
             <span className="text-[48px] md:text-[56px] leading-none tracking-[-0.03em] font-medium">
               {cvPercent}
             </span>
-            <span className="text-[22px] text-[#14110e]/50">%</span>
+            <span className="text-[22px] text-[#14110e]/50 dark:text-[#f0ece6]/50">%</span>
           </div>
-          <div className="h-1 bg-black/10 rounded-full overflow-hidden mb-5">
+          <div className="h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden mb-5">
             <div
-              className="h-full bg-[#14110e] rounded-full transition-[width]"
+              className="h-full bg-ink rounded-full transition-[width]"
               style={{ width: `${cvPercent}%` }}
             />
           </div>
           <Link
             href="/app/cv"
-            className="text-[13px] text-[#D5592E] hover:text-[#14110e]"
+            className="text-[13px] text-accent hover:text-ink"
           >
             Fullfør →
           </Link>
@@ -335,7 +351,7 @@ export default async function AppHomePage() {
           </div>
           <Link
             href="/app/pipeline"
-            className="text-[13px] text-[#D5592E] hover:text-[#14110e]"
+            className="text-[13px] text-accent hover:text-ink"
           >
             Se alle {apps.length} →
           </Link>
@@ -347,9 +363,9 @@ export default async function AppHomePage() {
             return (
               <div
                 key={col.status}
-                className="bg-white rounded-2xl border border-black/5 overflow-hidden"
+                className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 overflow-hidden"
               >
-                <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
                       className="w-1.5 h-1.5 rounded-full"
@@ -357,7 +373,7 @@ export default async function AppHomePage() {
                     />
                     <span className="text-[12px] font-medium">{col.label}</span>
                   </div>
-                  <span className="text-[11px] text-[#14110e]/45">
+                  <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
                     {items.length}
                   </span>
                 </div>
@@ -366,7 +382,7 @@ export default async function AppHomePage() {
                     <Link
                       key={a.id}
                       href={`/app/pipeline/${a.id}`}
-                      className="flex items-start gap-2.5 p-3 rounded-xl bg-[#faf8f5] hover:bg-[#eee9df] transition-colors"
+                      className="flex items-start gap-2.5 p-3 rounded-xl bg-bg hover:bg-panel transition-colors"
                     >
                       <CompanyLogo
                         website={a.companyWebsite}
@@ -378,14 +394,14 @@ export default async function AppHomePage() {
                         <div className="text-[13px] font-medium leading-tight truncate">
                           {a.title}
                         </div>
-                        <div className="text-[11px] text-[#14110e]/55 mt-0.5 truncate">
+                        <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 mt-0.5 truncate">
                           {a.companyName}
                         </div>
                       </div>
                     </Link>
                   ))}
                   {items.length === 0 && (
-                    <div className="text-[11px] text-[#14110e]/40 text-center py-6">
+                    <div className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40 text-center py-6">
                       Tom
                     </div>
                   )}
@@ -408,20 +424,20 @@ function MilestoneCard({
 }) {
   if (!milestone) {
     return (
-      <div className="bg-[#14110e] text-[#faf8f5] rounded-3xl p-8 md:p-10 relative overflow-hidden">
+      <div className="bg-ink text-bg rounded-3xl p-8 md:p-10 relative overflow-hidden">
         <SectionLabel tone="accent" className="mb-4">
           Neste milepæl
         </SectionLabel>
         <h2 className="text-[28px] md:text-[40px] leading-[1.05] tracking-[-0.02em] font-medium mb-4">
           Ingen kommende hendelser.
         </h2>
-        <p className="text-[14px] md:text-[15px] text-white/65 leading-relaxed mb-6 max-w-xl">
+        <p className="text-[14px] md:text-[15px] text-bg/65 leading-relaxed mb-6 max-w-xl">
           {firstName ? `${firstName}, l` : "L"}egg til en intervju-dato eller
           søknadsfrist på en av søknadene for å få en oversikt her.
         </p>
         <Link
           href="/app/pipeline"
-          className="inline-flex px-5 py-2.5 rounded-full bg-[#faf8f5] text-[#14110e] text-[13px] font-medium hover:bg-white"
+          className="inline-flex px-5 py-2.5 rounded-full bg-bg text-ink text-[13px] font-medium hover:bg-surface"
         >
           Åpne pipeline
         </Link>
@@ -441,7 +457,7 @@ function MilestoneCard({
   });
 
   return (
-    <div className="bg-[#14110e] text-[#faf8f5] rounded-3xl p-8 md:p-10 relative overflow-hidden">
+    <div className="bg-ink text-bg rounded-3xl p-8 md:p-10 relative overflow-hidden">
       <div className="flex items-start justify-between gap-6">
         <div className="max-w-xl">
           <SectionLabel tone="accent" className="mb-4">
@@ -450,19 +466,19 @@ function MilestoneCard({
           <h2 className="text-[28px] md:text-[40px] leading-[1.05] tracking-[-0.02em] font-medium mb-4">
             {kindText} hos {milestone.app.companyName}
           </h2>
-          <p className="text-[14px] md:text-[15px] text-white/65 leading-relaxed mb-6">
+          <p className="text-[14px] md:text-[15px] text-bg/65 leading-relaxed mb-6">
             {timeText}. {milestone.app.title}.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/app/pipeline"
-              className="px-5 py-2.5 rounded-full bg-[#faf8f5] text-[#14110e] text-[13px] font-medium hover:bg-white"
+              className="px-5 py-2.5 rounded-full bg-bg text-ink text-[13px] font-medium hover:bg-surface"
             >
               Åpne
             </Link>
             <Link
               href="/app/pipeline"
-              className="px-5 py-2.5 rounded-full border border-white/20 text-[13px] hover:border-white/40"
+              className="px-5 py-2.5 rounded-full border border-bg/20 text-[13px] hover:border-bg/40"
             >
               Flytt i kalender
             </Link>
@@ -472,7 +488,7 @@ function MilestoneCard({
           <div className="text-[56px] md:text-[80px] leading-none tracking-[-0.04em] font-medium">
             {days}
           </div>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-white/50 mt-1">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-bg/50 mt-1">
             {days === 1 ? "dag igjen" : "dager igjen"}
           </div>
         </div>
@@ -491,13 +507,13 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="bg-white rounded-3xl p-5 md:p-6 border border-black/5">
+    <div className="bg-surface rounded-3xl p-5 md:p-6 border border-black/5 dark:border-white/5">
       <div className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
         {value}
       </div>
-      <div className="text-[12px] text-[#14110e]/70 mt-3">{label}</div>
+      <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 mt-3">{label}</div>
       {sub && (
-        <div className="text-[11px] text-[#14110e]/45 mt-1">{sub}</div>
+        <div className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45 mt-1">{sub}</div>
       )}
     </div>
   );
@@ -519,13 +535,13 @@ function ResultCard({
         ? "#94a3b8"
         : "#d1d5db";
   return (
-    <div className="bg-white rounded-2xl p-4 md:p-5 border border-black/5">
+    <div className="bg-surface rounded-2xl p-4 md:p-5 border border-black/5 dark:border-white/5">
       <div className="flex items-center gap-2 mb-2">
         <span
           className="w-1.5 h-1.5 rounded-full"
           style={{ background: dot }}
         />
-        <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/60">
+        <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/60 dark:text-[#f0ece6]/60">
           {label}
         </span>
       </div>

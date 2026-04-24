@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   DragEndEvent,
@@ -114,6 +115,9 @@ export function PipelineView({
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const visibleColumns = showCompleted ? PIPELINE_COLUMNS : ACTIVE_COLUMNS;
   const notArchivedApps = apps.filter((a) => !a.archivedAt);
@@ -194,6 +198,51 @@ export function PipelineView({
     }
   }
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback((ids: string[]) => {
+    setSelected((prev) => {
+      const allSelected = ids.every((id) => prev.has(id));
+      if (allSelected) return new Set();
+      return new Set(ids);
+    });
+  }, []);
+
+  async function bulkAction(action: "archive" | "unarchive" | "delete" | "status", status?: string) {
+    if (selected.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/applications/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selected), action, status }),
+      });
+      if (!res.ok) throw new Error("Bulk-handlingen feilet");
+      if (action === "delete") {
+        setApps((prev) => prev.filter((a) => !selected.has(a.id)));
+      } else if (action === "archive") {
+        setApps((prev) => prev.map((a) => selected.has(a.id) ? { ...a, archivedAt: new Date().toISOString() } : a));
+      } else if (action === "unarchive") {
+        setApps((prev) => prev.map((a) => selected.has(a.id) ? { ...a, archivedAt: null } : a));
+      } else if (action === "status" && status) {
+        setApps((prev) => prev.map((a) => selected.has(a.id) ? { ...a, status, statusUpdatedAt: new Date().toISOString() } : a));
+      }
+      setSelected(new Set());
+      setConfirmDelete(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ukjent feil");
+      setTimeout(() => setError(null), 4000);
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   const isEmpty = apps.length === 0;
 
   if (isEmpty) {
@@ -217,14 +266,14 @@ export function PipelineView({
           <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
             Søknadene dine
           </h1>
-          <p className="text-[13px] text-[#14110e]/60 mt-2">
+          <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-2">
             {apps.length} totalt ·{" "}
             {apps.filter((a) => a.status === "interview").length} intervjuer
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex bg-[#eee9df] rounded-full p-1">
+          <div className="inline-flex bg-panel rounded-full p-1">
             {(["pipeline", "liste", "tidslinje"] as const).map((v) => (
               <button
                 key={v}
@@ -232,8 +281,8 @@ export function PipelineView({
                 className={cn(
                   "px-4 py-1.5 rounded-full text-[12px] transition-colors capitalize",
                   view === v
-                    ? "bg-[#faf8f5] text-[#14110e] font-medium"
-                    : "text-[#14110e]/60 hover:text-[#14110e]",
+                    ? "bg-bg text-ink font-medium"
+                    : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink",
                 )}
               >
                 {v === "pipeline" ? "Pipeline" : v === "liste" ? "Liste" : "Tidslinje"}
@@ -248,8 +297,8 @@ export function PipelineView({
               className={cn(
                 "px-4 py-1.5 rounded-full text-[12px] transition-colors border",
                 showCompleted
-                  ? "bg-[#14110e] text-[#faf8f5] border-transparent"
-                  : "bg-white text-[#14110e]/70 border-black/10 hover:border-black/25",
+                  ? "bg-ink text-bg border-transparent"
+                  : "bg-surface text-[#14110e]/70 dark:text-[#f0ece6]/70 border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25",
               )}
               aria-pressed={showCompleted}
             >
@@ -264,8 +313,8 @@ export function PipelineView({
               className={cn(
                 "px-4 py-1.5 rounded-full text-[12px] transition-colors border",
                 showArchived
-                  ? "bg-[#14110e] text-[#faf8f5] border-transparent"
-                  : "bg-white text-[#14110e]/70 border-black/10 hover:border-black/25",
+                  ? "bg-ink text-bg border-transparent"
+                  : "bg-surface text-[#14110e]/70 dark:text-[#f0ece6]/70 border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25",
               )}
               aria-pressed={showArchived}
             >
@@ -276,13 +325,13 @@ export function PipelineView({
           <label className="relative">
             <IconSearch
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#14110e]/45"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#14110e]/45 dark:text-[#f0ece6]/45"
             />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Søk…"
-              className="pl-8 pr-4 py-1.5 rounded-full bg-white border border-black/8 text-[12px] w-40 outline-none focus:border-[#D5592E]"
+              className="pl-8 pr-4 py-1.5 rounded-full bg-surface border border-black/8 dark:border-white/8 text-[12px] w-40 outline-none focus:border-accent"
             />
           </label>
 
@@ -290,7 +339,7 @@ export function PipelineView({
             <button
               type="button"
               onClick={() => setNewModalOpen(true)}
-              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors"
+              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
             >
               <IconPlus size={14} />
               Ny søknad
@@ -311,7 +360,13 @@ export function PipelineView({
       />
 
       {view === "liste" ? (
-        <ListView apps={filtered} />
+        <ListView
+          apps={filtered}
+          selected={selected}
+          onToggle={toggleSelect}
+          onToggleAll={toggleSelectAll}
+          readOnly={readOnly}
+        />
       ) : view === "tidslinje" ? (
         <TimelineView apps={filtered} />
       ) : (
@@ -359,6 +414,50 @@ export function PipelineView({
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && typeof window !== "undefined" &&
+        createPortal(
+          <BulkActionBar
+            count={selected.size}
+            loading={bulkLoading}
+            onArchive={() => bulkAction("archive")}
+            onUnarchive={() => bulkAction("unarchive")}
+            onStatus={(s) => bulkAction("status", s)}
+            onDelete={() => setConfirmDelete(true)}
+            onClear={() => setSelected(new Set())}
+          />,
+          document.body,
+        )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && typeof window !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-surface rounded-3xl p-6 max-w-sm w-full shadow-xl">
+              <h2 className="text-[18px] font-medium mb-2">Slett {selected.size} søknad{selected.size !== 1 ? "er" : ""}?</h2>
+              <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-6 leading-relaxed">
+                Dette kan ikke angres. All data, oppgaver og aktivitet slettes permanent.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => bulkAction("delete")}
+                  disabled={bulkLoading}
+                  className="flex-1 px-4 py-2.5 rounded-full bg-accent text-white text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
+                >
+                  {bulkLoading ? "Sletter …" : "Slett permanent"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="flex-1 px-4 py-2.5 rounded-full border border-black/15 dark:border-white/15 text-[13px] hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  Avbryt
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -393,11 +492,11 @@ function Column({
           <span className="text-[11px] uppercase tracking-[0.2em] font-medium">
             {label}
           </span>
-          <span className="text-[11px] text-[#14110e]/40">{items.length}</span>
+          <span className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">{items.length}</span>
         </div>
         <button
           type="button"
-          className="text-[#14110e]/40 hover:text-[#14110e] transition-colors"
+          className="text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-ink transition-colors"
           aria-label={`Legg til i ${label}`}
         >
           <IconPlus size={16} />
@@ -412,14 +511,14 @@ function Column({
           className={cn(
             "space-y-2 rounded-2xl transition-colors",
             variant === "desktop" && "flex-1 min-h-[140px] p-1",
-            isOver && "bg-[#eee9df]/60",
+            isOver && "bg-panel/60",
           )}
         >
           {items.map((a) => (
             <ApplicationCard key={a.id} app={a} />
           ))}
           {items.length === 0 && variant === "desktop" && (
-            <div className="rounded-2xl border border-dashed border-black/10 p-6 text-center text-[12px] text-[#14110e]/40">
+            <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 p-6 text-center text-[12px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
               Tom
             </div>
           )}
@@ -457,7 +556,7 @@ function ApplicationCard({
       {...(overlay ? {} : attributes)}
       {...(overlay ? {} : listeners)}
       className={cn(
-        "group bg-white rounded-2xl p-4 border border-black/5 cursor-grab active:cursor-grabbing hover:border-[#D5592E]/40 transition-colors",
+        "group bg-surface rounded-2xl p-4 border border-black/5 dark:border-white/5 cursor-grab active:cursor-grabbing hover:border-accent/40 transition-colors",
         overlay && "shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] rotate-[1deg]",
         isArchived && "opacity-60",
       )}
@@ -483,9 +582,9 @@ function ApplicationCard({
         <div className="text-[14px] font-medium leading-tight mb-1">
           {app.title}
         </div>
-        <div className="text-[11px] text-[#14110e]/55">{app.companyName}</div>
+        <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55">{app.companyName}</div>
       </Link>
-      <div className="mt-3 pt-3 border-t border-black/5 flex items-center justify-between text-[10px] text-[#14110e]/50">
+      <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
         <span>{next.text}</span>
         {next.days !== null && <span>{next.days}d</span>}
       </div>
@@ -515,25 +614,25 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         <h2 className="text-[28px] md:text-[32px] leading-[1.05] tracking-[-0.03em] font-medium mb-3">
           Basen er tom — ennå.
         </h2>
-        <p className="text-[14px] text-[#14110e]/65 mb-8 leading-relaxed">
+        <p className="text-[14px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mb-8 leading-relaxed">
           Den første søknaden er alltid tyngst. La oss legge til én sammen.
         </p>
         <div className="flex flex-col gap-2 w-full max-w-xs">
           <button
             onClick={onCreate}
-            className="px-5 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
+            className="px-5 py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
           >
             Opprett manuelt
           </button>
           <button
             onClick={onCreate}
-            className="px-5 py-3 rounded-full bg-white border border-black/10 text-[13px] hover:border-black/25 transition-colors"
+            className="px-5 py-3 rounded-full bg-surface border border-black/10 dark:border-white/10 text-[13px] hover:border-black/25 dark:hover:border-white/25 transition-colors"
           >
             Importer fra lenke
           </button>
           <button
             onClick={onCreate}
-            className="px-5 py-3 rounded-full text-[13px] text-[#14110e]/65 hover:text-[#14110e] transition-colors"
+            className="px-5 py-3 rounded-full text-[13px] text-[#14110e]/65 dark:text-[#f0ece6]/65 hover:text-ink transition-colors"
           >
             Lim inn stillingstekst
           </button>
@@ -552,54 +651,162 @@ function formatDate(d: Date | string | null | undefined): string {
   });
 }
 
-function ListView({ apps }: { apps: Application[] }) {
+function ListView({
+  apps,
+  selected,
+  onToggle,
+  onToggleAll,
+  readOnly,
+}: {
+  apps: Application[];
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: (ids: string[]) => void;
+  readOnly?: boolean;
+}) {
+  const allIds = apps.map((a) => a.id);
+  const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+
   if (!apps.length) {
     return (
-      <div className="rounded-3xl bg-[#eee9df] p-12 text-center text-[13px] text-[#14110e]/60">
+      <div className="rounded-3xl bg-panel p-12 text-center text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60">
         Ingen søknader matcher søket.
       </div>
     );
   }
   return (
-    <div className="rounded-3xl border border-black/8 bg-white overflow-hidden">
-      <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-[#14110e]/55 bg-[#eee9df]/40 border-b border-black/8">
-        <div className="col-span-4">Rolle · Selskap</div>
-        <div className="col-span-2">Status</div>
-        <div className="col-span-2">Frist</div>
-        <div className="col-span-2">Intervju</div>
-        <div className="col-span-2 text-right">Oppdatert</div>
+    <div className="rounded-3xl border border-black/8 dark:border-white/8 bg-surface overflow-hidden">
+      <div className="hidden md:grid gap-4 px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-[#14110e]/55 dark:text-[#f0ece6]/55 bg-panel/40 border-b border-black/8 dark:border-white/8"
+        style={{ gridTemplateColumns: readOnly ? "3fr 2fr 2fr 2fr 2fr" : "2rem 3fr 2fr 2fr 2fr 2fr" }}>
+        {!readOnly && (
+          <input
+            type="checkbox"
+            checked={allChecked}
+            onChange={() => onToggleAll(allIds)}
+            className="w-4 h-4 cursor-pointer accent-[#D5592E]"
+            aria-label="Velg alle"
+          />
+        )}
+        <div>Rolle · Selskap</div>
+        <div>Status</div>
+        <div>Frist</div>
+        <div>Intervju</div>
+        <div className="text-right">Oppdatert</div>
       </div>
-      <ul className="divide-y divide-black/5">
-        {apps.map((a) => (
-          <li key={a.id}>
-            <Link
-              href={`/app/pipeline/${a.id}`}
-              className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-5 py-4 hover:bg-[#eee9df]/30 transition-colors"
-            >
-              <div className="col-span-4 min-w-0">
-                <div className="text-[14px] font-medium leading-tight truncate">
-                  {a.title}
-                </div>
-                <div className="text-[12px] text-[#14110e]/55 truncate">
-                  {a.companyName}
-                </div>
+      <ul className="divide-y divide-black/5 dark:divide-white/5">
+        {apps.map((a) => {
+          const checked = selected.has(a.id);
+          return (
+            <li key={a.id} className={cn(checked && "bg-bg")}>
+              <div
+                className="grid grid-cols-1 gap-2 px-5 py-4 hover:bg-panel/30 transition-colors"
+                style={{ gridTemplateColumns: readOnly ? "1fr" : "2rem 1fr" }}
+              >
+                {!readOnly && (
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onToggle(a.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 cursor-pointer accent-[#D5592E] mt-1 md:mt-0 self-center"
+                    aria-label={`Velg ${a.title}`}
+                  />
+                )}
+                <Link
+                  href={`/app/pipeline/${a.id}`}
+                  className="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4"
+                >
+                  <div className="md:col-span-1 min-w-0">
+                    <div className="text-[14px] font-medium leading-tight truncate">{a.title}</div>
+                    <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 truncate">{a.companyName}</div>
+                  </div>
+                  <div className="flex md:block items-center gap-2">
+                    <StatusDot status={a.status as StatusKey} />
+                  </div>
+                  <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70">{formatDate(a.deadlineAt)}</div>
+                  <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70">{formatDate(a.interviewAt)}</div>
+                  <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 md:text-right">{formatDate(a.updatedAt)}</div>
+                </Link>
               </div>
-              <div className="col-span-2 flex md:block items-center gap-2">
-                <StatusDot status={a.status as StatusKey} />
-              </div>
-              <div className="col-span-2 text-[12px] text-[#14110e]/70">
-                {formatDate(a.deadlineAt)}
-              </div>
-              <div className="col-span-2 text-[12px] text-[#14110e]/70">
-                {formatDate(a.interviewAt)}
-              </div>
-              <div className="col-span-2 text-[12px] text-[#14110e]/55 md:text-right">
-                {formatDate(a.updatedAt)}
-              </div>
-            </Link>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
+    </div>
+  );
+}
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Kladd" },
+  { value: "applied", label: "Søkt" },
+  { value: "interview", label: "Intervju" },
+  { value: "offer", label: "Tilbud" },
+  { value: "accepted", label: "Takket ja" },
+  { value: "rejected", label: "Avslag" },
+  { value: "withdrawn", label: "Trukket" },
+];
+
+function BulkActionBar({
+  count,
+  loading,
+  onArchive,
+  onUnarchive,
+  onStatus,
+  onDelete,
+  onClear,
+}: {
+  count: number;
+  loading: boolean;
+  onArchive: () => void;
+  onUnarchive: () => void;
+  onStatus: (s: string) => void;
+  onDelete: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-ink text-bg rounded-2xl px-4 py-3 shadow-2xl flex-wrap justify-center">
+      <span className="text-[12px] font-medium whitespace-nowrap">{count} valgt</span>
+      <div className="w-px h-4 bg-bg/20 hidden sm:block" />
+      <select
+        onChange={(e) => { if (e.target.value) { onStatus(e.target.value); e.target.value = ""; } }}
+        defaultValue=""
+        disabled={loading}
+        className="bg-bg/10 text-bg text-[12px] rounded-xl px-3 py-1.5 border border-bg/15 focus:outline-none cursor-pointer disabled:opacity-50"
+      >
+        <option value="" disabled>Flytt til status…</option>
+        {STATUS_OPTIONS.map((s) => (
+          <option key={s.value} value={s.value} className="text-ink">{s.label}</option>
+        ))}
+      </select>
+      <button
+        onClick={onArchive}
+        disabled={loading}
+        className="px-3 py-1.5 rounded-xl bg-bg/10 hover:bg-bg/20 text-[12px] transition-colors disabled:opacity-50 whitespace-nowrap"
+      >
+        Arkiver
+      </button>
+      <button
+        onClick={onUnarchive}
+        disabled={loading}
+        className="px-3 py-1.5 rounded-xl bg-bg/10 hover:bg-bg/20 text-[12px] transition-colors disabled:opacity-50 whitespace-nowrap"
+      >
+        Gjenopprett
+      </button>
+      <button
+        onClick={onDelete}
+        disabled={loading}
+        className="px-3 py-1.5 rounded-xl bg-[#D5592E]/80 hover:bg-[#D5592E] text-[12px] transition-colors disabled:opacity-50 whitespace-nowrap"
+      >
+        Slett
+      </button>
+      <button
+        onClick={onClear}
+        disabled={loading}
+        className="px-3 py-1.5 rounded-xl bg-bg/10 hover:bg-bg/20 text-[12px] transition-colors disabled:opacity-50"
+        aria-label="Fjern valg"
+      >
+        ✕
+      </button>
     </div>
   );
 }
@@ -607,7 +814,7 @@ function ListView({ apps }: { apps: Application[] }) {
 function TimelineView({ apps }: { apps: Application[] }) {
   if (!apps.length) {
     return (
-      <div className="rounded-3xl bg-[#eee9df] p-12 text-center text-[13px] text-[#14110e]/60">
+      <div className="rounded-3xl bg-panel p-12 text-center text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60">
         Ingen søknader matcher søket.
       </div>
     );
@@ -695,7 +902,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
           <SectionLabel className="mb-4 capitalize">{month}</SectionLabel>
           <ul className="relative">
             <span
-              className="absolute left-[6px] top-2 bottom-2 w-px bg-black/10"
+              className="absolute left-[6px] top-2 bottom-2 w-px bg-black/10 dark:bg-white/10"
               aria-hidden
             />
             {items.map((e) => {
@@ -703,7 +910,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
               return (
                 <li key={e.id} className="relative pl-8 pb-5 last:pb-0">
                   <span
-                    className="absolute left-0 top-1.5 size-[13px] rounded-full border-2 border-[#faf8f5]"
+                    className="absolute left-0 top-1.5 size-[13px] rounded-full border-2 border-bg"
                     style={{ background: e.color }}
                     aria-hidden
                   />
@@ -713,20 +920,20 @@ function TimelineView({ apps }: { apps: Application[] }) {
                   >
                     <div className="flex items-baseline justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 mb-0.5">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-0.5">
                           {e.label}
                           {future && (
-                            <span className="ml-2 text-[#D5592E]">kommende</span>
+                            <span className="ml-2 text-accent">kommende</span>
                           )}
                         </div>
-                        <div className="text-[14px] font-medium group-hover:text-[#D5592E] transition-colors truncate">
+                        <div className="text-[14px] font-medium group-hover:text-accent transition-colors truncate">
                           {e.app.title}
                         </div>
-                        <div className="text-[12px] text-[#14110e]/55 truncate">
+                        <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 truncate">
                           {e.app.companyName}
                         </div>
                       </div>
-                      <span className="text-[11px] text-[#14110e]/60 shrink-0">
+                      <span className="text-[11px] text-[#14110e]/60 dark:text-[#f0ece6]/60 shrink-0">
                         {e.at.toLocaleDateString("nb-NO", {
                           day: "numeric",
                           month: "short",

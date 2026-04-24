@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Søknadsbasen</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="logo">Søknadsbasen</div>
+    </header>
+    <main id="main">
+      <div id="loading" class="state">
+        <div class="spinner"></div>
+      </div>
+      <div id="login-required" class="state hidden">
+        <p class="msg">Logg inn i Søknadsbasen for å bruke utvidelsen.</p>
+        <a href="https://soknadbasen.no/logg-inn" target="_blank" class="btn-primary">Logg inn</a>
+      </div>
+      <div id="form-view" class="state hidden">
+        <p class="section-label">Legg til stilling</p>
+        <div class="field">
+          <label for="title">Stillingstittel</label>
+          <input type="text" id="title" placeholder="Senior utvikler" />
+        </div>
+        <div class="field">
+          <label for="company">Selskap</label>
+          <input type="text" id="company" placeholder="Bekk" />
+        </div>
+        <div class="field">
+          <label for="source">Kilde</label>
+          <input type="text" id="source" placeholder="finn.no" readonly />
+        </div>
+        <p id="error" class="error hidden"></p>
+        <button id="add-btn" class="btn-primary">Legg til i pipeline</button>
+      </div>
+      <div id="success-view" class="state hidden">
+        <div class="success-icon">✓</div>
+        <p class="success-msg">Lagt til!</p>
+        <a href="https://soknadbasen.no/app/pipeline" target="_blank" class="btn-secondary">Åpne pipeline</a>
+      </div>
+    </main>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

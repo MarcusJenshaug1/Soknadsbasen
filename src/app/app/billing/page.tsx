@@ -38,30 +38,30 @@ export default async function BillingPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-semibold text-[#14110e]">Abonnement</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-ink">Abonnement</h1>
 
       {active && sub ? (
         <Card variant="surface" radius="3xl" className="p-6">
           <dl className="grid grid-cols-1 gap-4 text-[14px] sm:grid-cols-2">
             <div>
-              <dt className="text-[12px] text-black/55">Plan</dt>
-              <dd className="mt-1 text-[#14110e]">{TYPE_LABEL[sub.type] ?? sub.type}</dd>
+              <dt className="text-[12px] text-black/55 dark:text-white/55">Plan</dt>
+              <dd className="mt-1 text-ink">{TYPE_LABEL[sub.type] ?? sub.type}</dd>
             </div>
             <div>
-              <dt className="text-[12px] text-black/55">Status</dt>
-              <dd className="mt-1 text-[#14110e]">
+              <dt className="text-[12px] text-black/55 dark:text-white/55">Status</dt>
+              <dd className="mt-1 text-ink">
                 {STATUS_LABEL[sub.status] ?? sub.status}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-[12px] text-black/55">
+              <dt className="text-[12px] text-black/55 dark:text-white/55">
                 {sub.type === "monthly"
                   ? sub.status === "trialing"
                     ? "Prøveperiode slutter"
                     : "Fornyes"
                   : "Tilgang utløper"}
               </dt>
-              <dd className="mt-1 text-[#14110e]">
+              <dd className="mt-1 text-ink">
                 {format(sub.currentPeriodEnd, "d. MMMM yyyy", { locale: nb })}
               </dd>
             </div>
@@ -73,7 +73,7 @@ export default async function BillingPage() {
       ) : (
         <>
           <Card variant="surface" radius="3xl" className="p-6 mb-8">
-            <p className="text-[14px] text-[#14110e]">
+            <p className="text-[14px] text-ink">
               {sub
                 ? "Abonnementet ditt er ikke aktivt. Velg en plan under for å komme i gang igjen."
                 : "Du har ingen aktivt abonnement. Velg en plan under for å låse opp full tilgang."}

@@ -18,7 +18,7 @@ export function PasswordStrength({ score }: { score: 0 | 1 | 2 | 3 | 4 }) {
           key={i}
           className={cn(
             "h-0.5 flex-1 rounded-full transition-colors",
-            i < score ? "bg-[#D5592E]" : "bg-black/10",
+            i < score ? "bg-accent" : "bg-black/10 dark:bg-white/10",
           )}
         />
       ))}

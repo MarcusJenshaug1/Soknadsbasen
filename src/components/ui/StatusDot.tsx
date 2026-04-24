@@ -48,7 +48,7 @@ export function StatusDot({
         style={{ background: STATUS_COLOR[status] }}
       />
       {showLabel && (
-        <span className="text-[10px] uppercase tracking-[0.12em] text-[#14110e]/60">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-[#14110e]/60 dark:text-[#f0ece6]/60">
           {STATUS_LABEL[status]}
         </span>
       )}

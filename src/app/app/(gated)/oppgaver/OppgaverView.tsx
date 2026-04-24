@@ -120,13 +120,13 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
         </h1>
         <div className="text-center py-16">
           <div className="text-[18px] font-medium mb-2">Ingen oppgaver ennå.</div>
-          <p className="text-[13px] text-[#14110e]/60 max-w-sm mx-auto">
+          <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 max-w-sm mx-auto">
             Legg til oppgaver fra en søknad — forberedelse til intervju,
             oppfølgings-e-post, eller innhenting av referanser.
           </p>
           <Link
             href="/app/pipeline"
-            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
+            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
           >
             Åpne pipeline
           </Link>
@@ -143,10 +143,10 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
           <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
             Oppgaver og frister
           </h1>
-          <p className="text-[14px] text-[#14110e]/60 mt-2">
+          <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-2">
             {active} aktive
             {overdue > 0 && (
-              <span className="text-[#D5592E]"> · {overdue} forfalt</span>
+              <span className="text-accent"> · {overdue} forfalt</span>
             )}
           </p>
         </div>
@@ -164,11 +164,11 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
                   style={{ background: b.hue }}
                 />
                 <SectionLabel>{b.label}</SectionLabel>
-                <span className="text-[11px] text-[#14110e]/40">
+                <span className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
                   {items.length}
                 </span>
               </div>
-              <ul className="bg-white rounded-2xl border border-black/5 divide-y divide-black/5 overflow-hidden">
+              <ul className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
                 {items.map((t) => (
                   <TaskRow key={t.id} task={t} onToggle={toggle} onRemove={remove} />
                 ))}
@@ -205,8 +205,8 @@ function TaskRow({
         className={cn(
           "mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors",
           done
-            ? "border-[#14110e] bg-[#14110e] text-[#faf8f5]"
-            : "border-black/30 hover:border-[#14110e]",
+            ? "border-ink bg-ink text-bg"
+            : "border-black/30 hover:border-ink",
         )}
       >
         {done && <IconCheck size={10} />}
@@ -220,7 +220,7 @@ function TaskRow({
           <div
             className={cn(
               "text-[14px] font-medium leading-tight",
-              done && "line-through text-[#14110e]/40",
+              done && "line-through text-[#14110e]/40 dark:text-[#f0ece6]/40",
             )}
           >
             {task.title}
@@ -228,7 +228,7 @@ function TaskRow({
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             <Link
               href={`/app/pipeline/${task.application.id}`}
-              className="text-[11px] text-[#D5592E] hover:text-[#14110e] truncate"
+              className="text-[11px] text-accent hover:text-ink truncate"
               onClick={(e) => e.stopPropagation()}
             >
               {task.application.title} · {task.application.companyName}
@@ -247,14 +247,14 @@ function TaskRow({
               </span>
             )}
             {typeLabel && (
-              <span className="text-[10px] uppercase tracking-[0.12em] text-[#14110e]/55">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-[#14110e]/55 dark:text-[#f0ece6]/55">
                 {typeLabel}
               </span>
             )}
             <span
               className={cn(
                 "text-[11px]",
-                overdue ? "text-[#D5592E]" : "text-[#14110e]/50",
+                overdue ? "text-accent" : "text-[#14110e]/50 dark:text-[#f0ece6]/50",
               )}
             >
               {formatDue(task.dueAt)}
@@ -262,7 +262,7 @@ function TaskRow({
           </div>
         </button>
         {expanded && task.description && (
-          <div className="mt-2 text-[12px] text-[#14110e]/70 leading-[1.55] whitespace-pre-wrap">
+          <div className="mt-2 text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 leading-[1.55] whitespace-pre-wrap">
             {task.description}
           </div>
         )}
@@ -270,7 +270,7 @@ function TaskRow({
       <button
         type="button"
         onClick={() => onRemove(task)}
-        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#D5592E] transition-opacity"
+        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-accent transition-opacity"
         aria-label="Slett oppgave"
       >
         <IconClose size={14} />

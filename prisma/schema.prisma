@@ -16,14 +16,19 @@ model User {
   name         String?
   /// Supabase Storage path for the avatar (inside the `avatars` bucket).
   avatarUrl    String?
+  weeklyGoal   Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  resumes      Resume[]
-  userData     UserData?
-  companies    Company[]
-  applications JobApplication[]
-  subscription Subscription?
-  sessions     JobSearchSession[]
+  resumes           Resume[]
+  userData          UserData?
+  companies         Company[]
+  applications      JobApplication[]
+  subscription      Subscription?
+  sessions          JobSearchSession[]
+  pushSubscriptions PushSubscription[]
+  notifications     Notification[]
+  contacts          Contact[]
+  shareLinks        ShareLink[]
 }
 
 model Subscription {
@@ -147,6 +152,30 @@ model JobSearchSession {
   @@index([userId, status])
 }
 
+// ─── Network contacts ────────────────────────────────────
+
+/// A professional contact the user wants to keep track of.
+model Contact {
+  id              String    @id @default(uuid())
+  userId          String    @db.Uuid
+  name            String
+  title           String?
+  company         String?
+  linkedinUrl     String?
+  email           String?
+  phone           String?
+  photoUrl        String?
+  notes           String?
+  lastContactedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@index([userId])
+}
+
 // ─── Job application domain ────────────────────────────────
 
 /// A company the user has applied to or is tracking.
@@ -195,6 +224,8 @@ model JobApplication {
   archivedAt       DateTime?
   /// The job-search session this application belongs to. Null for pre-session data.
   sessionId        String?
+  /// Optional network contact who referred or helped with this application.
+  contactId        String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -202,10 +233,12 @@ model JobApplication {
   company        Company?              @relation(fields: [companyId], references: [id])
   session        JobSearchSession?     @relation(fields: [sessionId], references: [id])
   resumeSnapshot ResumeVersion?        @relation(fields: [resumeSnapshotId], references: [id])
-  tasks          Task[]
-  attachments    Attachment[]
-  activities     ApplicationActivity[]
-  coverLetter    CoverLetter?
+  tasks            Task[]
+  attachments      Attachment[]
+  activities       ApplicationActivity[]
+  coverLetter      CoverLetter?
+  interviewStages  InterviewStage[]
+  contact          Contact?              @relation(fields: [contactId], references: [id])
 }
 
 /// Checklist tasks tied to an application (follow-up, prep, documents …).
@@ -283,4 +316,75 @@ model CoverLetter {
   updatedAt      DateTime @updatedAt
 
   application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+// ─── Interview stages ────────────────────────────────────
+
+/// One interview round within a job application.
+model InterviewStage {
+  id            String    @id @default(uuid())
+  applicationId String
+  round         Int
+  /// "phone" | "technical" | "hr" | "final" | "other"
+  type          String    @default("other")
+  scheduledAt   DateTime?
+  /// "pending" | "passed" | "failed" | "cancelled"
+  outcome       String    @default("pending")
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+// ─── Share links ─────────────────────────────────────────
+
+/// Read-only token for sharing a pipeline view with a coach or mentor.
+model ShareLink {
+  id        String    @id @default(uuid())
+  userId    String    @db.Uuid
+  token     String    @unique @default(uuid())
+  label     String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+// ─── Web Push ────────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @db.Uuid
+  endpoint  String
+  auth      String
+  p256dh    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+}
+
+model Notification {
+  id     String    @id @default(uuid())
+  userId String    @db.Uuid
+  title  String
+  body   String
+  url    String?
+  readAt DateTime?
+  sentAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, sentAt])
 }

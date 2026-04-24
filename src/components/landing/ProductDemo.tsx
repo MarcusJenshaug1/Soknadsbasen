@@ -70,11 +70,11 @@ export default function ProductDemo() {
         ref={ref}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
-        className="bg-[#eee9df] rounded-[24px] md:rounded-[32px] p-5 md:p-10 relative overflow-hidden"
+        className="bg-panel rounded-[24px] md:rounded-[32px] p-5 md:p-10 relative overflow-hidden"
       >
         <div className="flex items-center justify-between mb-6 md:mb-8">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45 dark:text-[#f0ece6]/45">
               {step.track === "cv" ? "CV" : "Søknad"}
             </span>
             <div className="flex items-center gap-1.5" role="tablist" aria-label="Demo-steg">
@@ -91,14 +91,14 @@ export default function ProductDemo() {
                     onClick={() => setIndex(absoluteIdx)}
                     className={cn(
                       "h-1 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#D5592E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#eee9df]",
-                      active ? "w-8 bg-[#14110e]" : "w-4 bg-[#14110e]/20 hover:bg-[#14110e]/40",
+                      active ? "w-8 bg-ink" : "w-4 bg-[#14110e]/20 dark:bg-[#f0ece6]/20 hover:bg-[#14110e]/40 dark:hover:bg-[#f0ece6]/40",
                     )}
                   />
                 );
               })}
             </div>
           </div>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45 hidden md:block">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45 dark:text-[#f0ece6]/45 hidden md:block">
             Live demo
           </span>
         </div>
@@ -119,7 +119,7 @@ export default function ProductDemo() {
         </div>
 
         <div className="mt-6 md:mt-8 flex items-start gap-3 min-h-[44px]">
-          <step.icon className="w-4 h-4 mt-0.5 text-[#D5592E] shrink-0" />
+          <step.icon className="w-4 h-4 mt-0.5 text-accent shrink-0" />
           <AnimatePresence mode="wait">
             <motion.div
               key={`cap-${index}`}
@@ -128,10 +128,10 @@ export default function ProductDemo() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.35 }}
             >
-              <div className="text-[14px] md:text-[15px] font-medium text-[#14110e]">
+              <div className="text-[14px] md:text-[15px] font-medium text-ink">
                 {step.label}
               </div>
-              <div className="text-[12px] md:text-[13px] text-[#14110e]/60">
+              <div className="text-[12px] md:text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60">
                 {step.caption}
               </div>
             </motion.div>
@@ -164,7 +164,7 @@ function StepScene({ index }: { index: number }) {
 
 function SceneFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-full bg-white rounded-2xl border border-black/5 p-5 md:p-8 overflow-hidden">
+    <div className="h-full bg-surface rounded-2xl border border-black/5 dark:border-white/5 p-5 md:p-8 overflow-hidden">
       {children}
     </div>
   );
@@ -175,7 +175,7 @@ function CvTemplates() {
   const selected = 1;
   return (
     <SceneFrame>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 mb-5">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-5">
         Velg mal
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -186,8 +186,8 @@ function CvTemplates() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...TRANSITION, delay: 0.08 * i }}
             className={cn(
-              "relative aspect-[3/4] rounded-xl border bg-[#faf8f5] p-3 flex flex-col gap-1.5",
-              i === selected ? "border-[#D5592E] ring-2 ring-[#D5592E]/20" : "border-black/10",
+              "relative aspect-[3/4] rounded-xl border bg-bg p-3 flex flex-col gap-1.5",
+              i === selected ? "border-accent ring-2 ring-accent/20" : "border-black/10 dark:border-white/10",
             )}
           >
             <div className="h-1.5 w-12 rounded-full bg-[#14110e]/70" />
@@ -195,7 +195,7 @@ function CvTemplates() {
             <div className="h-0.5 w-full rounded-full bg-[#14110e]/10" />
             <div className="h-0.5 w-4/5 rounded-full bg-[#14110e]/10" />
             <div className="h-0.5 w-3/5 rounded-full bg-[#14110e]/10" />
-            <div className="mt-auto text-[10px] text-[#14110e]/55">{t}</div>
+            <div className="mt-auto text-[10px] text-[#14110e]/55 dark:text-[#f0ece6]/55">{t}</div>
           </motion.div>
         ))}
       </div>
@@ -225,28 +225,28 @@ function CvAiProfile() {
   }, []);
   return (
     <SceneFrame>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 mb-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-4">
         Profiltekst
       </div>
-      <div className="flex items-center gap-2 mb-4 bg-[#eee9df] rounded-full p-1 w-fit">
+      <div className="flex items-center gap-2 mb-4 bg-panel rounded-full p-1 w-fit">
         {tones.map((tone, i) => (
           <div
             key={tone}
             className={cn(
               "px-3 py-1 rounded-full text-[12px]",
-              i === selectedTone ? "bg-white text-[#14110e] font-medium" : "text-[#14110e]/60",
+              i === selectedTone ? "bg-surface text-ink font-medium" : "text-[#14110e]/60 dark:text-[#f0ece6]/60",
             )}
           >
             {tone}
           </div>
         ))}
-        <div className="ml-1 inline-flex items-center gap-1.5 bg-[#14110e] text-[#faf8f5] rounded-full px-3 py-1 text-[12px]">
+        <div className="ml-1 inline-flex items-center gap-1.5 bg-ink text-bg rounded-full px-3 py-1 text-[12px]">
           <Sparkles className="w-3 h-3" /> Generer
         </div>
       </div>
-      <div className="rounded-xl border border-black/10 bg-[#faf8f5] p-4 min-h-[140px] text-[13px] leading-[1.6] text-[#14110e]/85">
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-bg p-4 min-h-[140px] text-[13px] leading-[1.6] text-[#14110e]/85 dark:text-[#f0ece6]/85">
         {typed}
-        <span className="inline-block w-px h-[1em] align-middle bg-[#D5592E] ml-0.5 animate-pulse" />
+        <span className="inline-block w-px h-[1em] align-middle bg-accent ml-0.5 animate-pulse" />
       </div>
     </SceneFrame>
   );
@@ -257,10 +257,10 @@ function CvPreview() {
     <SceneFrame>
       <div className="grid grid-cols-5 gap-6 h-full">
         <div className="col-span-2 space-y-2">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 mb-3">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-3">
             Redigerer
           </div>
-          <div className="rounded-lg border border-black/10 bg-[#faf8f5] p-3">
+          <div className="rounded-lg border border-black/10 dark:border-white/10 bg-bg p-3">
             <div className="h-1.5 w-16 rounded-full bg-[#14110e]/70 mb-2" />
             <div className="space-y-1">
               <div className="h-1 w-full rounded-full bg-[#14110e]/15" />
@@ -268,7 +268,7 @@ function CvPreview() {
               <div className="h-1 w-2/3 rounded-full bg-[#14110e]/15" />
             </div>
           </div>
-          <div className="rounded-lg border border-black/10 bg-[#faf8f5] p-3">
+          <div className="rounded-lg border border-black/10 dark:border-white/10 bg-bg p-3">
             <div className="h-1.5 w-20 rounded-full bg-[#14110e]/70 mb-2" />
             <div className="space-y-1">
               <div className="h-1 w-3/4 rounded-full bg-[#14110e]/15" />
@@ -325,15 +325,15 @@ Vi ser etter en erfaren designer som kan lede discovery og levere helhetlige pro
   }, []);
   return (
     <SceneFrame>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 mb-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-4">
         Lim inn stillingsannonse
       </div>
-      <div className="rounded-xl border border-black/10 bg-[#faf8f5] p-4 min-h-[260px] text-[13px] leading-[1.65] text-[#14110e]/85 whitespace-pre-line">
+      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-bg p-4 min-h-[260px] text-[13px] leading-[1.65] text-[#14110e]/85 dark:text-[#f0ece6]/85 whitespace-pre-line">
         {typed}
-        <span className="inline-block w-px h-[1em] align-middle bg-[#D5592E] ml-0.5 animate-pulse" />
+        <span className="inline-block w-px h-[1em] align-middle bg-accent ml-0.5 animate-pulse" />
       </div>
       <div className="mt-4 flex items-center justify-end">
-        <div className="inline-flex items-center gap-1.5 bg-[#14110e] text-[#faf8f5] rounded-full px-4 py-2 text-[12px] font-medium">
+        <div className="inline-flex items-center gap-1.5 bg-ink text-bg rounded-full px-4 py-2 text-[12px] font-medium">
           <Wand2 className="w-3 h-3" /> Les stilling
         </div>
       </div>
@@ -350,7 +350,7 @@ function SoknadExtract() {
   ];
   return (
     <SceneFrame>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 mb-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-4">
         Hentet fra annonsen
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -360,12 +360,12 @@ function SoknadExtract() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...TRANSITION, delay: 0.15 + 0.18 * i }}
-            className="rounded-xl border border-black/10 bg-[#faf8f5] px-4 py-3"
+            className="rounded-xl border border-black/10 dark:border-white/10 bg-bg px-4 py-3"
           >
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#14110e]/50 mb-1">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-1">
               {f.label}
             </div>
-            <div className="text-[14px] text-[#14110e] font-medium">{f.value}</div>
+            <div className="text-[14px] text-ink font-medium">{f.value}</div>
           </motion.div>
         ))}
       </div>
@@ -373,9 +373,9 @@ function SoknadExtract() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ ...TRANSITION, delay: 1.0 }}
-        className="mt-5 flex items-center gap-2 text-[12px] text-[#14110e]/60"
+        className="mt-5 flex items-center gap-2 text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60"
       >
-        <Sparkles className="w-3.5 h-3.5 text-[#D5592E]" />
+        <Sparkles className="w-3.5 h-3.5 text-accent" />
         AI har fylt inn feltene. Du kan redigere før du lagrer.
       </motion.div>
     </SceneFrame>
@@ -391,18 +391,18 @@ function SoknadPipeline() {
   ];
   return (
     <SceneFrame>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 mb-4">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-4">
         Pipeline
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {cols.map((g) => (
-          <div key={g.h} className="bg-[#faf8f5] rounded-xl p-3 border border-black/5">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5">
+          <div key={g.h} className="bg-bg rounded-xl p-3 border border-black/5 dark:border-white/5">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: g.col }} />
                 <span className="text-[12px] font-medium">{g.h}</span>
               </div>
-              <span className="text-[11px] text-[#14110e]/40">{g.items}</span>
+              <span className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">{g.items}</span>
             </div>
             <div className="space-y-2">
               {Array.from({ length: g.items }).map((_, j) => {
@@ -416,7 +416,7 @@ function SoknadPipeline() {
                       ...TRANSITION,
                       delay: isIncoming ? 0.6 : 0.05 * j,
                     }}
-                    className="p-2.5 rounded-lg bg-white border border-black/5"
+                    className="p-2.5 rounded-lg bg-surface border border-black/5 dark:border-white/5"
                   >
                     <div className="h-1.5 w-16 rounded-full bg-[#14110e]/70 mb-1.5" />
                     <div className="h-1 w-10 rounded-full bg-[#14110e]/20" />
@@ -439,7 +439,7 @@ function ProductDemoStatic() {
       aria-label="Produktdemo"
       className="max-w-[1200px] mx-auto px-5 md:px-10 pb-20 md:pb-32"
     >
-      <div className="bg-[#eee9df] rounded-[24px] md:rounded-[32px] p-5 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
+      <div className="bg-panel rounded-[24px] md:rounded-[32px] p-5 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
         <StaticColumn title="CV" items={cv} />
         <StaticColumn title="Søknad" items={soknad} />
       </div>
@@ -450,23 +450,23 @@ function ProductDemoStatic() {
 function StaticColumn({ title, items }: { title: string; items: Step[] }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45 mb-4">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/45 dark:text-[#f0ece6]/45 mb-4">
         {title}
       </div>
       <ol className="space-y-3">
         {items.map((s, i) => (
           <li
             key={s.label}
-            className="bg-white rounded-xl border border-black/5 p-4 flex items-start gap-3"
+            className="bg-surface rounded-xl border border-black/5 dark:border-white/5 p-4 flex items-start gap-3"
           >
-            <div className="w-7 h-7 rounded-full bg-[#eee9df] flex items-center justify-center shrink-0">
-              <s.icon className="w-3.5 h-3.5 text-[#D5592E]" />
+            <div className="w-7 h-7 rounded-full bg-panel flex items-center justify-center shrink-0">
+              <s.icon className="w-3.5 h-3.5 text-accent" />
             </div>
             <div>
-              <div className="text-[13px] font-medium text-[#14110e]">
+              <div className="text-[13px] font-medium text-ink">
                 {i + 1}. {s.label}
               </div>
-              <div className="text-[12px] text-[#14110e]/60">{s.caption}</div>
+              <div className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60">{s.caption}</div>
             </div>
           </li>
         ))}

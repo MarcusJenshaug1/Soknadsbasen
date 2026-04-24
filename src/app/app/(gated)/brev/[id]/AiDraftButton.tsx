@@ -113,7 +113,7 @@ export function AiDraftButton({
 
   return (
     <div className="inline-flex items-center gap-2 flex-wrap">
-      <div className="inline-flex bg-[#eee9df] rounded-full p-1">
+      <div className="inline-flex bg-[#eee9df] dark:bg-panel rounded-full p-1">
         {TONES.map((t) => (
           <button
             key={t.id}
@@ -122,8 +122,8 @@ export function AiDraftButton({
             className={cn(
               "px-3 py-1 rounded-full text-[11px] transition-colors",
               tone === t.id
-                ? "bg-[#faf8f5] text-[#14110e] font-medium"
-                : "text-[#14110e]/60 hover:text-[#14110e]",
+                ? "bg-bg text-ink font-medium"
+                : "text-ink/60 hover:text-ink",
             )}
           >
             {t.label}
@@ -144,7 +144,7 @@ export function AiDraftButton({
           setOpen(false);
           setError(null);
         }}
-        className="text-[11px] text-[#14110e]/55 hover:text-[#14110e]"
+        className="text-[11px] text-ink/55 hover:text-ink"
       >
         Avbryt
       </button>

@@ -72,8 +72,45 @@ export default async function InnsiktPage({
   const period: Period = sp.period ?? "90d";
   const sessionId = sp.session ?? undefined;
 
-  // Hent sesjoner for filter-widgeten
-  const sessions = await getAllSessions();
+  const now = new Date();
+  const last7Start = new Date(now.getTime() - 7 * 86_400_000);
+  const prev7Start = new Date(now.getTime() - 14 * 86_400_000);
+
+  // Hent sesjoner for filter-widgeten + ukesdata parallelt
+  const [sessions, weekApps, prevWeekApps, weekTasks] = await Promise.all([
+    getAllSessions(),
+    prisma.jobApplication.findMany({
+      where: { userId: session.userId, archivedAt: null, createdAt: { gte: last7Start } },
+      select: { status: true, statusUpdatedAt: true, interviewAt: true },
+    }),
+    prisma.jobApplication.findMany({
+      where: { userId: session.userId, archivedAt: null, createdAt: { gte: prev7Start, lt: last7Start } },
+      select: { status: true },
+    }),
+    prisma.task.findMany({
+      where: {
+        completedAt: { gte: last7Start },
+        application: { userId: session.userId },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  const weekSent = weekApps.filter((a) => a.status !== "draft").length;
+  const prevSent = prevWeekApps.filter((a) => a.status !== "draft").length;
+  const weekInterviews = weekApps.filter(
+    (a) => a.interviewAt && new Date(a.interviewAt) >= last7Start,
+  ).length + weekApps.filter(
+    (a) => a.status === "interview" && a.statusUpdatedAt && new Date(a.statusUpdatedAt) >= last7Start,
+  ).length;
+  const weekResponses = weekApps.filter((a) =>
+    ["interview", "offer", "accepted", "rejected", "withdrawn"].includes(a.status) &&
+    a.statusUpdatedAt && new Date(a.statusUpdatedAt) >= last7Start,
+  ).length;
+  const prevResponses = prevWeekApps.filter((a) =>
+    ["interview", "offer", "accepted", "rejected", "withdrawn"].includes(a.status),
+  ).length;
+  const weekTasksDone = weekTasks.length;
 
   // Når sesjon er valgt, filtrer på sessionId; ellers bruk dato-cutoff
   const dateFilter = sessionId ? {} : { createdAt: { gte: periodCutoff(period) } };
@@ -197,13 +234,21 @@ export default async function InnsiktPage({
         <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-4">
           Ingen data for perioden ennå.
         </h1>
-        <p className="text-[14px] text-[#14110e]/60 max-w-md">
+        {weekSent > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 max-w-2xl">
+            <WeekStat label="Søknader sendt" value={weekSent} prev={prevSent} />
+            <WeekStat label="Intervjuer" value={weekInterviews} prev={null} />
+            <WeekStat label="Svar mottatt" value={weekResponses} prev={prevResponses} />
+            <WeekStat label="Oppgaver fullført" value={weekTasksDone} prev={null} />
+          </div>
+        )}
+        <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 max-w-md">
           Når du har noen søknader over litt tid, dukker mønstre og trender opp
           her.
         </p>
         <Link
           href="/app/pipeline"
-          className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
+          className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
         >
           Åpne pipeline
         </Link>
@@ -219,7 +264,7 @@ export default async function InnsiktPage({
           <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
             Mønstrene dine
           </h1>
-          <p className="text-[13px] text-[#14110e]/60 mt-2">
+          <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-2">
             Hva fungerer, hva fungerer ikke.
           </p>
         </div>
@@ -230,8 +275,16 @@ export default async function InnsiktPage({
         />
       </div>
 
+      {/* Siste 7 dager */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <WeekStat label="Søknader sendt" value={weekSent} prev={prevSent} />
+        <WeekStat label="Intervjuer" value={weekInterviews} prev={null} />
+        <WeekStat label="Svar mottatt" value={weekResponses} prev={prevResponses} />
+        <WeekStat label="Oppgaver fullført" value={weekTasksDone} prev={null} />
+      </div>
+
       {/* Hero */}
-      <div className="bg-[#14110e] text-[#faf8f5] rounded-3xl p-6 md:p-10 mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div className="bg-ink text-bg rounded-3xl p-6 md:p-10 mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div className="max-w-md">
           <SectionLabel tone="accent" className="mb-4">
             Svarprosent · 12 uker
@@ -246,7 +299,7 @@ export default async function InnsiktPage({
             {changePp !== 0 && (
               <div
                 className={
-                  changePp > 0 ? "text-[#D5592E] text-[16px]" : "text-white/50 text-[16px]"
+                  changePp > 0 ? "text-[#D5592E] text-[16px]" : "text-bg/50 text-[16px]"
                 }
               >
                 {changePp > 0 ? "+" : ""}
@@ -254,7 +307,7 @@ export default async function InnsiktPage({
               </div>
             )}
           </div>
-          <p className="text-[14px] text-white/65 leading-relaxed">
+          <p className="text-[14px] text-bg/65 leading-relaxed">
             {responded.length} av {sent.length} sendte søknader har fått svar i
             perioden.
           </p>
@@ -270,7 +323,7 @@ export default async function InnsiktPage({
               strokeLinejoin="round"
             />
           </svg>
-          <div className="flex justify-between text-[10px] text-white/50 mt-2 w-[340px] max-w-full">
+          <div className="flex justify-between text-[10px] text-bg/50 mt-2 w-[340px] max-w-full">
             <span>12 uker siden</span>
             <span>nå</span>
           </div>
@@ -279,7 +332,7 @@ export default async function InnsiktPage({
 
       {/* Svar-fordeling */}
       {responded.length > 0 && (
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-black/5 mb-4">
+        <div className="bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 mb-4">
           <SectionLabel className="mb-5">Hva slags svar</SectionLabel>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <BreakdownCell
@@ -313,10 +366,10 @@ export default async function InnsiktPage({
 
       {/* Source rate + Funnel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-black/5">
+        <div className="bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5">
           <SectionLabel className="mb-5">Svarrate per kilde</SectionLabel>
           {sources.length === 0 ? (
-            <p className="text-[13px] text-[#14110e]/50">
+            <p className="text-[13px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
               Ingen kilde-data ennå.
             </p>
           ) : (
@@ -326,7 +379,7 @@ export default async function InnsiktPage({
                   <div className="flex items-baseline justify-between text-[13px] mb-1.5">
                     <span>
                       {r.label}{" "}
-                      <span className="text-[#14110e]/45 text-[11px]">
+                      <span className="text-[#14110e]/45 dark:text-[#f0ece6]/45 text-[11px]">
                         ({r.sent})
                       </span>
                     </span>
@@ -334,9 +387,9 @@ export default async function InnsiktPage({
                       {r.pct}%
                     </span>
                   </div>
-                  <div className="h-1 bg-black/8 rounded-full overflow-hidden">
+                  <div className="h-1 bg-black/8 dark:bg-white/8 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#14110e] rounded-full"
+                      className="h-full bg-ink rounded-full"
                       style={{ width: `${r.pct}%` }}
                     />
                   </div>
@@ -346,7 +399,7 @@ export default async function InnsiktPage({
           )}
         </div>
 
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-black/5">
+        <div className="bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5">
           <SectionLabel className="mb-5">Trakten din</SectionLabel>
           <div className="space-y-2.5">
             {funnel.map((r, i) => {
@@ -354,10 +407,10 @@ export default async function InnsiktPage({
               const op = 1 - i * 0.15;
               return (
                 <div key={r.label} className="flex items-center gap-3">
-                  <div className="text-[12px] w-32 text-[#14110e]/75 shrink-0">
+                  <div className="text-[12px] w-32 text-[#14110e]/75 dark:text-[#f0ece6]/75 shrink-0">
                     {r.label}
                   </div>
-                  <div className="flex-1 bg-[#eee9df] h-7 rounded-full relative overflow-hidden">
+                  <div className="flex-1 bg-panel h-7 rounded-full relative overflow-hidden">
                     <div
                       className="absolute inset-y-0 left-0 rounded-full flex items-center justify-end px-3 text-[11px] font-medium text-[#faf8f5]"
                       style={{
@@ -377,39 +430,39 @@ export default async function InnsiktPage({
 
       {/* Latency + roles */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#eee9df] rounded-3xl p-6 md:p-8">
+        <div className="bg-panel rounded-3xl p-6 md:p-8">
           <SectionLabel className="mb-3">Tid til svar</SectionLabel>
           <div className="text-[40px] md:text-[48px] leading-none tracking-[-0.03em] font-medium">
             {medianLatency > 0 ? medianLatency : "—"}
           </div>
-          <div className="text-[12px] text-[#14110e]/60 mt-1.5">
+          <div className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-1.5">
             dager i median
           </div>
-          <p className="text-[12px] text-[#14110e]/70 mt-5 leading-relaxed">
+          <p className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 mt-5 leading-relaxed">
             Oppfølging etter 5 dager øker svarprosent med{" "}
-            <span className="text-[#D5592E] font-medium">2,1×</span> basert på
+            <span className="text-accent font-medium">2,1×</span> basert på
             bransjedata.
           </p>
         </div>
 
-        <div className="md:col-span-2 bg-white rounded-3xl p-6 md:p-8 border border-black/5">
+        <div className="md:col-span-2 bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5">
           <SectionLabel className="mb-5">Roller som gir svar</SectionLabel>
           <div className="space-y-1">
             {roles.length === 0 && (
-              <div className="text-[13px] text-[#14110e]/50">
+              <div className="text-[13px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
                 For få søknader til å rangere roller.
               </div>
             )}
             {roles.map((r, i) => (
               <div
                 key={r.role + i}
-                className="flex items-center gap-4 py-3 border-b border-black/5 last:border-0 text-[13px]"
+                className="flex items-center gap-4 py-3 border-b border-black/5 dark:border-white/5 last:border-0 text-[13px]"
               >
                 <span className="flex-1 font-medium truncate">{r.role}</span>
-                <span className="text-[#14110e]/55 w-20 text-right text-[12px]">
+                <span className="text-[#14110e]/55 dark:text-[#f0ece6]/55 w-20 text-right text-[12px]">
                   {r.sent} sendt
                 </span>
-                <span className="text-[#D5592E] font-medium w-20 text-right text-[12px]">
+                <span className="text-accent font-medium w-20 text-right text-[12px]">
                   {r.responded} svar
                 </span>
                 <span className="text-[18px] tracking-tight font-medium w-14 text-right">
@@ -424,6 +477,44 @@ export default async function InnsiktPage({
   );
 }
 
+function WeekStat({
+  label,
+  value,
+  prev,
+}: {
+  label: string;
+  value: number;
+  prev: number | null;
+}) {
+  const delta = prev !== null ? value - prev : null;
+  return (
+    <div className="bg-surface rounded-2xl p-4 border border-black/5 dark:border-white/5">
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-2">
+        {label}
+      </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-[28px] leading-none tracking-[-0.03em] font-medium">
+          {value}
+        </div>
+        {delta !== null && (
+          <div
+            className={`text-[12px] font-medium shrink-0 ${
+              delta > 0
+                ? "text-[#16a34a]"
+                : delta < 0
+                  ? "text-[#D5592E]"
+                  : "text-[#14110e]/35"
+            }`}
+          >
+            {delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "—"}
+          </div>
+        )}
+      </div>
+      <div className="text-[10px] text-[#14110e]/40 dark:text-[#f0ece6]/40 mt-1">siste 7 dager</div>
+    </div>
+  );
+}
+
 function BreakdownCell({
   label,
   value,
@@ -434,13 +525,13 @@ function BreakdownCell({
   color: string;
 }) {
   return (
-    <div className="rounded-2xl bg-[#eee9df]/50 p-4 border border-black/5">
+    <div className="rounded-2xl bg-panel/50 p-4 border border-black/5 dark:border-white/5">
       <div className="flex items-center gap-2 mb-2">
         <span
           className="w-1.5 h-1.5 rounded-full shrink-0"
           style={{ background: color }}
         />
-        <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/60">
+        <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/60 dark:text-[#f0ece6]/60">
           {label}
         </span>
       </div>

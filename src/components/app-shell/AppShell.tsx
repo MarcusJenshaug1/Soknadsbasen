@@ -10,7 +10,7 @@ export function AppShell({
   hasAccess: boolean;
 }) {
   return (
-    <div className="min-h-dvh bg-[#faf8f5] text-[#14110e] flex">
+    <div className="min-h-dvh bg-bg text-ink flex">
       <Sidebar hasAccess={hasAccess} />
       <main className="flex-1 min-w-0 pb-20 md:pb-0">
         {hasAccess && <MobileSessionBar />}

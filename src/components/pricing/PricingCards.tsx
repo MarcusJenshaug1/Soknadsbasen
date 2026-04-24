@@ -27,23 +27,23 @@ export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
       <div className="grid gap-6 md:grid-cols-2">
       <Card variant="surface" radius="3xl" className="p-8">
         <div className="mb-6">
-          <h3 className="text-[20px] font-semibold text-[#14110e]">Månedlig</h3>
+          <h3 className="text-[20px] font-semibold text-ink">Månedlig</h3>
           <p className="mt-1 text-[13px] text-black/55">
             Prøv gratis i 7 dager, deretter 79 kr/mnd
           </p>
           <div className="mt-4 flex items-baseline gap-1">
-            <span className="text-4xl font-semibold text-[#14110e]">79 kr</span>
-            <span className="text-[13px] text-black/55">/mnd</span>
+            <span className="text-4xl font-semibold text-ink">79 kr</span>
+            <span className="text-[13px] text-black/55 dark:text-white/55">/mnd</span>
           </div>
         </div>
         <ul className="mb-8 space-y-3">
-          <li className="flex items-start gap-2 text-[13px] font-medium text-[#D5592E]">
+          <li className="flex items-start gap-2 text-[13px] font-medium text-accent">
             <Check className="mt-0.5 h-4 w-4 shrink-0" />
             <span>7 dager gratis — kanseller før belastning</span>
           </li>
           {monthlyFeatures.map((f) => (
-            <li key={f} className="flex items-start gap-2 text-[13px] text-[#14110e]">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D5592E]" />
+            <li key={f} className="flex items-start gap-2 text-[13px] text-ink">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <span>{f}</span>
             </li>
           ))}
@@ -63,7 +63,7 @@ export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
         <ul className="mb-8 space-y-3">
           {oneTimeFeatures.map((f) => (
             <li key={f} className="flex items-start gap-2 text-[13px]">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D5592E]" />
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <span>{f}</span>
             </li>
           ))}
@@ -71,13 +71,13 @@ export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
         {oneTimeCta}
       </Card>
       </div>
-      <p className="mt-6 text-center text-[11px] text-[#14110e]/55">
+      <p className="mt-6 text-center text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
         Ved å starte bekrefter du at{" "}
-        <Link href="/vilkar" className="underline underline-offset-2 hover:text-[#14110e]">
+        <Link href="/vilkar" className="underline underline-offset-2 hover:text-ink">
           vilkårene
         </Link>{" "}
         og{" "}
-        <Link href="/personvern" className="underline underline-offset-2 hover:text-[#14110e]">
+        <Link href="/personvern" className="underline underline-offset-2 hover:text-ink">
           personvernerklæringen
         </Link>{" "}
         gjelder. Du samtykker til at leveringen starter umiddelbart og at

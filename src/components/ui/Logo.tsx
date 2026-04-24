@@ -21,7 +21,7 @@ export function Logo({
 
   const leafFill = tone === "bg" ? "#faf8f5" : "#D5592E";
   const foldFill = tone === "bg" ? "rgba(20,17,14,0.25)" : "#A94424";
-  const textColor = tone === "bg" ? "text-[#faf8f5]" : "text-[#14110e]";
+  const textColor = tone === "bg" ? "text-bg" : "text-ink";
 
   return (
     <Link

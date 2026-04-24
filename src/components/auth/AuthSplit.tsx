@@ -15,11 +15,11 @@ import { cn } from "@/lib/cn";
 type Mode = "login" | "register";
 
 const underline =
-  "w-full bg-transparent border-b border-black/15 focus:border-[#D5592E] py-2.5 outline-none text-[15px]";
+  "w-full bg-transparent border-b border-black/15 dark:border-white/15 focus:border-accent py-2.5 outline-none text-[15px]";
 const primary =
-  "w-full py-3.5 mt-4 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50";
+  "w-full py-3.5 mt-4 rounded-full bg-accent text-bg text-[14px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors disabled:opacity-50";
 const label =
-  "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-2";
+  "text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2";
 
 /**
  * Single-column auth screen with a toggle between login and register.
@@ -29,7 +29,7 @@ export function AuthSplit({ focus }: { focus: Mode }) {
   const [mode, setMode] = useState<Mode>(focus);
 
   return (
-    <div className="min-h-dvh bg-[#faf8f5] text-[#14110e] flex flex-col">
+    <div className="min-h-dvh bg-bg text-ink flex flex-col">
       <header className="max-w-[560px] mx-auto w-full px-6 md:px-10 pt-6 md:pt-10 flex items-center justify-between">
         <Logo href="/" />
         {mode === "register" && (
@@ -50,13 +50,13 @@ export function AuthSplit({ focus }: { focus: Mode }) {
         </div>
       </main>
 
-      <footer className="max-w-[560px] mx-auto w-full px-6 md:px-10 pb-6 md:pb-8 text-center text-[11px] text-[#14110e]/45">
+      <footer className="max-w-[560px] mx-auto w-full px-6 md:px-10 pb-6 md:pb-8 text-center text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
         {mode === "login" ? (
           <>
             Ny her?{" "}
             <button
               onClick={() => setMode("register")}
-              className="text-[#D5592E] hover:text-[#14110e] underline-offset-2 hover:underline"
+              className="text-accent hover:text-ink underline-offset-2 hover:underline"
             >
               Opprett konto
             </button>
@@ -66,7 +66,7 @@ export function AuthSplit({ focus }: { focus: Mode }) {
             Har du allerede konto?{" "}
             <button
               onClick={() => setMode("login")}
-              className="text-[#D5592E] hover:text-[#14110e] underline-offset-2 hover:underline"
+              className="text-accent hover:text-ink underline-offset-2 hover:underline"
             >
               Logg inn
             </button>
@@ -88,7 +88,7 @@ function Toggle({
     <div
       role="tablist"
       aria-label="Logg inn eller registrer"
-      className="inline-flex bg-[#eee9df] rounded-full p-1 w-full"
+      className="inline-flex bg-panel rounded-full p-1 w-full"
     >
       {(["login", "register"] as const).map((m) => (
         <button
@@ -99,8 +99,8 @@ function Toggle({
           className={cn(
             "flex-1 py-2 rounded-full text-[12px] uppercase tracking-[0.12em] transition-colors",
             mode === m
-              ? "bg-[#faf8f5] text-[#14110e] font-medium"
-              : "text-[#14110e]/60 hover:text-[#14110e]",
+              ? "bg-bg text-ink font-medium"
+              : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink",
           )}
         >
           {m === "login" ? "Logg inn" : "Registrer"}
@@ -139,7 +139,7 @@ function LoginForm() {
       <h1 className="text-[36px] md:text-[40px] leading-[1] tracking-[-0.03em] font-medium mb-3">
         Velkommen tilbake.
       </h1>
-      <p className="text-[14px] text-[#14110e]/65 mb-8">
+      <p className="text-[14px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mb-8">
         Fortsett der du slapp.
       </p>
       <form onSubmit={onSubmit} className="space-y-5">
@@ -165,14 +165,14 @@ function LoginForm() {
             className={underline}
           />
         </div>
-        {error && <p className="text-[12px] text-[#D5592E]">{error}</p>}
+        {error && <p className="text-[12px] text-accent">{error}</p>}
         <button type="submit" disabled={submitting} className={primary}>
           {submitting ? "Logger inn…" : "Logg inn"}
         </button>
         <div className="text-right">
           <Link
             href="/glemt-passord"
-            className="text-[12px] text-[#14110e]/60 hover:text-[#D5592E]"
+            className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-accent"
           >
             Glemt passord?
           </Link>
@@ -221,7 +221,7 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
       <h1 className="text-[36px] md:text-[40px] leading-[1] tracking-[-0.03em] font-medium mb-3">
         Opprett basen din.
       </h1>
-      <p className="text-[14px] text-[#14110e]/65 mb-8">
+      <p className="text-[14px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mb-8">
         Tre felt. Så er du i gang med 7 dager gratis.
       </p>
       <form onSubmit={onSubmit} className="space-y-5">
@@ -261,11 +261,11 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
           />
           <PasswordStrength score={score} />
         </div>
-        {error && <p className="text-[12px] text-[#D5592E]">{error}</p>}
+        {error && <p className="text-[12px] text-accent">{error}</p>}
         <button type="submit" disabled={submitting} className={primary}>
           {submitting ? "Oppretter…" : "Opprett konto"}
         </button>
-        <p className="text-[11px] text-[#14110e]/55 leading-relaxed pt-1">
+        <p className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 leading-relaxed pt-1">
           Ved registrering godtar du våre vilkår og personvernerklæring.
         </p>
       </form>

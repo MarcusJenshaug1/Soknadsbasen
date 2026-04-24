@@ -26,7 +26,7 @@ export function BillingPortalButton() {
       <Button onClick={onClick} disabled={loading} size="md">
         {loading ? "Åpner portal…" : "Administrer abonnement"}
       </Button>
-      {error && <p className="text-[12px] text-[#D5592E]">{error}</p>}
+      {error && <p className="text-[12px] text-accent">{error}</p>}
     </div>
   );
 }

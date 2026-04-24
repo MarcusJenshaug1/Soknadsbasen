@@ -35,8 +35,8 @@ const EMPTY: Draft = {
 const SOURCES = ["LinkedIn", "FINN.no", "Webcruiter", "Direkte kontakt", "Referanse", "Annet"];
 
 const INPUT =
-  "w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
-const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-1.5";
+  "w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-accent";
+const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-1.5";
 
 export function NewApplicationModal({
   open,
@@ -183,8 +183,8 @@ export function NewApplicationModal({
         className="absolute inset-0 bg-[#14110e]/50 backdrop-blur-sm"
         onClick={close}
       />
-      <div className="relative bg-[#faf8f5] rounded-3xl w-full max-w-[680px] max-h-[88vh] overflow-hidden flex flex-col border border-black/8">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8">
+      <div className="relative bg-bg rounded-3xl w-full max-w-[680px] max-h-[88vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
           <div>
             <SectionLabel>Ny søknad</SectionLabel>
             <h2 className="text-[20px] font-medium tracking-tight mt-1">
@@ -193,15 +193,15 @@ export function NewApplicationModal({
           </div>
           <button
             onClick={close}
-            className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#14110e]/60"
+            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-[#14110e]/60 dark:text-[#f0ece6]/60"
             aria-label="Lukk"
           >
             <IconClose size={18} />
           </button>
         </header>
 
-        <div className="px-6 pt-4 pb-2 border-b border-black/8">
-          <div className="inline-flex bg-[#eee9df] rounded-full p-1 gap-1">
+        <div className="px-6 pt-4 pb-2 border-b border-black/8 dark:border-white/8">
+          <div className="inline-flex bg-panel rounded-full p-1 gap-1">
             {(["manual", "url", "paste"] as const).map((m) => (
               <button
                 key={m}
@@ -212,8 +212,8 @@ export function NewApplicationModal({
                 className={cn(
                   "px-4 py-1.5 rounded-full text-[12px] transition-colors",
                   mode === m
-                    ? "bg-[#faf8f5] text-[#14110e] font-medium"
-                    : "text-[#14110e]/60 hover:text-[#14110e]",
+                    ? "bg-bg text-ink font-medium"
+                    : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink",
                 )}
               >
                 {m === "manual" ? "Manuelt" : m === "url" ? "Fra lenke" : "Lim inn tekst"}
@@ -251,17 +251,17 @@ export function NewApplicationModal({
         </div>
 
         {mode === "manual" && (
-          <footer className="px-6 py-4 border-t border-black/8 flex items-center justify-end gap-2 bg-[#eee9df]/40">
+          <footer className="px-6 py-4 border-t border-black/8 dark:border-white/8 flex items-center justify-end gap-2 bg-panel/40">
             <button
               onClick={close}
-              className="px-4 py-2 rounded-full text-[12px] border border-black/15 hover:border-black/30"
+              className="px-4 py-2 rounded-full text-[12px] border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30"
             >
               Avbryt
             </button>
             <button
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
             >
               <IconPlus size={14} />
               {saving ? "Lagrer …" : "Opprett søknad"}
@@ -286,7 +286,7 @@ function UrlStep({
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-[13px] text-[#14110e]/65 leading-relaxed">
+      <p className="text-[13px] text-[#14110e]/65 dark:text-[#f0ece6]/65 leading-relaxed">
         Lim inn lenken til stillingsannonsen (FINN.no, Webcruiter, NAV, selskapets
         egen side). AI henter tittel, selskap, beskrivelse og frist. Tips: LinkedIn
         krever ofte innlogging — bruk &quot;Lim inn tekst&quot; i stedet.
@@ -304,7 +304,7 @@ function UrlStep({
       <button
         onClick={onExtract}
         disabled={extracting || !url.trim()}
-        className="w-full py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] disabled:opacity-50"
+        className="w-full py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
       >
         {extracting ? "Henter og tolker …" : "Hent fra lenke"}
       </button>
@@ -325,7 +325,7 @@ function PasteStep({
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-[13px] text-[#14110e]/65 leading-relaxed">
+      <p className="text-[13px] text-[#14110e]/65 dark:text-[#f0ece6]/65 leading-relaxed">
         Kopier hele stillingsteksten fra annonsen og lim inn her. AI trekker ut
         tittel, selskap, beskrivelse osv.
       </p>
@@ -342,7 +342,7 @@ function PasteStep({
       <button
         onClick={onExtract}
         disabled={extracting || !text.trim()}
-        className="w-full py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] disabled:opacity-50"
+        className="w-full py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
       >
         {extracting ? "Tolker …" : "Tolk teksten"}
       </button>

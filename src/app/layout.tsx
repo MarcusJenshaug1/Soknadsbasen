@@ -1,10 +1,11 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
-import { rootMetadata } from "@/lib/seo/metadata";
+import { rootMetadata, rootViewport } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/siteConfig";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -21,6 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = rootMetadata();
+export const viewport = rootViewport();
 
 export default function RootLayout({
   children,
@@ -28,15 +30,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang={siteConfig.language}>
+    <html lang={siteConfig.language} suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
-        <AuthProvider>{children}</AuthProvider>
-        <ServiceWorkerRegistration />
-        <Analytics />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
+          <AuthProvider>{children}</AuthProvider>
+          <ServiceWorkerRegistration />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

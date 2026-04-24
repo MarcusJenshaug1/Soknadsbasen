@@ -6,6 +6,7 @@ import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
+import { NotificationBell } from "./NotificationBell";
 
 type NavItem = { href: string; label: string; gated: boolean };
 
@@ -16,9 +17,9 @@ const NAV: readonly NavItem[] = [
   { href: "/app/brev", label: "Søknadsbrev", gated: true },
   { href: "/app/oppgaver", label: "Oppgaver", gated: true },
   { href: "/app/selskaper", label: "Selskaper", gated: true },
+  { href: "/app/nettverk", label: "Nettverk", gated: true },
   { href: "/app/innsikt", label: "Innsikt", gated: true },
   { href: "/app/sesjoner", label: "Sesjoner", gated: true },
-  { href: "/app/profil", label: "Profil", gated: false },
   { href: "/app/billing", label: "Abonnement", gated: false },
 ] as const;
 
@@ -45,7 +46,7 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
   const nav = NAV.filter((n) => hasAccess || !n.gated);
 
   return (
-    <aside className="hidden md:flex w-[240px] shrink-0 border-r border-black/8 flex-col p-6 bg-[#faf8f5] h-dvh sticky top-0 print:hidden">
+    <aside className="hidden md:flex w-[240px] shrink-0 border-r border-black/8 dark:border-white/8 flex-col p-6 bg-bg h-dvh sticky top-0 print:hidden">
       <div className="mb-12">
         <Logo href="/app" />
       </div>
@@ -64,8 +65,8 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
               className={cn(
                 "block px-3 py-2 rounded-full transition-colors",
                 active
-                  ? "bg-[#14110e] text-[#faf8f5]"
-                  : "text-[#14110e]/70 hover:bg-black/5 hover:text-[#14110e]",
+                  ? "bg-ink text-bg dark:bg-white/12 dark:text-ink"
+                  : "text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-ink",
               )}
             >
               {n.label}
@@ -74,7 +75,8 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
         })}
         </div>
         {hasAccess && (
-          <div className="mt-4 pt-4 border-t border-black/8">
+          <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-2">
+            <NotificationBell />
             <SessionSwitcher />
           </div>
         )}
@@ -82,9 +84,9 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
       <Link
         href="/app/profil"
         prefetch={true}
-        className="border-t border-black/8 pt-5 flex items-center gap-3 hover:opacity-80 transition-opacity"
+        className="border-t border-black/8 dark:border-white/8 pt-5 flex items-center gap-3 hover:opacity-80 transition-opacity"
       >
-        <div className="w-9 h-9 rounded-full bg-[#eee9df] text-[11px] font-medium flex items-center justify-center overflow-hidden shrink-0">
+        <div className="w-9 h-9 rounded-full bg-panel text-[11px] font-medium flex items-center justify-center overflow-hidden shrink-0">
           {user?.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -100,7 +102,7 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
           <div className="text-[12px] font-medium truncate">
             {displayName(user?.name, user?.email)}
           </div>
-          <div className="text-[11px] text-[#14110e]/55 truncate">
+          <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 truncate">
             {user?.email ?? "—"}
           </div>
         </div>
@@ -109,7 +111,7 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
         href="https://marcusjenshaug.no"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 flex items-center gap-2 text-[11px] text-[#14110e]/35 hover:text-[#14110e]/60 transition-colors"
+        className="mt-3 flex items-center gap-2 text-[11px] text-[#14110e]/35 dark:text-[#f0ece6]/35 hover:text-[#14110e]/60 dark:hover:text-[#f0ece6]/60 transition-colors"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

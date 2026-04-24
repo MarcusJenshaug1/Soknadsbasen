@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { siteConfig, siteUrl, absoluteUrl } from "./siteConfig";
 
 type BuildMetadataArgs = {
@@ -67,6 +67,15 @@ export function buildMetadata({
   };
 }
 
+export function rootViewport(): Viewport {
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#D5592E" },
+      { media: "(prefers-color-scheme: dark)", color: "#D5592E" },
+    ],
+  };
+}
+
 export function rootMetadata(): Metadata {
   return {
     metadataBase: siteUrl,
@@ -75,10 +84,6 @@ export function rootMetadata(): Metadata {
     creator: siteConfig.founder.name,
     publisher: siteConfig.name,
     formatDetection: { email: false, telephone: false, address: false },
-    themeColor: [
-      { media: "(prefers-color-scheme: light)", color: "#D5592E" },
-      { media: "(prefers-color-scheme: dark)", color: "#D5592E" },
-    ],
     appleWebApp: {
       capable: true,
       title: siteConfig.name,

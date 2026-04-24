@@ -167,6 +167,24 @@ export function IconCheckList({ size = 20, className }: IconProps) {
   );
 }
 
+export function IconUsers({ size = 20, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <circle cx="9" cy="7" r="4" />
+      <path d="M3 21c0-4 3-7 6-7s6 3 6 7" />
+      <path d="M16 3.13a4 4 0 010 7.75M21 21c0-3.5-2-6-5-7" />
+    </svg>
+  );
+}
+
+export function IconLink({ size = 20, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
 export function IconMoreHorizontal({ size = 20, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>

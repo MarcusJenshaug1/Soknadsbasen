@@ -12,6 +12,7 @@ import {
   IconMoreHorizontal,
 } from "@/components/ui/Icons";
 import { cn } from "@/lib/cn";
+import { NotificationBell } from "./NotificationBell";
 
 type Tab = {
   href: string;
@@ -51,6 +52,7 @@ const MORE_ROUTES = [
   "/app/brev",
   "/app/oppgaver",
   "/app/selskaper",
+  "/app/nettverk",
   "/app/sesjoner",
   "/app/billing",
 ];
@@ -59,6 +61,7 @@ const MORE_ITEMS = [
   { href: "/app/brev", label: "Søknadsbrev", gated: true },
   { href: "/app/oppgaver", label: "Oppgaver", gated: true },
   { href: "/app/selskaper", label: "Selskaper", gated: true },
+  { href: "/app/nettverk", label: "Nettverk", gated: true },
   { href: "/app/sesjoner", label: "Sesjoner", gated: true },
   { href: "/app/billing", label: "Abonnement", gated: false },
   { href: "/om", label: "Om Marcus Jenshaug", gated: false },
@@ -82,7 +85,13 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
             className="fixed inset-0 z-40 md:hidden"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+60px)] left-2 right-2 z-50 bg-[#faf8f5] border border-black/8 rounded-3xl shadow-lg overflow-hidden md:hidden">
+          <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+60px)] left-2 right-2 z-50 bg-bg border border-black/8 dark:border-white/8 rounded-3xl shadow-lg overflow-hidden md:hidden">
+            {hasAccess && (
+              <div className="px-4 pt-3 pb-2 border-b border-black/5 dark:border-white/5 flex items-center gap-2">
+                <NotificationBell />
+                <span className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60">Varsler</span>
+              </div>
+            )}
             <div className="px-2 py-2 space-y-0.5">
               {visibleMoreItems.map((item) => {
                 const active = pathname.startsWith(item.href);
@@ -95,8 +104,8 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
                     className={cn(
                       "flex items-center px-4 py-3 rounded-2xl text-[14px] transition-colors",
                       active
-                        ? "bg-[#14110e] text-[#faf8f5] font-medium"
-                        : "text-[#14110e] hover:bg-black/5",
+                        ? "bg-ink text-bg font-medium"
+                        : "text-ink hover:bg-black/5 dark:hover:bg-white/5",
                     )}
                   >
                     {item.label}
@@ -109,7 +118,7 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
       )}
 
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#faf8f5]/95 backdrop-blur-md border-t border-black/8 pb-[env(safe-area-inset-bottom)] px-2 pt-2 print:hidden"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-bg/95 backdrop-blur-md border-t border-black/8 dark:border-white/8 pb-[env(safe-area-inset-bottom)] px-2 pt-2 print:hidden"
         aria-label="Hovednavigasjon"
       >
         <ul className="grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
@@ -122,10 +131,10 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
                   prefetch={true}
                   className="flex flex-col items-center gap-1 py-1"
                 >
-                  <span className={cn(active ? "text-[#14110e]" : "text-[#14110e]/40")}>
+                  <span className={cn(active ? "text-ink" : "text-[#14110e]/40 dark:text-[#f0ece6]/40")}>
                     <t.Icon size={20} />
                   </span>
-                  <span className={cn("text-[10px]", active ? "text-[#14110e] font-medium" : "text-[#14110e]/50")}>
+                  <span className={cn("text-[10px]", active ? "text-ink font-medium" : "text-[#14110e]/50 dark:text-[#f0ece6]/50")}>
                     {t.label}
                   </span>
                 </Link>
@@ -139,10 +148,10 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
               onClick={() => setMoreOpen((v) => !v)}
               className="w-full flex flex-col items-center gap-1 py-1"
             >
-              <span className={cn(moreActive || moreOpen ? "text-[#14110e]" : "text-[#14110e]/40")}>
+              <span className={cn(moreActive || moreOpen ? "text-ink" : "text-[#14110e]/40 dark:text-[#f0ece6]/40")}>
                 <IconMoreHorizontal size={20} />
               </span>
-              <span className={cn("text-[10px]", moreActive || moreOpen ? "text-[#14110e] font-medium" : "text-[#14110e]/50")}>
+              <span className={cn("text-[10px]", moreActive || moreOpen ? "text-ink font-medium" : "text-[#14110e]/50 dark:text-[#f0ece6]/50")}>
                 Mer
               </span>
             </button>

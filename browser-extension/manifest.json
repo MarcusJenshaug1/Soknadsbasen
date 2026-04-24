@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Søknadsbasen",
+  "version": "1.0.0",
+  "description": "Legg til jobber fra LinkedIn, FINN.no og andre sider direkte i Søknadsbasen.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "https://soknadbasen.no/*",
+    "https://www.soknadbasen.no/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.finn.no/job/*",
+        "https://www.finn.no/*/ad.html*",
+        "https://www.linkedin.com/jobs/*",
+        "https://no.indeed.com/*",
+        "https://arbeidsplassen.nav.no/*",
+        "https://karriere.no/*",
+        "<all_urls>"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

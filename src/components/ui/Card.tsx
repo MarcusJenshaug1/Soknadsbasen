@@ -15,10 +15,10 @@ export function Card({
 }: CardProps) {
   const variantStyle =
     variant === "panel"
-      ? "bg-[#eee9df]"
+      ? "bg-panel"
       : variant === "ink"
-        ? "bg-[#14110e] text-[#faf8f5]"
-        : "bg-white border border-black/5";
+        ? "bg-ink text-bg"
+        : "bg-surface border border-black/5 dark:border-white/5";
 
   const radiusStyle = radius === "3xl" ? "rounded-3xl" : "rounded-2xl";
 

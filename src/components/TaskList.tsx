@@ -135,7 +135,7 @@ export function TaskList({ applicationId }: TaskListProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="size-6 text-neutral-400 animate-spin" />
+        <Loader2 className="size-6 text-ink/40 animate-spin" />
       </div>
     );
   }
@@ -146,13 +146,13 @@ export function TaskList({ applicationId }: TaskListProps) {
   return (
     <div className="space-y-4">
       {/* Add task form */}
-      <form onSubmit={handleAddTask} className="bg-neutral-50 rounded-lg p-4 space-y-3">
+      <form onSubmit={handleAddTask} className="bg-panel rounded-lg p-4 space-y-3">
         <input
           type="text"
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
           placeholder="Legg til en ny oppgave..."
-          className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           disabled={adding}
         />
 
@@ -161,14 +161,14 @@ export function TaskList({ applicationId }: TaskListProps) {
             type="date"
             value={newTaskDueAt}
             onChange={(e) => setNewTaskDueAt(e.target.value)}
-            className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             disabled={adding}
           />
 
           <select
             value={newTaskType}
             onChange={(e) => setNewTaskType(e.target.value)}
-            className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             disabled={adding}
           >
             <option value="other">Annet</option>
@@ -195,7 +195,7 @@ export function TaskList({ applicationId }: TaskListProps) {
 
       {/* Task list */}
       {tasks.length === 0 ? (
-        <div className="text-center py-8 text-neutral-500 text-sm">
+        <div className="text-center py-8 text-ink/55 text-sm">
           Ingen oppgaver ennå. Legg til en for å komme i gang!
         </div>
       ) : (
@@ -203,7 +203,7 @@ export function TaskList({ applicationId }: TaskListProps) {
           {/* Incomplete tasks */}
           {incompleteTasks.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-neutral-700 px-1">
+              <h4 className="text-sm font-medium text-ink/80 px-1">
                 Aktive oppgaver ({incompleteTasks.length})
               </h4>
               {incompleteTasks.map((task) => (
@@ -221,7 +221,7 @@ export function TaskList({ applicationId }: TaskListProps) {
           {/* Completed tasks */}
           {completedTasks.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-neutral-500 px-1">
+              <h4 className="text-sm font-medium text-ink/55 px-1">
                 Fullførte ({completedTasks.length})
               </h4>
               {completedTasks.map((task) => (

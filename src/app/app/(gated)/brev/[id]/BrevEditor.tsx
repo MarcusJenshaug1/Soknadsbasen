@@ -33,8 +33,8 @@ type Letter = {
 };
 
 const INPUT =
-  "w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
-const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-2";
+  "w-full bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
+const LABEL = "text-[11px] uppercase tracking-wider text-ink/55 block mb-2";
 
 export function BrevEditor({
   application,
@@ -136,7 +136,7 @@ export function BrevEditor({
 
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10 space-y-6">
-      <div className="flex items-center gap-2 text-[12px] text-[#14110e]/55">
+      <div className="flex items-center gap-2 text-[12px] text-ink/55">
         <Link href="/app/brev" className="hover:text-[#D5592E]">
           Brev
         </Link>
@@ -155,15 +155,15 @@ export function BrevEditor({
           <h1 className="text-[28px] md:text-[36px] leading-[1] tracking-[-0.03em] font-medium">
             {application.title}
           </h1>
-          <p className="text-[14px] text-[#14110e]/60 mt-2">
+          <p className="text-[14px] text-ink/60 mt-2">
             For {application.companyName}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-[#14110e]/45">{savedLabel}</span>
+          <span className="text-[11px] text-ink/45">{savedLabel}</span>
           <button
             onClick={copyLetter}
-            className="px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] transition-colors"
+            className="px-3 py-1.5 rounded-full bg-[#D5592E] text-bg text-[11px] font-medium hover:bg-[#a94424] transition-colors"
           >
             {copied ? "Kopiert!" : "Kopier brev"}
           </button>
@@ -317,16 +317,16 @@ function StreamingPreview({
 }) {
   return (
     <div
-      className={`relative rounded-2xl bg-white border border-[#D5592E] overflow-hidden ${minHeight}`}
+      className={`relative rounded-2xl bg-surface border border-[#D5592E] overflow-hidden ${minHeight}`}
     >
-      <div className="px-5 py-4 text-[14px] text-[#14110e] leading-[1.6] whitespace-pre-wrap">
+      <div className="px-5 py-4 text-[14px] text-ink leading-[1.6] whitespace-pre-wrap">
         {text ? (
           <>
             {text}
             <span className="inline-block w-[2px] h-[0.9em] bg-[#D5592E] ml-[2px] align-[-0.05em] animate-pulse" />
           </>
         ) : (
-          <span className="text-[#14110e]/35 animate-pulse">AI skriver …</span>
+          <span className="text-ink/35 animate-pulse">AI skriver …</span>
         )}
       </div>
     </div>
@@ -341,7 +341,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-black/5 p-5 md:p-6 space-y-4">
+    <div className="bg-surface rounded-2xl border border-black/8 dark:border-white/8 p-5 md:p-6 space-y-4">
       <SectionLabel>{title}</SectionLabel>
       {children}
     </div>

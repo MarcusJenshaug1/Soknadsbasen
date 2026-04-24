@@ -4,6 +4,7 @@ import { getSessionWithAccess } from "@/lib/auth";
 import { getAllSessions } from "@/lib/session-context";
 import { SectionLabel } from "@/components/ui/Pill";
 import { SessionHistoryClient } from "./SessionHistoryClient";
+import { ShareLinkWidget } from "./ShareLinkWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,18 @@ export default async function SesjonerPage() {
       <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-2">
         Sesjoner
       </h1>
-      <p className="text-[13px] text-[#14110e]/60 mb-8">
+      <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-8">
         Alle søkerunder, med statistikk og lenke til pipeline-arkivet.
       </p>
 
+      <ShareLinkWidget />
+
+      <div className="mt-10 mb-4">
+        <h2 className="text-[18px] font-medium">Alle sesjoner</h2>
+      </div>
+
       {sessions.length === 0 ? (
-        <div className="text-[13px] text-[#14110e]/55 py-12 text-center">
+        <div className="text-[13px] text-[#14110e]/55 dark:text-[#f0ece6]/55 py-12 text-center">
           Ingen sesjoner ennå. Start en søknad for å opprette din første sesjon automatisk.
         </div>
       ) : (
@@ -48,7 +55,7 @@ export default async function SesjonerPage() {
             return (
               <div
                 key={s.id}
-                className="border border-black/8 rounded-2xl px-5 py-4 bg-white hover:border-black/15 transition-colors"
+                className="border border-black/8 dark:border-white/8 rounded-2xl px-5 py-4 bg-surface hover:border-black/15 dark:hover:border-white/15 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -57,23 +64,23 @@ export default async function SesjonerPage() {
                       {s.status === "ACTIVE" ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-medium">Aktiv</span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-[#eee9df] text-[#14110e]/55 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-panel text-[#14110e]/55 dark:text-[#f0ece6]/55 text-[10px]">
                           {s.outcome ? OUTCOME_LABELS[s.outcome] : "Avsluttet"}
                         </span>
                       )}
                     </div>
-                    <div className="text-[12px] text-[#14110e]/50">
+                    <div className="text-[12px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
                       {start}{end ? ` – ${end}` : ""}
                       {" · "}{s._count.applications} søknader
                     </div>
                     {s.notes && (
-                      <div className="text-[12px] text-[#14110e]/65 mt-1.5 italic">{s.notes}</div>
+                      <div className="text-[12px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mt-1.5 italic">{s.notes}</div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Link
                       href={`/app/pipeline?session=${s.id}`}
-                      className="px-3 py-1.5 rounded-full text-[12px] border border-black/10 hover:border-black/25 transition-colors"
+                      className="px-3 py-1.5 rounded-full text-[12px] border border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25 transition-colors"
                     >
                       Se pipeline
                     </Link>

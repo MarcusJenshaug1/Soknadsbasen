@@ -11,11 +11,11 @@ export async function RelatedGuides({ slugs }: { slugs: string[] }) {
   return (
     <section
       aria-labelledby="related-heading"
-      className="border-t border-black/10 pt-12 mt-16"
+      className="border-t border-black/10 dark:border-white/10 pt-12 mt-16"
     >
       <h2
         id="related-heading"
-        className="text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-6"
+        className="text-[11px] uppercase tracking-[0.2em] text-accent mb-6"
       >
         Les også
       </h2>
@@ -24,21 +24,21 @@ export async function RelatedGuides({ slugs }: { slugs: string[] }) {
           <li key={g.frontmatter.slug}>
             <Link
               href={`/guide/${g.frontmatter.slug}`}
-              className="group block border border-black/10 rounded-2xl p-6 hover:border-[#14110e]/30 transition-colors"
+              className="group block border border-black/10 dark:border-white/10 rounded-2xl p-6 hover:border-ink/30 transition-colors"
             >
-              <div className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/50 mb-2">
+              <div className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-2">
                 {g.frontmatter.tags?.[0] ?? "Guide"} ·{" "}
                 {formatGuideDate(
                   g.frontmatter.updatedAt ?? g.frontmatter.publishedAt,
                 )}
               </div>
-              <h3 className="text-[17px] md:text-[19px] leading-[1.3] tracking-[-0.015em] font-medium mb-2 group-hover:text-[#D5592E] transition-colors">
+              <h3 className="text-[17px] md:text-[19px] leading-[1.3] tracking-[-0.015em] font-medium mb-2 group-hover:text-accent transition-colors">
                 {g.frontmatter.title}
               </h3>
-              <p className="text-[13px] leading-[1.55] text-[#14110e]/65 line-clamp-2">
+              <p className="text-[13px] leading-[1.55] text-[#14110e]/65 dark:text-[#f0ece6]/65 line-clamp-2">
                 {g.frontmatter.description}
               </p>
-              <span className="mt-3 inline-flex items-center gap-1 text-[12px] text-[#D5592E]">
+              <span className="mt-3 inline-flex items-center gap-1 text-[12px] text-accent">
                 Les guiden
                 <FiArrowUpRight className="w-3 h-3" />
               </span>

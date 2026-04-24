@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { SectionLabel } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
 import { AvatarCropper } from "@/components/AvatarCropper";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 type User = {
   id: string;
@@ -187,7 +188,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
             "mb-6 px-4 py-2.5 rounded-2xl text-[12px]",
             msg.kind === "ok"
               ? "bg-[#16a34a]/10 text-[#16a34a] border border-[#16a34a]/30"
-              : "bg-[#D5592E]/10 text-[#D5592E] border border-[#D5592E]/30",
+              : "bg-accent/10 text-accent border border-accent/30",
           )}
         >
           {msg.text}
@@ -201,7 +202,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
           subtitle="Kontaktinfo som vises på CV og søknader."
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-20 h-20 rounded-full bg-[#eee9df] flex items-center justify-center text-[24px] font-medium text-[#14110e]/70 overflow-hidden shrink-0">
+            <div className="w-20 h-20 rounded-full bg-panel flex items-center justify-center text-[24px] font-medium text-[#14110e]/70 dark:text-[#f0ece6]/70 overflow-hidden shrink-0">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -230,7 +231,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={uploadingAvatar}
-                  className="px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50 transition-colors"
                 >
                   {uploadingAvatar
                     ? "Laster opp …"
@@ -243,13 +244,13 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                     type="button"
                     onClick={removeAvatar}
                     disabled={uploadingAvatar}
-                    className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:border-black/30 disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] hover:border-black/30 dark:hover:border-white/30 disabled:opacity-50 transition-colors"
                   >
                     Fjern
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-[#14110e]/50 mt-2">
+              <p className="text-[11px] text-[#14110e]/50 dark:text-[#f0ece6]/50 mt-2">
                 JPG/PNG/WEBP · maks 2 MB.
               </p>
             </div>
@@ -266,7 +267,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
+                className="px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors disabled:opacity-50"
               >
                 {saving ? "Lagrer…" : "Lagre endringer"}
               </button>
@@ -282,14 +283,14 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               <button
                 type="button"
                 onClick={() => setPwOpen(true)}
-                className="text-[13px] text-[#D5592E] hover:text-[#14110e]"
+                className="text-[13px] text-accent hover:text-ink"
               >
                 Endre passord →
               </button>
             ) : (
               <form
                 onSubmit={onChangePassword}
-                className="space-y-4 p-5 rounded-2xl bg-[#eee9df]/50"
+                className="space-y-4 p-5 rounded-2xl bg-panel/50"
               >
                 <Field
                   label="Nytt passord"
@@ -313,14 +314,14 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                       setNewPw("");
                       setConfirmPw("");
                     }}
-                    className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:border-black/30"
+                    className="px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] hover:border-black/30 dark:hover:border-white/30"
                   >
                     Avbryt
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
+                    className="px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors disabled:opacity-50"
                   >
                     {saving ? "Lagrer…" : "Oppdater passord"}
                   </button>
@@ -328,6 +329,11 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               </form>
             )}
           </div>
+        </Section>
+
+        {/* Utseende */}
+        <Section title="Utseende" subtitle="Velg lys, mørk eller automatisk basert på systeminstillinger.">
+          <ThemeToggle />
         </Section>
 
         {/* Data */}
@@ -350,13 +356,13 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
             ) : (
               <form
                 onSubmit={onDelete}
-                className="p-5 rounded-2xl border border-[#D5592E]/30 bg-[#D5592E]/5 space-y-4"
+                className="p-5 rounded-2xl border border-accent/30 bg-accent/5 space-y-4"
               >
                 <div>
-                  <h3 className="text-[14px] font-medium text-[#D5592E] mb-1">
+                  <h3 className="text-[14px] font-medium text-accent mb-1">
                     Bekreft sletting
                   </h3>
-                  <p className="text-[12px] text-[#14110e]/65">
+                  <p className="text-[12px] text-[#14110e]/65 dark:text-[#f0ece6]/65">
                     Skriv inn passordet ditt for å bekrefte. Alt av søknader,
                     CV-er og brev blir fjernet permanent.
                   </p>
@@ -375,14 +381,14 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                       setDeleteOpen(false);
                       setDeletePw("");
                     }}
-                    className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:border-black/30"
+                    className="px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] hover:border-black/30 dark:hover:border-white/30"
                   >
                     Avbryt
                   </button>
                   <button
                     type="submit"
                     disabled={deleting || !deletePw}
-                    className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
+                    className="px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors disabled:opacity-50"
                   >
                     {deleting ? "Sletter…" : "Slett konto permanent"}
                   </button>
@@ -399,7 +405,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               await logout();
               router.replace("/");
             }}
-            className="px-5 py-2.5 rounded-full border border-black/15 text-[13px] hover:border-black/30 transition-colors"
+            className="px-5 py-2.5 rounded-full border border-black/15 dark:border-white/15 text-[13px] hover:border-black/30 dark:hover:border-white/30 transition-colors"
           >
             Logg ut
           </button>
@@ -428,12 +434,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="pb-10 border-b border-black/8 last:border-0">
+    <section className="pb-10 border-b border-black/8 dark:border-white/8 last:border-0">
       <div className="mb-6">
         <h2 className="text-[20px] md:text-[22px] tracking-tight font-medium mb-1">
           {title}
         </h2>
-        <p className="text-[13px] text-[#14110e]/60">{subtitle}</p>
+        <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60">{subtitle}</p>
       </div>
       {children}
     </section>
@@ -457,7 +463,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-2">
+      <label className="text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2">
         {label}
       </label>
       <input
@@ -467,8 +473,8 @@ function Field({
         autoComplete={autoComplete}
         onChange={(e) => onChange?.(e.target.value)}
         className={cn(
-          "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#D5592E]",
-          disabled && "bg-[#eee9df]/40 text-[#14110e]/60 cursor-not-allowed",
+          "w-full bg-surface text-ink border border-black/10 dark:border-white/15 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-accent",
+          disabled && "bg-panel/40 text-[#14110e]/60 dark:text-[#f0ece6]/60 cursor-not-allowed",
         )}
       />
     </div>
@@ -493,20 +499,20 @@ function Row({
       className={cn(
         "flex items-center justify-between gap-4 p-5 rounded-2xl border",
         danger
-          ? "border-[#D5592E]/30 bg-[#D5592E]/5"
-          : "border-black/8 bg-white",
+          ? "border-accent/30 bg-accent/5"
+          : "border-black/8 dark:border-white/8 bg-surface",
       )}
     >
       <div className="min-w-0">
         <div
           className={cn(
             "text-[14px] font-medium",
-            danger && "text-[#D5592E]",
+            danger && "text-accent",
           )}
         >
           {title}
         </div>
-        <div className="text-[12px] text-[#14110e]/55 mt-0.5">{sub}</div>
+        <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 mt-0.5">{sub}</div>
       </div>
       <button
         type="button"
@@ -514,8 +520,8 @@ function Row({
         className={cn(
           "shrink-0 px-4 py-2 rounded-full text-[12px] font-medium transition-colors",
           danger
-            ? "bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]"
-            : "bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]",
+            ? "bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]"
+            : "bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]",
         )}
       >
         {action}

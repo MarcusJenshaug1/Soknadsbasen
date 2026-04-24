@@ -50,7 +50,7 @@ export function ResumeEditor() {
 
   if (!hydrated) {
     return (
-      <div className="flex items-center justify-center py-20 text-[12px] uppercase tracking-[0.2em] text-[#14110e]/45">
+      <div className="flex items-center justify-center py-20 text-[12px] uppercase tracking-[0.2em] text-[#14110e]/45 dark:text-[#f0ece6]/45">
         Laster CV-data
       </div>
     );
@@ -61,11 +61,11 @@ export function ResumeEditor() {
       <PrintOutput />
       <ImportCVModal open={showImport} onClose={() => setShowImport(false)} />
 
-      <div className="flex flex-col h-[calc(100dvh-80px)] md:h-[calc(100dvh-20px)] bg-[#faf8f5] print:hidden">
+      <div className="flex flex-col h-[calc(100dvh-80px)] md:h-[calc(100dvh-20px)] bg-bg print:hidden">
         {/* Top strip: CV switcher + import + step counter + mobile view toggle */}
         <div className="px-5 md:px-10 pt-5 md:pt-8 pb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.2em] text-[#14110e]/55 mb-2">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-2">
               Min CV
             </div>
             <h1 className="text-[28px] md:text-[36px] leading-[1] tracking-[-0.03em] font-medium">
@@ -76,12 +76,12 @@ export function ResumeEditor() {
             <CVSwitcher />
             <button
               onClick={() => setShowImport(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-black/10 text-[12px] hover:border-black/30 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-black/10 dark:border-white/10 text-[12px] text-ink hover:border-black/30 dark:hover:border-white/30 transition-colors"
             >
               <FileUp className="size-3.5" />
               Importer PDF
             </button>
-            <div className="hidden md:block text-[11px] text-[#14110e]/45">
+            <div className="hidden md:block text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
               Lagres automatisk
             </div>
           </div>
@@ -89,18 +89,18 @@ export function ResumeEditor() {
 
         {/* Step tabs */}
         <div className="px-5 md:px-10 pb-4 overflow-x-auto no-scrollbar">
-          <div className="inline-flex gap-1 bg-[#eee9df] rounded-full p-1 whitespace-nowrap">
+          <div className="inline-flex gap-1 bg-panel rounded-full p-1 whitespace-nowrap">
             {STEPS.map((step, index) => (
               <button
                 key={step.id}
                 onClick={() => setCurrentStep(index)}
                 className={`px-3 md:px-4 py-1.5 rounded-full text-[11px] md:text-[12px] transition-colors ${
                   currentStep === index
-                    ? "bg-[#faf8f5] text-[#14110e] font-medium"
-                    : "text-[#14110e]/60 hover:text-[#14110e]"
+                    ? "bg-bg text-ink font-medium"
+                    : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink"
                 }`}
               >
-                <span className="mr-1.5 text-[#14110e]/40">{index + 1}</span>
+                <span className="mr-1.5 text-[#14110e]/40 dark:text-[#f0ece6]/40">{index + 1}</span>
                 {step.title}
               </button>
             ))}
@@ -114,8 +114,8 @@ export function ResumeEditor() {
               onClick={() => setMobileView("editor")}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] transition-colors ${
                 mobileView === "editor"
-                  ? "bg-[#faf8f5] text-[#14110e] font-medium"
-                  : "text-[#14110e]/60"
+                  ? "bg-bg text-ink font-medium"
+                  : "text-[#14110e]/60 dark:text-[#f0ece6]/60"
               }`}
             >
               <PenTool className="size-3" /> Rediger
@@ -124,8 +124,8 @@ export function ResumeEditor() {
               onClick={() => setMobileView("preview")}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] transition-colors ${
                 mobileView === "preview"
-                  ? "bg-[#faf8f5] text-[#14110e] font-medium"
-                  : "text-[#14110e]/60"
+                  ? "bg-bg text-ink font-medium"
+                  : "text-[#14110e]/60 dark:text-[#f0ece6]/60"
               }`}
             >
               <Eye className="size-3" /> Forhåndsvis
@@ -136,7 +136,7 @@ export function ResumeEditor() {
         {/* Editor + Preview */}
         <div className="flex-1 flex overflow-hidden">
           <div
-            className={`${mobileView === "editor" ? "flex" : "hidden"} md:flex w-full md:w-[45%] lg:w-[40%] overflow-y-auto px-5 md:px-10 pb-8 bg-white md:border-r border-black/8`}
+            className={`${mobileView === "editor" ? "flex" : "hidden"} md:flex w-full md:w-[45%] lg:w-[40%] overflow-y-auto px-5 md:px-10 pb-8 bg-surface md:border-r border-black/8 dark:border-white/8`}
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -161,29 +161,29 @@ export function ResumeEditor() {
           </div>
 
           <div
-            className={`${mobileView === "preview" ? "flex" : "hidden"} md:flex w-full md:w-[55%] lg:w-[60%] bg-[#eee9df] overflow-y-auto px-2 md:px-4 py-4 md:py-8 justify-center items-start`}
+            className={`${mobileView === "preview" ? "flex" : "hidden"} md:flex w-full md:w-[55%] lg:w-[60%] bg-panel overflow-y-auto px-2 md:px-4 py-4 md:py-8 justify-center items-start`}
           >
             <LivePreview />
           </div>
         </div>
 
         {/* Footer nav */}
-        <footer className="p-3 md:p-4 border-t border-black/8 bg-[#faf8f5] flex items-center justify-between">
+        <footer className="p-3 md:p-4 border-t border-black/8 dark:border-white/8 bg-bg flex items-center justify-between">
           <button
             onClick={prevStep}
             disabled={currentStep === 0}
-            className="inline-flex items-center gap-1.5 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[13px] font-medium transition-colors disabled:opacity-40 border border-black/15 bg-white hover:border-black/30"
+            className="inline-flex items-center gap-1.5 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[13px] font-medium transition-colors disabled:opacity-40 border border-black/15 dark:border-white/15 bg-surface text-ink hover:border-black/30 dark:hover:border-white/30"
           >
             <ChevronLeft className="size-4" />
             <span className="hidden sm:inline">Tilbake</span>
           </button>
-          <span className="text-[11px] text-[#14110e]/45">
+          <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
             {currentStep + 1} / {STEPS.length}
           </span>
           <button
             onClick={nextStep}
             disabled={currentStep === STEPS.length - 1}
-            className="inline-flex items-center gap-1.5 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[13px] font-medium transition-colors disabled:opacity-40 bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]"
+            className="inline-flex items-center gap-1.5 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[13px] font-medium transition-colors disabled:opacity-40 bg-accent text-bg hover:bg-[#a94424] dark:hover:bg-[#c45830]"
           >
             <span className="hidden sm:inline">Neste steg</span>
             <span className="sm:hidden">Neste</span>
@@ -203,61 +203,61 @@ function ContactForm() {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all";
+    "w-full px-4 py-2.5 rounded-lg border border-black/12 dark:border-white/12 bg-surface text-ink focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all";
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-xl font-semibold">Personalia</h3>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-ink/55">
           Start med å fylle ut det viktigste. Et bilde støttes i enkelte maler, men er avslått som standard.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Fornavn *</label>
+          <label className="text-sm font-medium text-ink/80">Fornavn *</label>
           <input type="text" className={inputClass} placeholder="Ola" value={data.firstName} onChange={(e) => updateContact({ firstName: e.target.value })} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Etternavn *</label>
+          <label className="text-sm font-medium text-ink/80">Etternavn *</label>
           <input type="text" className={inputClass} placeholder="Nordmann" value={data.lastName} onChange={(e) => updateContact({ lastName: e.target.value })} />
         </div>
         <div className="space-y-1 col-span-2">
-          <label className="text-sm font-medium text-neutral-700">E-post *</label>
+          <label className="text-sm font-medium text-ink/80">E-post *</label>
           <input type="email" className={inputClass} placeholder="ola.nordmann@epost.no" value={data.email} onChange={(e) => updateContact({ email: e.target.value })} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Telefon</label>
+          <label className="text-sm font-medium text-ink/80">Telefon</label>
           <input type="tel" className={inputClass} placeholder="+47 000 00 000" value={data.phone} onChange={(e) => updateContact({ phone: e.target.value })} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Sted</label>
+          <label className="text-sm font-medium text-ink/80">Sted</label>
           <input type="text" className={inputClass} placeholder="Oslo, Norge" value={data.location} onChange={(e) => updateContact({ location: e.target.value })} />
-          <p className="text-xs text-neutral-500 mt-1">Anbefalt: Kun By/Land.</p>
+          <p className="text-xs text-ink/55 mt-1">Anbefalt: Kun By/Land.</p>
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">LinkedIn</label>
+          <label className="text-sm font-medium text-ink/80">LinkedIn</label>
           <input type="url" className={inputClass} placeholder="https://linkedin.com/in/..." value={data.linkedin} onChange={(e) => updateContact({ linkedin: e.target.value })} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700">Nettside / Portefølje</label>
+          <label className="text-sm font-medium text-ink/80">Nettside / Portefølje</label>
           <input type="url" className={inputClass} placeholder="https://..." value={data.website} onChange={(e) => updateContact({ website: e.target.value })} />
         </div>
 
-        <div className="space-y-1 col-span-2 mt-2 p-5 border rounded-2xl bg-white shadow-sm border-neutral-200">
+        <div className="space-y-1 col-span-2 mt-2 p-5 border rounded-2xl bg-surface border-black/8 dark:border-white/8">
           <div className="flex items-start justify-between">
             <div>
-              <label className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+              <label className="text-sm font-semibold text-ink flex items-center gap-2">
                 Bilde på CV <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[11px] uppercase tracking-wider">Er valgfritt</span>
               </label>
-              <p className="text-xs text-neutral-500 mt-1.5 max-w-sm leading-relaxed">
+              <p className="text-xs text-ink/55 mt-1.5 max-w-sm leading-relaxed">
                 Å bruke bilde varierer etter marked og stilling. Det anbefales ofte ikke for internasjonale roller pga. diskrimineringslovgivning.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
               <input type="checkbox" className="sr-only peer" checked={data.includePhoto} onChange={(e) => updateContact({ includePhoto: e.target.checked })} />
-              <div className="w-11 h-6 bg-neutral-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div className="w-11 h-6 bg-black/20 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
             </label>
           </div>
           
@@ -322,7 +322,7 @@ function ContactForm() {
                   <button
                     type="button"
                     onClick={() => updateContact({ photoUrl: "" })}
-                    className="text-[12px] text-[#14110e]/55 hover:text-[#D5592E]"
+                    className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 hover:text-accent"
                   >
                     Fjern
                   </button>
@@ -374,7 +374,7 @@ function CVSwitcher() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-black/10 text-[12px] hover:border-black/30 transition-colors max-w-[220px]"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-black/10 dark:border-white/10 text-[12px] text-ink hover:border-black/30 dark:hover:border-white/30 transition-colors max-w-[220px]"
       >
         <span className="truncate">{activeName}</span>
         <ChevronDown
@@ -389,7 +389,7 @@ function CVSwitcher() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute top-full mt-2 left-0 w-64 rounded-2xl border border-black/8 bg-white overflow-hidden z-20"
+            className="absolute top-full mt-2 left-0 w-64 rounded-2xl border border-black/8 dark:border-white/8 bg-surface overflow-hidden z-20"
           >
             <div className="max-h-60 overflow-y-auto py-1">
               {resumes.map((r) => (
@@ -397,8 +397,8 @@ function CVSwitcher() {
                   key={r.id}
                   className={`group flex items-center gap-1 px-3 py-2 text-[12px] transition-colors ${
                     r.id === activeResumeId
-                      ? "bg-[#eee9df] text-[#14110e]"
-                      : "hover:bg-[#eee9df]/50 text-[#14110e]/70"
+                      ? "bg-panel text-ink"
+                      : "hover:bg-panel/50 text-ink/70"
                   }`}
                 >
                   {editingId === r.id ? (

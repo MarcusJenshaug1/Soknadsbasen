@@ -61,7 +61,7 @@ export function CompanyLogo({
   return (
     <div
       className={cn(
-        "rounded-2xl bg-[#eee9df] flex items-center justify-center text-[#14110e]/70 font-medium overflow-hidden shrink-0 border border-black/5",
+        "rounded-2xl bg-panel flex items-center justify-center text-[#14110e]/70 dark:text-[#f0ece6]/70 font-medium overflow-hidden shrink-0 border border-black/5 dark:border-white/5",
         dims.text,
         className,
       )}

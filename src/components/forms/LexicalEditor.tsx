@@ -28,12 +28,12 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useRef } from "react";
 
 const theme = {
-  paragraph: "mb-3 text-[14px] leading-[1.6] text-[#14110e]",
+  paragraph: "mb-3 text-[14px] leading-[1.6] text-ink",
   list: {
     nested: { listitem: "list-none" },
     ol: "list-decimal ml-6 mb-3",
     ul: "list-disc ml-6 mb-3",
-    listitem: "mb-1 text-[14px] text-[#14110e] leading-[1.6]",
+    listitem: "mb-1 text-[14px] text-ink leading-[1.6]",
   },
   text: {
     bold: "font-medium",
@@ -66,15 +66,15 @@ export function LexicalEditor({
   };
 
   return (
-    <div className="relative rounded-2xl bg-white border border-black/8 focus-within:border-[#D5592E] transition-colors overflow-hidden">
+    <div className="relative rounded-2xl bg-surface border border-black/8 dark:border-white/8 focus-within:border-accent transition-colors overflow-hidden">
       <LexicalComposer initialConfig={initialConfig}>
         <Toolbar />
         <RichTextPlugin
           contentEditable={
-            <ContentEditable className="min-h-[320px] px-5 py-4 outline-none text-[14px] text-[#14110e] leading-[1.6]" />
+            <ContentEditable className="min-h-[320px] px-5 py-4 outline-none text-[14px] text-ink leading-[1.6]" />
           }
           placeholder={
-            <div className="absolute top-[60px] left-5 text-[14px] text-[#14110e]/35 pointer-events-none">
+            <div className="absolute top-[60px] left-5 text-[14px] text-[#14110e]/35 dark:text-[#f0ece6]/35 pointer-events-none">
               {placeholder ?? "Begynn å skrive …"}
             </div>
           }
@@ -126,9 +126,9 @@ function seedEditor(editor: LexicalEditorType, value: string) {
 function Toolbar() {
   const [editor] = useLexicalComposerContext();
   const btn =
-    "px-2.5 py-1 rounded-full text-[11px] uppercase tracking-[0.12em] text-[#14110e]/70 hover:bg-[#eee9df]";
+    "px-2.5 py-1 rounded-full text-[11px] uppercase tracking-[0.12em] text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:bg-panel";
   return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-black/5 bg-[#faf8f5]/50">
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-black/5 dark:border-white/5 bg-bg/50">
       <button
         type="button"
         onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
@@ -145,7 +145,7 @@ function Toolbar() {
       >
         <span className="italic">I</span>
       </button>
-      <span className="w-px h-4 bg-black/10 mx-1" />
+      <span className="w-px h-4 bg-black/10 dark:bg-white/10 mx-1" />
       <button
         type="button"
         onClick={() =>

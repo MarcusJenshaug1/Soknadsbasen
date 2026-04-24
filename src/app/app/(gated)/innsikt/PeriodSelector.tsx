@@ -22,7 +22,7 @@ export function PeriodSelector({ current }: { current: string }) {
     <select
       value={current}
       onChange={(e) => change(e.target.value)}
-      className="bg-white border border-black/10 rounded-full px-4 py-2 text-[12px] outline-none focus:border-[#D5592E]"
+      className="bg-surface border border-black/10 dark:border-white/10 rounded-full px-4 py-2 text-[12px] outline-none focus:border-accent"
     >
       {OPTIONS.map((o) => (
         <option key={o.id} value={o.id}>

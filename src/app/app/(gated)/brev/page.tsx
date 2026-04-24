@@ -32,18 +32,18 @@ export default async function BrevPage() {
       <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-2">
         Brevene dine
       </h1>
-      <p className="text-[14px] text-[#14110e]/60 mb-10">
+      <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-10">
         Ett brev per søknad. Auto-lagres mens du skriver.
       </p>
 
       {apps.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-[14px] text-[#14110e]/60 max-w-sm mx-auto mb-6">
+          <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 max-w-sm mx-auto mb-6">
             Opprett en søknad først — brevet kobles til stillingen.
           </p>
           <Link
             href="/app/pipeline"
-            className="inline-flex px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
+            className="inline-flex px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
           >
             Åpne pipeline
           </Link>
@@ -53,7 +53,7 @@ export default async function BrevPage() {
           {withLetters.length > 0 && (
             <section>
               <SectionLabel className="mb-3">Skrevet</SectionLabel>
-              <ul className="bg-white rounded-2xl border border-black/5 divide-y divide-black/5 overflow-hidden">
+              <ul className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
                 {withLetters.map((a) => (
                   <LetterRow
                     key={a.id}
@@ -68,7 +68,7 @@ export default async function BrevPage() {
           {withoutLetters.length > 0 && (
             <section>
               <SectionLabel className="mb-3">Mangler brev</SectionLabel>
-              <ul className="bg-white rounded-2xl border border-black/5 divide-y divide-black/5 overflow-hidden">
+              <ul className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
                 {withoutLetters.map((a) => (
                   <LetterRow key={a.id} app={a} hasLetter={false} />
                 ))}
@@ -99,13 +99,13 @@ function LetterRow({
     <li>
       <Link
         href={`/app/brev/${app.id}`}
-        className="flex items-center justify-between gap-4 p-4 hover:bg-[#eee9df]/40 transition-colors"
+        className="flex items-center justify-between gap-4 p-4 hover:bg-panel/40 transition-colors"
       >
         <div className="min-w-0">
           <div className="text-[14px] font-medium leading-tight">
             {app.title}
           </div>
-          <div className="flex items-center gap-3 mt-1 text-[12px] text-[#14110e]/55">
+          <div className="flex items-center gap-3 mt-1 text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
             <span>{app.companyName}</span>
             <StatusDot status={app.status as StatusKey} />
             {hasLetter && updated && (
@@ -119,7 +119,7 @@ function LetterRow({
             )}
           </div>
         </div>
-        <span className="shrink-0 text-[12px] text-[#D5592E]">
+        <span className="shrink-0 text-[12px] text-accent">
           {hasLetter ? "Åpne →" : "Skriv →"}
         </span>
       </Link>
