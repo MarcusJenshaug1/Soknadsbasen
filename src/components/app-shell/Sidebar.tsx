@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { NotificationBell } from "./NotificationBell";
+import type { OrgContext } from "@/lib/auth";
 
 type NavItem = { href: string; label: string; gated: boolean };
 
@@ -39,7 +40,7 @@ function displayName(name?: string | null, email?: string | null): string {
   return "Uinnlogget";
 }
 
-export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
+export function Sidebar({ hasAccess, org }: { hasAccess: boolean; org: OrgContext | null }) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const initials = initialsFor(user?.name, user?.email);
@@ -48,7 +49,26 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
   return (
     <aside className="hidden md:flex w-[240px] shrink-0 border-r border-black/8 dark:border-white/8 flex-col p-6 bg-bg h-dvh sticky top-0 print:hidden">
       <div className="mb-12">
-        <Logo href="/app" />
+        {org ? (
+          <div className="flex items-center gap-2">
+            {org.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={org.logoUrl}
+                alt=""
+                className="w-7 h-7 rounded-md object-contain"
+              />
+            )}
+            <span
+              className="text-[13px] font-semibold truncate"
+              style={org.brandColor ? { color: org.brandColor } : undefined}
+            >
+              {org.displayName}
+            </span>
+          </div>
+        ) : (
+          <Logo href="/app" />
+        )}
       </div>
       <nav className="space-y-0.5 text-[13px] flex-1 flex flex-col">
         <div className="flex-1 space-y-0.5">
@@ -73,6 +93,20 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
             </Link>
           );
         })}
+        {org && (
+          <Link
+            href={`/org/${org.slug}`}
+            prefetch={true}
+            className={cn(
+              "block px-3 py-2 rounded-full transition-colors",
+              pathname.startsWith(`/org/${org.slug}`)
+                ? "bg-ink text-bg dark:bg-white/12 dark:text-ink"
+                : "text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-ink",
+            )}
+          >
+            Min organisasjon
+          </Link>
+        )}
         </div>
         {hasAccess && (
           <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-2">

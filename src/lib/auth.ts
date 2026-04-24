@@ -8,8 +8,19 @@ export interface SessionPayload {
   name: string | null;
 }
 
+export interface OrgContext {
+  id: string;
+  slug: string;
+  displayName: string;
+  logoUrl: string | null;
+  brandColor: string | null;
+  role: "admin" | "member";
+  sharesDataWithOrg: boolean;
+}
+
 export interface SessionWithAccess extends SessionPayload {
   hasAccess: boolean;
+  org: OrgContext | null;
 }
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
@@ -48,6 +59,7 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
         id: user.id,
         email: user.email ?? "",
         name: (user.user_metadata?.name as string | undefined) ?? null,
+        isAdmin: (user.user_metadata?.isAdmin as boolean | undefined) ?? false,
       },
       select: { id: true, email: true, name: true },
     });
@@ -81,7 +93,26 @@ export const getSessionWithAccess = cache(
         id: true,
         email: true,
         name: true,
+        isAdmin: true,
         subscription: { select: { status: true, currentPeriodEnd: true } },
+        orgMemberships: {
+          where: { status: "active" },
+          select: {
+            role: true,
+            sharesDataWithOrg: true,
+            org: {
+              select: {
+                id: true,
+                slug: true,
+                displayName: true,
+                logoUrl: true,
+                brandColor: true,
+                status: true,
+              },
+            },
+          },
+          take: 1,
+        },
       },
     });
 
@@ -94,21 +125,48 @@ export const getSessionWithAccess = cache(
           id: user.id,
           email: user.email ?? "",
           name: (user.user_metadata?.name as string | undefined) ?? null,
+          isAdmin: (user.user_metadata?.isAdmin as boolean | undefined) ?? false,
         },
         select: { id: true, email: true, name: true },
       });
-      profile = { ...created, subscription: null };
+      return {
+        userId: created.id,
+        email: created.email,
+        name: created.name,
+        hasAccess: created.email === process.env.ADMIN_EMAIL,
+        org: null,
+      };
     }
 
     const sub = profile.subscription;
-    const hasAccess =
+    const personalAccess =
       !!sub && ACTIVE_STATUSES.has(sub.status) && sub.currentPeriodEnd > new Date();
+
+    const activeMembership = profile.orgMemberships[0] ?? null;
+    const orgAccess =
+      !!activeMembership && ACTIVE_STATUSES.has(activeMembership.org.status);
+
+    const isAdmin = profile.email === process.env.ADMIN_EMAIL || profile.isAdmin;
+    const hasAccess = personalAccess || orgAccess || isAdmin;
+
+    const org: OrgContext | null = activeMembership
+      ? {
+          id: activeMembership.org.id,
+          slug: activeMembership.org.slug,
+          displayName: activeMembership.org.displayName,
+          logoUrl: activeMembership.org.logoUrl,
+          brandColor: activeMembership.org.brandColor,
+          role: activeMembership.role as "admin" | "member",
+          sharesDataWithOrg: activeMembership.sharesDataWithOrg,
+        }
+      : null;
 
     return {
       userId: profile.id,
       email: profile.email,
       name: profile.name,
       hasAccess,
+      org,
     };
   },
 );

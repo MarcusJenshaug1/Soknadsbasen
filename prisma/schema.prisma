@@ -17,6 +17,8 @@ model User {
   /// Supabase Storage path for the avatar (inside the `avatars` bucket).
   avatarUrl    String?
   weeklyGoal   Int?
+  /// Grants free app access without a subscription (platform staff, beta testers)
+  isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   resumes           Resume[]
@@ -29,6 +31,7 @@ model User {
   notifications     Notification[]
   contacts          Contact[]
   shareLinks        ShareLink[]
+  orgMemberships    OrgMembership[]
 }
 
 model Subscription {
@@ -387,4 +390,144 @@ model Notification {
 
   @@index([userId, readAt])
   @@index([userId, sentAt])
+}
+
+// ─── Organisation licensing ───────────────────────────────
+
+model Organization {
+  id                   String   @id @default(uuid())
+  /// URL-safe identifier used in all routes: /org/[slug]
+  slug                 String   @unique
+  /// Public display name shown in whitelabeled header
+  displayName          String
+  /// Internal/legal name
+  name                 String
+  logoUrl              String?
+  /// Hex colour for whitelabel header, e.g. "#D5592E"
+  brandColor           String?
+  /// Org's own Stripe customer (NOT the admin's personal customer)
+  stripeCustomerId     String?
+  /// Per-seat recurring subscription
+  stripeSubscriptionId String?  @unique
+  /// "active" | "trialing" | "past_due" | "canceled" | "incomplete"
+  status               String   @default("incomplete")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  memberships OrgMembership[]
+  invites     OrgInvite[]
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+model OrgMembership {
+  id                String   @id @default(uuid())
+  orgId             String
+  userId            String   @db.Uuid
+  /// "admin" | "member"
+  role              String   @default("member")
+  /// "invited" | "active" | "suspended"
+  status            String   @default("active")
+  /// Whether the org admin can see this member's CVs and applications
+  sharesDataWithOrg Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
+  @@index([orgId, status])
+}
+
+/// Invitation for a user who may not have registered yet.
+model OrgInvite {
+  id        String   @id @default(uuid())
+  orgId     String
+  email     String
+  /// Secure random token sent in the invite link
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([token])
+}
+
+/// Org access inquiries submitted from the register page
+model OrgInquiry {
+  id           String   @id @default(uuid())
+  orgName      String
+  contactName  String
+  contactEmail String
+  message      String?
+  /// "pending" | "contacted" | "dismissed"
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// Custom folders for the admin inbox
+model EmailFolder {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+
+  parent   EmailFolder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children EmailFolder[] @relation("FolderTree")
+
+  inboundEmails InboundEmail[]
+  sentEmails    SentEmail[]
+
+  @@index([parentId])
+}
+
+/// Inbound emails received via Resend webhook
+model InboundEmail {
+  id          String    @id @default(uuid())
+  fromAddress String
+  fromName    String?
+  toAddress   String
+  subject     String
+  textBody    String?
+  htmlBody    String?
+  messageId   String?
+  folderId    String?
+  archived    Boolean   @default(false)
+  deletedAt   DateTime?
+  receivedAt  DateTime  @default(now())
+
+  folder EmailFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([receivedAt])
+  @@index([folderId])
+  @@index([archived])
+  @@index([deletedAt])
+}
+
+/// Emails sent from the admin inbox
+model SentEmail {
+  id          String    @id @default(uuid())
+  toAddress   String
+  subject     String
+  textBody    String?
+  htmlBody    String?
+  inReplyTo   String?
+  folderId    String?
+  archived    Boolean   @default(false)
+  deletedAt   DateTime?
+  sentAt      DateTime  @default(now())
+
+  folder EmailFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([sentAt])
+  @@index([folderId])
+  @@index([archived])
+  @@index([deletedAt])
 }

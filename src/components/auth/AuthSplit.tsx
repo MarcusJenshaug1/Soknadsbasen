@@ -11,6 +11,7 @@ import {
   passwordScore,
 } from "@/components/ui/PasswordStrength";
 import { cn } from "@/lib/cn";
+import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 
 type Mode = "login" | "register";
 
@@ -182,6 +183,93 @@ function LoginForm() {
   );
 }
 
+function OrgInquiryForm({
+  defaultEmail,
+  defaultName,
+  onClose,
+}: {
+  defaultEmail: string;
+  defaultName: string;
+  onClose: () => void;
+}) {
+  const [orgName, setOrgName] = useState("");
+  const [contactName, setContactName] = useState(defaultName);
+  const [contactEmail, setContactEmail] = useState(defaultEmail);
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/org/forespørsel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgName, contactName, contactEmail, message }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error ?? "Noe gikk galt"); return; }
+      setSent(true);
+    } catch {
+      setErr("Noe gikk galt");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200/60 dark:border-green-800/40 px-5 py-4">
+        <p className="text-[13px] font-medium text-green-800 dark:text-green-300">Forespørsel sendt!</p>
+        <p className="text-[12px] text-green-700/70 dark:text-green-400/70 mt-0.5">Vi tar kontakt med deg snart.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-panel px-5 py-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Building2 size={14} className="text-ink/50" />
+          <span className="text-[13px] font-medium">Søk om org-tilgang</span>
+        </div>
+        <button type="button" onClick={onClose} className="text-[11px] text-ink/40 hover:text-ink transition-colors">lukk</button>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <label className={label}>Organisasjonsnavn</label>
+          <input required value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Velle AS" className={underline} />
+        </div>
+        <div>
+          <label className={label}>Kontaktperson</label>
+          <input required value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Marit Larsen" className={underline} />
+        </div>
+        <div>
+          <label className={label}>E-post</label>
+          <input required type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="navn@org.no" className={underline} />
+        </div>
+        <div>
+          <label className={label}>Melding (valgfritt)</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Fortell litt om organisasjonen og hva dere trenger…"
+            rows={2}
+            className={`${underline} resize-none`}
+          />
+        </div>
+        {err && <p className="text-[12px] text-accent">{err}</p>}
+        <button type="submit" disabled={sending} className="w-full py-2.5 rounded-full bg-ink text-bg text-[13px] font-medium disabled:opacity-40 transition-opacity">
+          {sending ? "Sender…" : "Send forespørsel"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function RegisterForm({ onDone }: { onDone: () => void }) {
   const router = useRouter();
   const register = useAuthStore((s) => s.register);
@@ -190,6 +278,7 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [orgOpen, setOrgOpen] = useState(false);
   const score = passwordScore(password);
 
   async function onSubmit(e: React.FormEvent) {
@@ -269,6 +358,37 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
           Ved registrering godtar du våre vilkår og personvernerklæring.
         </p>
       </form>
+
+      <div className="mt-8 pt-6 border-t border-black/8 dark:border-white/8">
+        {!orgOpen ? (
+          <button
+            type="button"
+            onClick={() => setOrgOpen(true)}
+            className="flex items-center gap-2 text-[13px] text-ink/45 hover:text-ink transition-colors group w-full"
+          >
+            <Building2 size={14} className="shrink-0" />
+            <span>Er du en organisasjon eller bedrift?</span>
+            <ChevronDown size={13} className="ml-auto opacity-50 group-hover:opacity-100 transition-opacity" />
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setOrgOpen(false)}
+              className="flex items-center gap-2 text-[13px] text-ink/45 hover:text-ink transition-colors group w-full mb-4"
+            >
+              <Building2 size={14} className="shrink-0" />
+              <span>Er du en organisasjon eller bedrift?</span>
+              <ChevronUp size={13} className="ml-auto opacity-50 group-hover:opacity-100 transition-opacity" />
+            </button>
+            <OrgInquiryForm
+              defaultEmail={email}
+              defaultName={name}
+              onClose={() => setOrgOpen(false)}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }
