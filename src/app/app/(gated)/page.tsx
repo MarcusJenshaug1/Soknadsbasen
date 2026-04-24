@@ -178,11 +178,12 @@ export default async function AppHomePage() {
     ? Math.max(1, Math.round((Date.now() - oldestActive.getTime()) / 86_400_000))
     : 0;
 
-  const respondedCount = apps.filter(
-    (a) =>
-      a.status === "interview" ||
-      a.status === "offer" ||
-      a.status === "accepted",
+  // Svar = alle statuser der arbeidsgiver har respondert eller prosessen
+  // er avsluttet etter vurdering. Inkluderer: intervju, tilbud, takket ja,
+  // takket nei. Avslag telles ikke som svar i denne konteksten.
+  const RESPONDED = ["interview", "offer", "accepted", "declined"] as const;
+  const respondedCount = apps.filter((a) =>
+    (RESPONDED as readonly string[]).includes(a.status),
   ).length;
   const sentCount = apps.filter((a) => a.status !== "draft").length;
   const responseRate = sentCount > 0 ? Math.round((respondedCount / sentCount) * 100) : 0;

@@ -76,6 +76,7 @@ export default async function InnsiktPage({
     where: {
       userId: session.userId,
       createdAt: { gte: cutoff },
+      archivedAt: null,
     },
     include: {
       activities: {
@@ -90,7 +91,7 @@ export default async function InnsiktPage({
 
   const sent = apps.filter((a) => a.status !== "draft");
   const responded = sent.filter((a) =>
-    ["interview", "offer", "accepted"].includes(a.status),
+    ["interview", "offer", "accepted", "declined"].includes(a.status),
   );
   const responseRate =
     sent.length > 0 ? Math.round((responded.length / sent.length) * 1000) / 10 : 0;
@@ -101,7 +102,7 @@ export default async function InnsiktPage({
     const key = inferSource(a.source);
     const entry = sourceMap.get(key) ?? { sent: 0, responded: 0 };
     entry.sent++;
-    if (["interview", "offer", "accepted"].includes(a.status)) entry.responded++;
+    if (["interview", "offer", "accepted", "declined"].includes(a.status)) entry.responded++;
     sourceMap.set(key, entry);
   }
   const sources = Array.from(sourceMap.entries())
@@ -115,8 +116,8 @@ export default async function InnsiktPage({
   // Funnel
   const funnel = [
     { label: "Søknader sendt", n: sent.length },
-    { label: "Førstegangssamtale", n: apps.filter((a) => a.activities.length > 0 || ["interview", "offer", "accepted"].includes(a.status)).length },
-    { label: "Intervjurunder", n: apps.filter((a) => ["interview", "offer", "accepted"].includes(a.status)).length },
+    { label: "Førstegangssamtale", n: apps.filter((a) => a.activities.length > 0 || ["interview", "offer", "accepted", "declined"].includes(a.status)).length },
+    { label: "Intervjurunder", n: apps.filter((a) => ["interview", "offer", "accepted", "declined"].includes(a.status)).length },
     { label: "Tilbud mottatt", n: apps.filter((a) => ["offer", "accepted"].includes(a.status)).length },
     { label: "Akseptert", n: apps.filter((a) => a.status === "accepted").length },
   ];
@@ -144,7 +145,7 @@ export default async function InnsiktPage({
     const key = a.title.trim();
     const entry = roleMap.get(key) ?? { sent: 0, responded: 0 };
     entry.sent++;
-    if (["interview", "offer", "accepted"].includes(a.status)) entry.responded++;
+    if (["interview", "offer", "accepted", "declined"].includes(a.status)) entry.responded++;
     roleMap.set(key, entry);
   }
   const roles = Array.from(roleMap.entries())
@@ -162,7 +163,7 @@ export default async function InnsiktPage({
       (a) => a.createdAt >= start && a.createdAt < end && a.status !== "draft",
     );
     const winResp = winApps.filter((a) =>
-      ["interview", "offer", "accepted"].includes(a.status),
+      ["interview", "offer", "accepted", "declined"].includes(a.status),
     ).length;
     points.push(winApps.length ? Math.round((winResp / winApps.length) * 100) : 0);
   }

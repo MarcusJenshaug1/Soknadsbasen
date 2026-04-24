@@ -39,7 +39,7 @@ const SAVE_DEBOUNCE_MS = 2_000; // Wait 2s after last change before saving
 
 /* ─── The hook ────────────────────────────────────────────── */
 
-export function useCloudSync() {
+export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   const user = useAuthStore((s) => s.user);
   const loadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,27 +116,28 @@ export function useCloudSync() {
 
   /* ── Load on login ─────────────────────────────────────── */
   useEffect(() => {
+    if (!enabled) return;
     if (user) {
       loadFromServer();
     } else {
       loadedRef.current = false;
     }
-  }, [user, loadFromServer]);
+  }, [enabled, user, loadFromServer]);
 
   /* ── Subscribe to store changes → auto-save ────────────── */
   useEffect(() => {
-    if (!user) return;
+    if (!enabled || !user) return;
 
     const unsubResume = useResumeStore.subscribe(debouncedSave);
 
     return () => {
       unsubResume();
     };
-  }, [user, debouncedSave]);
+  }, [enabled, user, debouncedSave]);
 
   /* ── Save immediately before page unload ───────────────── */
   useEffect(() => {
-    if (!user) return;
+    if (!enabled || !user) return;
 
     const handleBeforeUnload = () => {
       if (!loadedRef.current) return;
