@@ -1,28 +1,26 @@
 "use client";
 
-import type { UserRoles } from "@/lib/auth";
+interface DialogOption {
+  label: string;
+  href: string;
+}
 
 interface RoleSwitchDialogProps {
-  roles: UserRoles;
+  options: DialogOption[];
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function RoleSwitchDialog({
-  roles,
+  options,
   isOpen,
   onClose,
 }: RoleSwitchDialogProps) {
-  if (!isOpen) return null;
+  if (!isOpen || options.length === 0) return null;
 
-  const handleAdminClick = () => {
+  const handleOptionClick = (href: string) => {
     onClose();
-    window.location.href = "/admin";
-  };
-
-  const handleOrgClick = (slug: string) => {
-    onClose();
-    window.location.href = `/org/${slug}`;
+    window.location.href = href;
   };
 
   return (
@@ -35,34 +33,20 @@ export function RoleSwitchDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
-          <h2 className="text-[18px] font-semibold mb-6">Velg modus</h2>
+          <h2 className="text-[18px] font-semibold mb-6">Velg kontekst</h2>
 
-          <div className="space-y-3">
-            <button
-              onClick={handleAdminClick}
-              className="w-full px-4 py-3 rounded-full bg-accent hover:bg-[#a94424] dark:hover:bg-[#c45830] text-bg font-medium text-[14px] transition-colors"
-            >
-              Intern admin
-            </button>
-
-            {roles.orgMemberships.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-[12px] uppercase tracking-wider text-ink/50 px-1">
-                  Organisasjoner
-                </p>
-                {roles.orgMemberships.map((org) => (
-                  <button
-                    key={org.id}
-                    onClick={() => handleOrgClick(org.slug)}
-                    className="w-full text-left px-4 py-3 rounded-full border border-black/15 dark:border-white/15 hover:bg-panel hover:border-accent transition-colors"
-                  >
-                    <div className="font-medium text-[14px] text-ink">
-                      {org.displayName}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="space-y-2">
+            {options.map((option) => (
+              <button
+                key={option.href}
+                onClick={() => handleOptionClick(option.href)}
+                className="w-full text-left px-4 py-3 rounded-full border border-black/15 dark:border-white/15 hover:bg-panel hover:border-accent transition-colors"
+              >
+                <div className="font-medium text-[14px] text-ink">
+                  {option.label}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 
