@@ -51,10 +51,10 @@ export async function POST(req: Request) {
           .join("\n")}`
       : "",
     Array.isArray(cv.education) && cv.education.length
-      ? `Utdanning: ${cv.education.map((e) => `${e.title} ved ${e.institution}`).join(", ")}`
+      ? `Utdanning: ${cv.education.map((e) => `${e.degree}${e.field ? ` i ${e.field}` : ""} ved ${e.school}`).join(", ")}`
       : "",
     Array.isArray(cv.skills) && cv.skills.length
-      ? `Ferdigheter: ${cv.skills.map((s) => s.name).join(", ")}`
+      ? `Ferdigheter: ${cv.skills.join(", ")}`
       : "",
   ]
     .filter(Boolean)
