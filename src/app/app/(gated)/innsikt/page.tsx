@@ -91,10 +91,19 @@ export default async function InnsiktPage({
 
   const sent = apps.filter((a) => a.status !== "draft");
   const responded = sent.filter((a) =>
-    ["interview", "offer", "accepted", "declined"].includes(a.status),
+    ["interview", "offer", "accepted", "declined", "rejected"].includes(a.status),
   );
   const responseRate =
     sent.length > 0 ? Math.round((responded.length / sent.length) * 1000) / 10 : 0;
+
+  // Svar-fordeling: hva slags svar er det egentlig?
+  const breakdown = {
+    interview: apps.filter((a) => a.status === "interview").length,
+    offer: apps.filter((a) => a.status === "offer").length,
+    accepted: apps.filter((a) => a.status === "accepted").length,
+    declined: apps.filter((a) => a.status === "declined").length,
+    rejected: apps.filter((a) => a.status === "rejected").length,
+  };
 
   // Per-source breakdown
   const sourceMap = new Map<string, { sent: number; responded: number }>();
@@ -102,7 +111,7 @@ export default async function InnsiktPage({
     const key = inferSource(a.source);
     const entry = sourceMap.get(key) ?? { sent: 0, responded: 0 };
     entry.sent++;
-    if (["interview", "offer", "accepted", "declined"].includes(a.status)) entry.responded++;
+    if (["interview", "offer", "accepted", "declined", "rejected"].includes(a.status)) entry.responded++;
     sourceMap.set(key, entry);
   }
   const sources = Array.from(sourceMap.entries())
@@ -116,8 +125,8 @@ export default async function InnsiktPage({
   // Funnel
   const funnel = [
     { label: "Søknader sendt", n: sent.length },
-    { label: "Førstegangssamtale", n: apps.filter((a) => a.activities.length > 0 || ["interview", "offer", "accepted", "declined"].includes(a.status)).length },
-    { label: "Intervjurunder", n: apps.filter((a) => ["interview", "offer", "accepted", "declined"].includes(a.status)).length },
+    { label: "Førstegangssamtale", n: apps.filter((a) => a.activities.length > 0 || ["interview", "offer", "accepted", "declined", "rejected"].includes(a.status)).length },
+    { label: "Intervjurunder", n: apps.filter((a) => ["interview", "offer", "accepted", "declined", "rejected"].includes(a.status)).length },
     { label: "Tilbud mottatt", n: apps.filter((a) => ["offer", "accepted"].includes(a.status)).length },
     { label: "Akseptert", n: apps.filter((a) => a.status === "accepted").length },
   ];
@@ -145,7 +154,7 @@ export default async function InnsiktPage({
     const key = a.title.trim();
     const entry = roleMap.get(key) ?? { sent: 0, responded: 0 };
     entry.sent++;
-    if (["interview", "offer", "accepted", "declined"].includes(a.status)) entry.responded++;
+    if (["interview", "offer", "accepted", "declined", "rejected"].includes(a.status)) entry.responded++;
     roleMap.set(key, entry);
   }
   const roles = Array.from(roleMap.entries())
@@ -163,7 +172,7 @@ export default async function InnsiktPage({
       (a) => a.createdAt >= start && a.createdAt < end && a.status !== "draft",
     );
     const winResp = winApps.filter((a) =>
-      ["interview", "offer", "accepted", "declined"].includes(a.status),
+      ["interview", "offer", "accepted", "declined", "rejected"].includes(a.status),
     ).length;
     points.push(winApps.length ? Math.round((winResp / winApps.length) * 100) : 0);
   }
@@ -257,6 +266,40 @@ export default async function InnsiktPage({
           </div>
         </div>
       </div>
+
+      {/* Svar-fordeling */}
+      {responded.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 md:p-8 border border-black/5 mb-4">
+          <SectionLabel className="mb-5">Hva slags svar</SectionLabel>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <BreakdownCell
+              label="Intervju"
+              value={breakdown.interview}
+              color="#14110e"
+            />
+            <BreakdownCell
+              label="Tilbud"
+              value={breakdown.offer}
+              color="#16a34a"
+            />
+            <BreakdownCell
+              label="Takket ja"
+              value={breakdown.accepted}
+              color="#16a34a"
+            />
+            <BreakdownCell
+              label="Takket nei"
+              value={breakdown.declined}
+              color="#94a3b8"
+            />
+            <BreakdownCell
+              label="Avslag"
+              value={breakdown.rejected}
+              color="#d1d5db"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Source rate + Funnel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -366,6 +409,33 @@ export default async function InnsiktPage({
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function BreakdownCell({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-[#eee9df]/50 p-4 border border-black/5">
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ background: color }}
+        />
+        <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/60">
+          {label}
+        </span>
+      </div>
+      <div className="text-[28px] md:text-[32px] leading-none tracking-[-0.03em] font-medium">
+        {value}
       </div>
     </div>
   );

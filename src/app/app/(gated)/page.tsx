@@ -180,8 +180,14 @@ export default async function AppHomePage() {
 
   // Svar = alle statuser der arbeidsgiver har respondert eller prosessen
   // er avsluttet etter vurdering. Inkluderer: intervju, tilbud, takket ja,
-  // takket nei. Avslag telles ikke som svar i denne konteksten.
-  const RESPONDED = ["interview", "offer", "accepted", "declined"] as const;
+  // takket nei, avslag. Breakdown per type vises i Resultater-seksjonen.
+  const RESPONDED = [
+    "interview",
+    "offer",
+    "accepted",
+    "declined",
+    "rejected",
+  ] as const;
   const respondedCount = apps.filter((a) =>
     (RESPONDED as readonly string[]).includes(a.status),
   ).length;
