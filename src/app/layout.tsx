@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { rootMetadata } from "@/lib/seo/metadata";
@@ -34,6 +35,7 @@ export default function RootLayout({
       >
         <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
         <AuthProvider>{children}</AuthProvider>
+        <ServiceWorkerRegistration />
         <Analytics />
       </body>
     </html>

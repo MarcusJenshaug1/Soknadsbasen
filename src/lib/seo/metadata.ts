@@ -75,6 +75,15 @@ export function rootMetadata(): Metadata {
     creator: siteConfig.founder.name,
     publisher: siteConfig.name,
     formatDetection: { email: false, telephone: false, address: false },
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#D5592E" },
+      { media: "(prefers-color-scheme: dark)", color: "#D5592E" },
+    ],
+    appleWebApp: {
+      capable: true,
+      title: siteConfig.name,
+      statusBarStyle: "black-translucent",
+    },
     ...buildMetadata({ path: "/" }),
   };
 }
