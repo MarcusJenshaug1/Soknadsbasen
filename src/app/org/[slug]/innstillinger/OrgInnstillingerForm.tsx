@@ -22,7 +22,9 @@ export function OrgInnstillingerForm({ slug, initial }: { slug: string; initial:
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const inputCls =
-    "w-full border-b border-black/20 bg-transparent py-2 text-[15px] outline-none focus:border-ink placeholder:text-ink/40 transition-colors";
+    "w-full border-b border-black/15 bg-transparent py-2 text-[14px] outline-none focus:border-ink placeholder:text-ink/40 transition-colors";
+  const labelCls =
+    "block text-[11px] font-medium uppercase tracking-wide text-ink/50 mb-1.5";
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -53,39 +55,62 @@ export function OrgInnstillingerForm({ slug, initial }: { slug: string; initial:
     }
   }
 
+  const validHex = fields.brandColor && /^#[0-9a-fA-F]{6}$/.test(fields.brandColor);
+
   return (
-    <form onSubmit={handleSave} className="space-y-6">
+    <form onSubmit={handleSave} className="space-y-5">
       <div>
-        <label className="block text-[11px] font-medium uppercase tracking-wide text-ink/50 mb-1">
-          Juridisk navn
-        </label>
-        <input className={inputCls} value={fields.name} onChange={(e) => setFields((f) => ({ ...f, name: e.target.value }))} required />
+        <label className={labelCls}>Juridisk navn</label>
+        <input
+          className={inputCls}
+          value={fields.name}
+          onChange={(e) => setFields((f) => ({ ...f, name: e.target.value }))}
+          required
+        />
       </div>
       <div>
-        <label className="block text-[11px] font-medium uppercase tracking-wide text-ink/50 mb-1">
-          Visningsnavn
-        </label>
-        <input className={inputCls} value={fields.displayName} onChange={(e) => setFields((f) => ({ ...f, displayName: e.target.value }))} required />
+        <label className={labelCls}>Visningsnavn</label>
+        <input
+          className={inputCls}
+          value={fields.displayName}
+          onChange={(e) => setFields((f) => ({ ...f, displayName: e.target.value }))}
+          required
+        />
+        <p className="text-[11px] text-ink/40 mt-1">Vises i sidebar og faktureringsfelt.</p>
       </div>
       <div>
-        <label className="block text-[11px] font-medium uppercase tracking-wide text-ink/50 mb-1">
-          Logo-URL
-        </label>
-        <input className={inputCls} value={fields.logoUrl} onChange={(e) => setFields((f) => ({ ...f, logoUrl: e.target.value }))} placeholder="https://…" type="url" />
+        <label className={labelCls}>Logo-URL</label>
+        <div className="flex items-center gap-3">
+          {fields.logoUrl ? (
+            <div className="w-10 h-10 rounded-lg border border-black/10 bg-black/3 flex items-center justify-center overflow-hidden shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={fields.logoUrl} alt="" className="w-8 h-8 object-contain" />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-lg border border-black/10 bg-black/3 flex items-center justify-center shrink-0">
+              <span className="text-[10px] text-ink/30">ingen</span>
+            </div>
+          )}
+          <input
+            className={inputCls}
+            value={fields.logoUrl}
+            onChange={(e) => setFields((f) => ({ ...f, logoUrl: e.target.value }))}
+            placeholder="https://…"
+            type="url"
+          />
+        </div>
       </div>
       <div>
-        <label className="block text-[11px] font-medium uppercase tracking-wide text-ink/50 mb-2">
-          Merkefarge
-        </label>
+        <label className={labelCls}>Merkefarge</label>
         <div className="flex items-center gap-3">
           <input
             type="color"
-            value={fields.brandColor || "#D5592E"}
+            value={validHex ? fields.brandColor : "#D5592E"}
             onChange={(e) => setFields((f) => ({ ...f, brandColor: e.target.value }))}
-            className="w-10 h-10 rounded-lg border border-black/20 cursor-pointer"
+            className="w-10 h-10 rounded-lg border border-black/15 cursor-pointer"
           />
           <input
-            className="flex-1 border-b border-black/20 bg-transparent py-2 text-[15px] outline-none focus:border-ink"
+            className={inputCls}
             value={fields.brandColor}
             onChange={(e) => setFields((f) => ({ ...f, brandColor: e.target.value }))}
             placeholder="#D5592E"
@@ -93,16 +118,20 @@ export function OrgInnstillingerForm({ slug, initial }: { slug: string; initial:
           />
         </div>
       </div>
-      {msg && (
-        <p className={`text-[13px] ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.text}</p>
-      )}
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-full py-3 rounded-full bg-ink text-bg text-[14px] font-medium disabled:opacity-40"
-      >
-        {saving ? "Lagrer…" : "Lagre innstillinger"}
-      </button>
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-5 py-2 rounded-full bg-ink text-bg text-[13px] font-medium disabled:opacity-40"
+        >
+          {saving ? "Lagrer…" : "Lagre"}
+        </button>
+        {msg && (
+          <span className={`text-[12px] ${msg.ok ? "text-green-700" : "text-red-600"}`}>
+            {msg.text}
+          </span>
+        )}
+      </div>
     </form>
   );
 }

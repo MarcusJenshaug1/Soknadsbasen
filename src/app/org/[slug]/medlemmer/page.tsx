@@ -1,10 +1,15 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { MedlemmerClient } from "./MedlemmerClient";
 
-export default async function MedlemmerPage({ params }: { params: Promise<{ slug: string }> }) {
+export const dynamic = "force-dynamic";
+
+export default async function MedlemmerPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const session = await getSession();
   if (!session) return null;
@@ -13,7 +18,7 @@ export default async function MedlemmerPage({ params }: { params: Promise<{ slug
     where: { slug },
     select: {
       id: true,
-      displayName: true,
+      seatLimit: true,
       memberships: {
         where: { userId: session.userId, status: "active" },
         select: { role: true },
@@ -22,34 +27,38 @@ export default async function MedlemmerPage({ params }: { params: Promise<{ slug
   });
   if (!org || org.memberships.length === 0) notFound();
 
-  const members = await prisma.orgMembership.findMany({
-    where: { orgId: org.id },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      role: true,
-      status: true,
-      sharesDataWithOrg: true,
-      user: { select: { id: true, email: true, name: true, avatarUrl: true } },
-    },
-  });
+  // Server-render first page (50 newest). Client tar over deretter.
+  const [firstPage, totalActive, totalInvited] = await Promise.all([
+    prisma.orgMembership.findMany({
+      where: { orgId: org.id, status: { in: ["active", "invited"] } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 51,
+      select: {
+        id: true,
+        role: true,
+        status: true,
+        sharesDataWithOrg: true,
+        createdAt: true,
+        user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+      },
+    }),
+    prisma.orgMembership.count({ where: { orgId: org.id, status: "active" } }),
+    prisma.orgMembership.count({ where: { orgId: org.id, status: "invited" } }),
+  ]);
+
+  const hasMore = firstPage.length > 50;
+  const initialMembers = hasMore ? firstPage.slice(0, 50) : firstPage;
+  const initialCursor = hasMore ? initialMembers[initialMembers.length - 1]?.id : null;
 
   return (
-    <div className="min-h-dvh bg-bg p-6 md:p-10 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <Link href={`/org/${slug}`} className="text-[13px] text-ink/50 hover:text-ink transition-colors">
-          ← {org.displayName}
-        </Link>
-      </div>
-      <h1 className="text-[22px] font-semibold mb-2">Medlemmer</h1>
-      <p className="text-[13px] text-ink/50 mb-8">
-        Inviter brukere ved å skrive inn eposadressen deres.
-      </p>
-      <MedlemmerClient
-        initialMembers={members}
-        callerRole={org.memberships[0].role}
-        slug={slug}
-      />
-    </div>
+    <MedlemmerClient
+      slug={slug}
+      callerRole={org.memberships[0].role}
+      seatLimit={org.seatLimit}
+      initialMembers={initialMembers}
+      initialCursor={initialCursor ?? null}
+      totalActive={totalActive}
+      totalInvited={totalInvited}
+    />
   );
 }

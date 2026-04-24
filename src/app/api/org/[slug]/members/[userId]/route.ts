@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/server";
 
 export async function DELETE(
   req: Request,
@@ -16,7 +15,6 @@ export async function DELETE(
     where: { slug },
     select: {
       id: true,
-      stripeSubscriptionId: true,
       memberships: {
         where: { userId: session.userId, status: "active" },
         select: { role: true },
@@ -48,24 +46,8 @@ export async function DELETE(
     data: { status: "suspended" },
   });
 
-  // Sync Stripe seat quantity
-  if (org.stripeSubscriptionId) {
-    try {
-      const sub = await stripe.subscriptions.retrieve(org.stripeSubscriptionId);
-      const item = sub.items.data[0];
-      const activeCount = await prisma.orgMembership.count({
-        where: { orgId: org.id, status: "active" },
-      });
-      if (item && activeCount > 0) {
-        await stripe.subscriptions.update(org.stripeSubscriptionId, {
-          items: [{ id: item.id, quantity: activeCount }],
-          proration_behavior: "create_prorations",
-        });
-      }
-    } catch (err) {
-      console.error("[org/members/delete] Stripe quantity update failed:", err);
-    }
-  }
+  // Pool-modellen: lisensen frigjøres i poolen, men Stripe sub quantity endres ikke.
+  // Admin må selv redusere lisensantallet via /api/org/[slug]/seats hvis ønsket.
 
   return NextResponse.json({ ok: true });
 }

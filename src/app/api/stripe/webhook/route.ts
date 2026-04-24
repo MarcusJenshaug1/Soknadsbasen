@@ -51,12 +51,14 @@ export async function POST(req: Request) {
           if (!subscriptionId) break;
 
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const seatLimit = sub.items.data[0]?.quantity ?? 1;
           await prisma.organization.update({
             where: { id: orgId },
             data: {
               stripeCustomerId: customerId,
               stripeSubscriptionId: subscriptionId,
               status: sub.status,
+              seatLimit,
             },
           });
           break;
@@ -125,10 +127,11 @@ export async function POST(req: Request) {
           where: { stripeSubscriptionId: subscription.id },
           data: { status: subscription.status, currentPeriodEnd: periodEnd },
         });
-        // Update org subscriptions
+        // Update org subscriptions (status + seatLimit fra sub item quantity)
+        const seatLimit = subscription.items.data[0]?.quantity ?? 1;
         await prisma.organization.updateMany({
           where: { stripeSubscriptionId: subscription.id },
-          data: { status: subscription.status },
+          data: { status: subscription.status, seatLimit },
         });
         break;
       }

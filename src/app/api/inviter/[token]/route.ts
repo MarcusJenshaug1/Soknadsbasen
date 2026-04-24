@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe/server";
 
 export async function GET(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
@@ -28,7 +27,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const { token } = await ctx.params;
   const invite = await prisma.orgInvite.findUnique({
     where: { token },
-    include: { org: { select: { id: true, slug: true, stripeSubscriptionId: true } } },
+    include: { org: { select: { id: true, slug: true } } },
   });
   if (!invite) return NextResponse.json({ error: "Invitasjon ikke funnet" }, { status: 404 });
   if (invite.expiresAt < new Date()) {
@@ -46,24 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
 
   await prisma.orgInvite.delete({ where: { token } });
 
-  // Sync Stripe seat quantity
-  if (invite.org.stripeSubscriptionId) {
-    try {
-      const sub = await stripe.subscriptions.retrieve(invite.org.stripeSubscriptionId);
-      const item = sub.items.data[0];
-      const activeCount = await prisma.orgMembership.count({
-        where: { orgId: invite.org.id, status: "active" },
-      });
-      if (item) {
-        await stripe.subscriptions.update(invite.org.stripeSubscriptionId, {
-          items: [{ id: item.id, quantity: activeCount }],
-          proration_behavior: "create_prorations",
-        });
-      }
-    } catch (err) {
-      console.error("[inviter/accept] Stripe quantity update failed:", err);
-    }
-  }
+  // Pool-modellen: lisensen er allerede kjøpt av admin. Ingen Stripe-justering.
 
   return NextResponse.json({ ok: true, orgSlug: invite.org.slug });
 }

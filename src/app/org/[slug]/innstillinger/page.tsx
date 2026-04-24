@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { OrgInnstillingerForm } from "./OrgInnstillingerForm";
+
+export const dynamic = "force-dynamic";
 
 export default async function OrgInnstillingerPage({
   params,
@@ -31,17 +32,25 @@ export default async function OrgInnstillingerPage({
   if (org.memberships[0].role !== "admin") notFound();
 
   return (
-    <div className="min-h-dvh bg-bg p-6 md:p-10 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <Link href={`/org/${slug}`} className="text-[13px] text-ink/50 hover:text-ink transition-colors">
-          ← {org.displayName}
-        </Link>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-[20px] font-semibold text-ink">Innstillinger</h1>
+        <p className="text-[13px] text-ink/50 mt-0.5">
+          Navn, logo og merkefarge for organisasjonen.
+        </p>
       </div>
-      <h1 className="text-[22px] font-semibold mb-8">Innstillinger</h1>
-      <OrgInnstillingerForm
-        slug={slug}
-        initial={{ name: org.name, displayName: org.displayName, logoUrl: org.logoUrl, brandColor: org.brandColor }}
-      />
+
+      <section className="border border-black/8 rounded-xl bg-bg p-6 max-w-2xl">
+        <OrgInnstillingerForm
+          slug={slug}
+          initial={{
+            name: org.name,
+            displayName: org.displayName,
+            logoUrl: org.logoUrl,
+            brandColor: org.brandColor,
+          }}
+        />
+      </section>
     </div>
   );
 }

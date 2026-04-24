@@ -15,6 +15,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
     select: {
       id: true,
       displayName: true,
+      seatLimit: true,
       memberships: {
         where: { userId: session.userId, status: "active" },
         select: { role: true },
@@ -48,6 +49,30 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
   });
   if (existingMembership) {
     return NextResponse.json({ error: "Brukeren er allerede et aktivt medlem" }, { status: 409 });
+  }
+
+  // Pool-sjekk: aktive medlemmer + unike ubetalte invitasjoner ≤ seatLimit.
+  // OrgInvite opprettes for alle invitasjoner (med eller uten eksisterende bruker),
+  // så vi teller dem som kilde-av-sannhet for "pending". Membership(status=invited)
+  // er bare et speil av OrgInvite når brukeren finnes fra før.
+  const [activeMembers, pendingInvites] = await Promise.all([
+    prisma.orgMembership.count({
+      where: { orgId: org.id, status: "active" },
+    }),
+    prisma.orgInvite.count({
+      where: { orgId: org.id, expiresAt: { gt: new Date() } },
+    }),
+  ]);
+  const seatsUsed = activeMembers + pendingInvites;
+  if (seatsUsed >= org.seatLimit) {
+    return NextResponse.json(
+      {
+        error: "Ingen ledige lisenser. Kjøp flere lisenser før du inviterer.",
+        seatsUsed,
+        seatLimit: org.seatLimit,
+      },
+      { status: 409 },
+    );
   }
 
   const token = randomUUID();
