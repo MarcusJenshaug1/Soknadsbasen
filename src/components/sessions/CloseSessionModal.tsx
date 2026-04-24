@@ -23,9 +23,10 @@ const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-1
 interface Props {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function CloseSessionModal({ open, onClose }: Props) {
+export function CloseSessionModal({ open, onClose, onSuccess }: Props) {
   const router = useRouter();
   const activeSession = useSessionStore((s) => s.activeSession);
   const close = useSessionStore((s) => s.close);
@@ -62,6 +63,7 @@ export function CloseSessionModal({ open, onClose }: Props) {
       });
       router.refresh();
       onClose();
+      onSuccess?.();
       setOutcome(null);
       setWinningId("");
       setNotes("");

@@ -23,6 +23,7 @@ export function MobileSessionBar() {
   const [open, setOpen] = useState(false);
   const [showClose, setShowClose] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [newAfterClose, setNewAfterClose] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -79,6 +80,13 @@ export function MobileSessionBar() {
                 >
                   Avslutt sesjon
                 </button>
+                <span className="text-[#14110e]/20 text-[11px]">·</span>
+                <button
+                  onClick={() => { setNewAfterClose(true); setShowClose(true); setOpen(false); }}
+                  className="text-[11px] text-[#14110e]/50 hover:text-[#14110e] hover:underline"
+                >
+                  Start ny sesjon
+                </button>
               </div>
             </div>
           )}
@@ -123,7 +131,11 @@ export function MobileSessionBar() {
         </div>
       )}
 
-      <CloseSessionModal open={showClose} onClose={() => setShowClose(false)} />
+      <CloseSessionModal
+        open={showClose}
+        onClose={() => { setShowClose(false); setNewAfterClose(false); }}
+        onSuccess={() => { if (newAfterClose) setShowNew(true); }}
+      />
       <NewSessionModal open={showNew} onClose={() => setShowNew(false)} />
     </div>
   );
