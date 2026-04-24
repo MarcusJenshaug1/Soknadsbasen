@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { IconClose } from "@/components/ui/Icons";
 import { SectionLabel } from "@/components/ui/Pill";
@@ -54,7 +55,7 @@ export function NewSessionModal({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-[#14110e]/50 backdrop-blur-sm"
@@ -121,6 +122,7 @@ export function NewSessionModal({ open, onClose }: Props) {
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
