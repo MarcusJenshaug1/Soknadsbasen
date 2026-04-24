@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
@@ -133,9 +134,15 @@ export default async function AppHomePage() {
   const session = await getSession();
   if (!session) redirect("/logg-inn");
 
+  const activeJobSession = await getActiveSession();
+
   const [allApps, userData] = await Promise.all([
     prisma.jobApplication.findMany({
-      where: { userId: session.userId, archivedAt: null },
+      where: {
+        userId: session.userId,
+        archivedAt: null,
+        ...(activeJobSession ? { sessionId: activeJobSession.id } : {}),
+      },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -213,6 +220,11 @@ export default async function AppHomePage() {
           </h1>
           <p className="text-[14px] md:text-[15px] text-[#14110e]/65 mt-3">
             {active.length} aktive søknader · {interviewCount} intervjuer
+            {activeJobSession && (
+              <span className="ml-2 text-[13px] text-[#14110e]/40">
+                · {activeJobSession.name}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">

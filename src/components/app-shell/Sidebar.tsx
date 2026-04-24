@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
+import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 
 type NavItem = { href: string; label: string; gated: boolean };
 
@@ -16,6 +17,7 @@ const NAV: readonly NavItem[] = [
   { href: "/app/oppgaver", label: "Oppgaver", gated: true },
   { href: "/app/selskaper", label: "Selskaper", gated: true },
   { href: "/app/innsikt", label: "Innsikt", gated: true },
+  { href: "/app/sesjoner", label: "Sesjoner", gated: true },
   { href: "/app/profil", label: "Profil", gated: false },
   { href: "/app/billing", label: "Abonnement", gated: false },
 ] as const;
@@ -47,7 +49,8 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
       <div className="mb-12">
         <Logo href="/app" />
       </div>
-      <nav className="space-y-0.5 text-[13px] flex-1">
+      <nav className="space-y-0.5 text-[13px] flex-1 flex flex-col">
+        <div className="flex-1 space-y-0.5">
         {nav.map((n) => {
           const active =
             n.href === "/app"
@@ -69,6 +72,12 @@ export function Sidebar({ hasAccess }: { hasAccess: boolean }) {
             </Link>
           );
         })}
+        </div>
+        {hasAccess && (
+          <div className="mt-4 pt-4 border-t border-black/8">
+            <SessionSwitcher />
+          </div>
+        )}
       </nav>
       <Link
         href="/app/profil"

@@ -101,8 +101,10 @@ function initials(name: string) {
 
 export function PipelineView({
   initialApplications,
+  readOnly = false,
 }: {
   initialApplications: Application[];
+  readOnly?: boolean;
 }) {
   const [apps, setApps] = useState(initialApplications);
   const [search, setSearch] = useState("");
@@ -284,14 +286,16 @@ export function PipelineView({
             />
           </label>
 
-          <button
-            type="button"
-            onClick={() => setNewModalOpen(true)}
-            className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
-          >
-            <IconPlus size={14} />
-            Ny søknad
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => setNewModalOpen(true)}
+              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
+            >
+              <IconPlus size={14} />
+              Ny søknad
+            </button>
+          )}
         </div>
       </div>
 
@@ -312,10 +316,10 @@ export function PipelineView({
         <TimelineView apps={filtered} />
       ) : (
         <DndContext
-          sensors={sensors}
-          onDragStart={(e: DragStartEvent) => setDraggingId(String(e.active.id))}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setDraggingId(null)}
+          sensors={readOnly ? [] : sensors}
+          onDragStart={readOnly ? undefined : (e: DragStartEvent) => setDraggingId(String(e.active.id))}
+          onDragEnd={readOnly ? undefined : handleDragEnd}
+          onDragCancel={readOnly ? undefined : () => setDraggingId(null)}
         >
           {/* Mobile: stacked */}
           <div className="md:hidden space-y-5">

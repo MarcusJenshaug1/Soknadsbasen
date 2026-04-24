@@ -166,3 +166,21 @@ export function IconCheckList({ size = 20, className }: IconProps) {
     </svg>
   );
 }
+
+export function IconMoreHorizontal({ size = 20, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function IconChevronDown({ size = 20, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}

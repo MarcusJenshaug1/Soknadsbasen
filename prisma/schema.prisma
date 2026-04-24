@@ -23,6 +23,7 @@ model User {
   companies    Company[]
   applications JobApplication[]
   subscription Subscription?
+  sessions     JobSearchSession[]
 }
 
 model Subscription {
@@ -111,6 +112,41 @@ model Template {
   createdAt   DateTime @default(now())
 }
 
+// ─── Job search sessions ───────────────────────────────────
+
+enum SessionStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum SessionOutcome {
+  GOT_JOB
+  PAUSE
+  OTHER
+}
+
+/// A bounded job-search period. One ACTIVE session per user at a time.
+/// Applications belong to a session; profile/CV/subscription are global.
+model JobSearchSession {
+  id                   String          @id @default(uuid())
+  userId               String          @db.Uuid
+  name                 String
+  status               SessionStatus   @default(ACTIVE)
+  outcome              SessionOutcome?
+  /// If outcome=GOT_JOB, the application that led to the offer.
+  winningApplicationId String?
+  startedAt            DateTime        @default(now())
+  closedAt             DateTime?
+  notes                String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@index([userId, status])
+}
+
 // ─── Job application domain ────────────────────────────────
 
 /// A company the user has applied to or is tracking.
@@ -157,11 +193,14 @@ model JobApplication {
   /// Optional link to a ResumeVersion snapshot sent with this application.
   resumeSnapshotId String?
   archivedAt       DateTime?
+  /// The job-search session this application belongs to. Null for pre-session data.
+  sessionId        String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   company        Company?              @relation(fields: [companyId], references: [id])
+  session        JobSearchSession?     @relation(fields: [sessionId], references: [id])
   resumeSnapshot ResumeVersion?        @relation(fields: [resumeSnapshotId], references: [id])
   tasks          Task[]
   attachments    Attachment[]

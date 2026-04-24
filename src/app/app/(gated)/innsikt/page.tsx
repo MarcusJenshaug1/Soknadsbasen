@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { getAllSessions } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
-import { PeriodSelector } from "./PeriodSelector";
+import { InnsiktFilters } from "./InnsiktFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -63,20 +64,25 @@ function buildSparkline(points: number[]): string {
 export default async function InnsiktPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: Period }>;
+  searchParams: Promise<{ period?: Period; session?: string }>;
 }) {
-  const session = await getSession();
+  const [session, sp] = await Promise.all([getSession(), searchParams]);
   if (!session) redirect("/logg-inn");
 
-  const sp = await searchParams;
   const period: Period = sp.period ?? "90d";
-  const cutoff = periodCutoff(period);
+  const sessionId = sp.session ?? undefined;
+
+  // Hent sesjoner for filter-widgeten
+  const sessions = await getAllSessions();
+
+  // Når sesjon er valgt, filtrer på sessionId; ellers bruk dato-cutoff
+  const dateFilter = sessionId ? {} : { createdAt: { gte: periodCutoff(period) } };
 
   const apps = await prisma.jobApplication.findMany({
     where: {
       userId: session.userId,
-      createdAt: { gte: cutoff },
       archivedAt: null,
+      ...(sessionId ? { sessionId } : dateFilter),
     },
     include: {
       activities: {
@@ -217,7 +223,11 @@ export default async function InnsiktPage({
             Hva fungerer, hva fungerer ikke.
           </p>
         </div>
-        <PeriodSelector current={period} />
+        <InnsiktFilters
+          currentPeriod={period}
+          currentSession={sessionId ?? null}
+          sessions={sessions.map((s) => ({ id: s.id, name: s.name, status: s.status }))}
+        />
       </div>
 
       {/* Hero */}

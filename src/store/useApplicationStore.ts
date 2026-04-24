@@ -58,6 +58,7 @@ export interface JobApplicationData {
   id: string;
   userId: string;
   companyId: string | null;
+  sessionId: string | null;
   companyName: string;
   title: string;
   source: string | null;
@@ -119,7 +120,7 @@ interface ApplicationStore {
   error: string | null;
 
   /** Load (or reload) all applications from the server. */
-  load: (params?: { status?: string; search?: string }) => Promise<void>;
+  load: (params?: { status?: string; search?: string; sessionId?: string }) => Promise<void>;
 
   /** Create a new application, add it to local state, return it. */
   create: (input: CreateApplicationInput) => Promise<JobApplicationData>;
@@ -147,6 +148,7 @@ export const useApplicationStore = create<ApplicationStore>((set, get) => ({
       const qs = new URLSearchParams();
       if (params?.status) qs.set("status", params.status);
       if (params?.search) qs.set("search", params.search);
+      if (params?.sessionId) qs.set("sessionId", params.sessionId);
       const url = `/api/applications${qs.toString() ? `?${qs}` : ""}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Kunne ikke laste søknader");

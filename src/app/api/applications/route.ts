@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createDefaultSession } from "@/lib/session-context";
 
 /* ─── GET /api/applications ────────────────────────────────
    Query params:
@@ -17,6 +18,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? undefined;
   const search = searchParams.get("search") ?? undefined;
+  const sessionId = searchParams.get("sessionId") ?? undefined;
   const sort = (searchParams.get("sort") ?? "updatedAt") as
     | "createdAt"
     | "updatedAt"
@@ -26,6 +28,7 @@ export async function GET(req: Request) {
     where: {
       userId: session.userId,
       ...(status ? { status } : {}),
+      ...(sessionId ? { sessionId } : {}),
       ...(search
         ? {
             OR: [
@@ -79,9 +82,19 @@ export async function POST(req: Request) {
     );
   }
 
+  // Finn aktiv sesjon — opprett standard-sesjon hvis ingen finnes (første søknad)
+  let activeSession = await prisma.jobSearchSession.findFirst({
+    where: { userId: session.userId, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (!activeSession) {
+    activeSession = await createDefaultSession(session.userId);
+  }
+
   const application = await prisma.jobApplication.create({
     data: {
       userId: session.userId,
+      sessionId: activeSession.id,
       companyName: body.companyName.trim(),
       companyWebsite: body.companyWebsite?.trim() || null,
       title: body.title.trim(),
