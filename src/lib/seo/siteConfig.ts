@@ -1,22 +1,8 @@
-// Bygg-ID for å tvinge cache-invalidering ved oppdatering: 2026-04-24-2
-const DEFAULT_SITE_URL = "https://søknadsbasen.no";
-
-function safeParseUrl(raw: string | undefined): URL {
-  const candidate = (raw ?? "").trim();
-  if (!candidate) return new URL(DEFAULT_SITE_URL);
-  try {
-    const u = new URL(candidate);
-    // Verifiser at hostname parses til gyldig punycode/unicode
-    if (!u.hostname || u.hostname.length === 0) {
-      return new URL(DEFAULT_SITE_URL);
-    }
-    return u;
-  } catch {
-    return new URL(DEFAULT_SITE_URL);
-  }
-}
-
-export const siteUrl = safeParseUrl(process.env.NEXT_PUBLIC_SITE_URL);
+// Hardkodet produksjons-URL. Env-var ble deaktivert 2026-04-24 pga
+// Vercel-env med ugyldig punycode (xn--sknadsbasen-95a) som fortsatt
+// lekket inn i prerender-chunks selv med safeParseUrl-wrapping.
+// Endre hardkodingen under ved domenebytte, ikke via env.
+export const siteUrl = new URL("https://søknadsbasen.no");
 
 export const siteConfig = {
   name: "Søknadsbasen",
