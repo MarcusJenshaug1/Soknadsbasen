@@ -92,7 +92,7 @@ export function SessionSwitcher() {
                 <div className="text-[10px] uppercase tracking-wider text-[#14110e]/45 mb-2">Denne sesjonen</div>
                 <button
                   onClick={() => { setShowClose(true); setOpen(false); }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-[#c15a3a] hover:bg-[#c15a3a]/8 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-[12px] text-[#D5592E] hover:bg-[#D5592E]/8 transition-colors"
                 >
                   Avslutt sesjon …
                 </button>
@@ -140,7 +140,7 @@ export function SessionSwitcher() {
               {!activeSession ? (
                 <button
                   onClick={() => { setShowNew(true); setOpen(false); }}
-                  className="w-full px-3 py-2 rounded-xl text-[12px] bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a] transition-colors"
+                  className="w-full px-3 py-2 rounded-xl text-[12px] bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424] transition-colors"
                 >
                   Start ny sesjon
                 </button>

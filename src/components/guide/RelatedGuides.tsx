@@ -15,7 +15,7 @@ export async function RelatedGuides({ slugs }: { slugs: string[] }) {
     >
       <h2
         id="related-heading"
-        className="text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-6"
+        className="text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-6"
       >
         Les også
       </h2>
@@ -32,13 +32,13 @@ export async function RelatedGuides({ slugs }: { slugs: string[] }) {
                   g.frontmatter.updatedAt ?? g.frontmatter.publishedAt,
                 )}
               </div>
-              <h3 className="text-[17px] md:text-[19px] leading-[1.3] tracking-[-0.015em] font-medium mb-2 group-hover:text-[#c15a3a] transition-colors">
+              <h3 className="text-[17px] md:text-[19px] leading-[1.3] tracking-[-0.015em] font-medium mb-2 group-hover:text-[#D5592E] transition-colors">
                 {g.frontmatter.title}
               </h3>
               <p className="text-[13px] leading-[1.55] text-[#14110e]/65 line-clamp-2">
                 {g.frontmatter.description}
               </p>
-              <span className="mt-3 inline-flex items-center gap-1 text-[12px] text-[#c15a3a]">
+              <span className="mt-3 inline-flex items-center gap-1 text-[12px] text-[#D5592E]">
                 Les guiden
                 <FiArrowUpRight className="w-3 h-3" />
               </span>

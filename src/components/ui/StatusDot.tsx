@@ -12,7 +12,7 @@ export type StatusKey =
 
 export const STATUS_COLOR: Record<StatusKey, string> = {
   draft: "#94a3b8",
-  applied: "#c15a3a",
+  applied: "#D5592E",
   interview: "#14110e",
   offer: "#16a34a",
   accepted: "#16a34a",

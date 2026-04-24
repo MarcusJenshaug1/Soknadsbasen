@@ -265,7 +265,7 @@ export function SummaryForm() {
           <button
             type="button"
             onClick={() => setAiOpen(true)}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a] transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] transition-colors"
           >
             Forbedre med AI
           </button>
@@ -291,7 +291,7 @@ export function SummaryForm() {
               type="button"
               onClick={runImprove}
               disabled={aiLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] disabled:opacity-50"
             >
               {aiLoading ? "Skriver …" : "Generer"}
             </button>
@@ -308,7 +308,7 @@ export function SummaryForm() {
           </div>
         )}
       </div>
-      {aiError && <p className="text-[11px] text-[#c15a3a]">{aiError}</p>}
+      {aiError && <p className="text-[11px] text-[#D5592E]">{aiError}</p>}
       <LexicalEditor
         key={editorKey}
         value={summary}

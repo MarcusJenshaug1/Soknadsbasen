@@ -7,7 +7,7 @@ export const PIPELINE_COLUMNS: {
   dotColor: string;
 }[] = [
   { status: "draft", label: "Kladd", dotColor: "#94a3b8" },
-  { status: "applied", label: "Sendt", dotColor: "#c15a3a" },
+  { status: "applied", label: "Sendt", dotColor: "#D5592E" },
   { status: "interview", label: "Intervju", dotColor: "#14110e" },
   { status: "offer", label: "Tilbud", dotColor: "#16a34a" },
   { status: "accepted", label: "Takket ja", dotColor: "#16a34a" },

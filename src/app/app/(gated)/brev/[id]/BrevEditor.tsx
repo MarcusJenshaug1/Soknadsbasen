@@ -33,7 +33,7 @@ type Letter = {
 };
 
 const INPUT =
-  "w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]";
+  "w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
 const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-2";
 
 export function BrevEditor({
@@ -97,13 +97,13 @@ export function BrevEditor({
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10 space-y-6">
       <div className="flex items-center gap-2 text-[12px] text-[#14110e]/55">
-        <Link href="/app/brev" className="hover:text-[#c15a3a]">
+        <Link href="/app/brev" className="hover:text-[#D5592E]">
           Brev
         </Link>
         <span>/</span>
         <Link
           href={`/app/pipeline/${application.id}`}
-          className="hover:text-[#c15a3a] truncate"
+          className="hover:text-[#D5592E] truncate"
         >
           {application.companyName}
         </Link>

@@ -35,7 +35,7 @@ export function SessionHistoryClient({ sessionId }: { sessionId: string }) {
       >
         {loading ? "…" : "Gjenåpne"}
       </button>
-      {error && <div className="text-[11px] text-[#c15a3a] mt-1">{error}</div>}
+      {error && <div className="text-[11px] text-[#D5592E] mt-1">{error}</div>}
     </div>
   );
 }

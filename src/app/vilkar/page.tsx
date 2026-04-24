@@ -23,7 +23,7 @@ export default function VilkarPage() {
       </header>
 
       <main className="max-w-[720px] mx-auto px-5 md:px-8 pb-24">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-4 mt-6">
+        <div className="text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-4 mt-6">
           Vilkår
         </div>
         <h1 className="text-[40px] md:text-[56px] leading-[1.05] tracking-[-0.03em] font-medium mb-4">
@@ -266,8 +266,8 @@ function Prose({ children }: { children: React.ReactNode }) {
         [&_h2]:mt-12 [&_h2]:mb-4
         [&_p]:mb-4
         [&_ul]:mb-5 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-1.5
-        [&_li]:marker:text-[#c15a3a]/60
-        [&_a]:text-[#c15a3a] [&_a]:underline-offset-2 hover:[&_a]:underline
+        [&_li]:marker:text-[#D5592E]/60
+        [&_a]:text-[#D5592E] [&_a]:underline-offset-2 hover:[&_a]:underline
         [&_strong]:text-[#14110e] [&_strong]:font-medium
       "
     >

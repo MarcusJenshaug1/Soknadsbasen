@@ -34,8 +34,8 @@ const TYPE_LABEL: Record<string, string> = {
 const PRIORITY: Record<string, { label: string; color: string }> = {
   low: { label: "Lav", color: "#94a3b8" },
   medium: { label: "Medium", color: "#14110e" },
-  high: { label: "Høy", color: "#c15a3a" },
-  urgent: { label: "Haster", color: "#c15a3a" },
+  high: { label: "Høy", color: "#D5592E" },
+  urgent: { label: "Haster", color: "#D5592E" },
 };
 
 function startOfDay(d = new Date()) {
@@ -58,9 +58,9 @@ function bucketFor(t: Task): "overdue" | "today" | "week" | "later" | "done" {
 }
 
 const BUCKETS: { key: ReturnType<typeof bucketFor>; label: string; hue: string }[] = [
-  { key: "overdue", label: "Forfalt", hue: "#c15a3a" },
+  { key: "overdue", label: "Forfalt", hue: "#D5592E" },
   { key: "today", label: "I dag", hue: "#14110e" },
-  { key: "week", label: "Denne uken", hue: "#c15a3a" },
+  { key: "week", label: "Denne uken", hue: "#D5592E" },
   { key: "later", label: "Senere", hue: "#94a3b8" },
   { key: "done", label: "Fullført", hue: "#16a34a" },
 ];
@@ -126,7 +126,7 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
           </p>
           <Link
             href="/app/pipeline"
-            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a]"
+            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
           >
             Åpne pipeline
           </Link>
@@ -146,7 +146,7 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
           <p className="text-[14px] text-[#14110e]/60 mt-2">
             {active} aktive
             {overdue > 0 && (
-              <span className="text-[#c15a3a]"> · {overdue} forfalt</span>
+              <span className="text-[#D5592E]"> · {overdue} forfalt</span>
             )}
           </p>
         </div>
@@ -228,7 +228,7 @@ function TaskRow({
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             <Link
               href={`/app/pipeline/${task.application.id}`}
-              className="text-[11px] text-[#c15a3a] hover:text-[#14110e] truncate"
+              className="text-[11px] text-[#D5592E] hover:text-[#14110e] truncate"
               onClick={(e) => e.stopPropagation()}
             >
               {task.application.title} · {task.application.companyName}
@@ -254,7 +254,7 @@ function TaskRow({
             <span
               className={cn(
                 "text-[11px]",
-                overdue ? "text-[#c15a3a]" : "text-[#14110e]/50",
+                overdue ? "text-[#D5592E]" : "text-[#14110e]/50",
               )}
             >
               {formatDue(task.dueAt)}
@@ -270,7 +270,7 @@ function TaskRow({
       <button
         type="button"
         onClick={() => onRemove(task)}
-        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#c15a3a] transition-opacity"
+        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#D5592E] transition-opacity"
         aria-label="Slett oppgave"
       >
         <IconClose size={14} />

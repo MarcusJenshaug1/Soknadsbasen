@@ -143,8 +143,8 @@ function Step1({ onNext }: { onNext: () => void }) {
   return (
     <>
       <div className="flex-1 flex flex-col justify-center px-6 max-w-xl mx-auto w-full">
-        <div className="inline-flex items-center gap-2 text-[11px] text-[#c15a3a] mb-5">
-          <span className="w-1 h-1 rounded-full bg-[#c15a3a]" />
+        <div className="inline-flex items-center gap-2 text-[11px] text-[#D5592E] mb-5">
+          <span className="w-1 h-1 rounded-full bg-[#D5592E]" />
           Velkommen
         </div>
         <h1 className="text-[44px] md:text-[56px] leading-[1] tracking-[-0.035em] font-medium mb-5">
@@ -158,7 +158,7 @@ function Step1({ onNext }: { onNext: () => void }) {
       <div className="p-6 max-w-xl mx-auto w-full">
         <button
           onClick={onNext}
-          className="w-full py-3.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[14px] font-medium hover:bg-[#c15a3a] transition-colors"
+          className="w-full py-3.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] transition-colors"
         >
           Start
         </button>
@@ -257,7 +257,7 @@ function Step2({
         <button
           onClick={onNext}
           disabled={!canContinue}
-          className="flex-1 py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors disabled:opacity-40"
+          className="flex-1 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-40"
         >
           Fortsett
         </button>
@@ -297,14 +297,14 @@ function Step3({
                 className={cn(
                   "w-full p-5 rounded-2xl text-left transition-colors border-2",
                   selected
-                    ? "border-[#c15a3a] bg-[#c15a3a]/5"
+                    ? "border-[#D5592E] bg-[#D5592E]/5"
                     : "border-black/8 bg-white hover:border-black/20",
                 )}
               >
                 <div
                   className={cn(
                     "text-[16px] font-medium mb-0.5",
-                    selected && "text-[#c15a3a]",
+                    selected && "text-[#D5592E]",
                   )}
                 >
                   {s.title}
@@ -324,7 +324,7 @@ function Step3({
         </button>
         <button
           onClick={onNext}
-          className="flex-1 py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+          className="flex-1 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
         >
           Fortsett
         </button>
@@ -342,8 +342,8 @@ function Step4({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   return (
     <div className="flex-1 flex flex-col bg-[#14110e] text-[#faf8f5]">
       <div className="flex-1 flex flex-col justify-center px-6 max-w-xl mx-auto w-full">
-        <div className="inline-flex items-center gap-2 text-[11px] text-[#c15a3a] mb-5">
-          <span className="w-1 h-1 rounded-full bg-[#c15a3a]" />
+        <div className="inline-flex items-center gap-2 text-[11px] text-[#D5592E] mb-5">
+          <span className="w-1 h-1 rounded-full bg-[#D5592E]" />
           Klar
         </div>
         <h1 className="text-[44px] md:text-[56px] leading-[1] tracking-[-0.035em] font-medium mb-4">
@@ -364,7 +364,7 @@ function Step4({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
                 <div className="text-[14px] font-medium">{s.role}</div>
                 <div className="text-[12px] text-white/60">{s.company}</div>
               </div>
-              <span className="text-[#c15a3a]">→</span>
+              <span className="text-[#D5592E]">→</span>
             </div>
           ))}
         </div>
@@ -457,13 +457,13 @@ function Step5({
               </div>
             </div>
             <ul className="mb-6 space-y-2 flex-1">
-              <li className="flex items-start gap-2 text-[12px] font-medium text-[#c15a3a]">
+              <li className="flex items-start gap-2 text-[12px] font-medium text-[#D5592E]">
                 <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>7 dager gratis — kanseller før belastning</span>
               </li>
               {monthlyFeatures.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-[12px]">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#c15a3a]" />
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D5592E]" />
                   <span>{f}</span>
                 </li>
               ))}
@@ -471,7 +471,7 @@ function Step5({
             <button
               onClick={() => startCheckout(monthlyPriceId, "subscription")}
               disabled={loadingPriceId !== null}
-              className="w-full py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors disabled:opacity-50"
+              className="w-full py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
             >
               {loadingPriceId === monthlyPriceId
                 ? "Sender deg til Stripe…"
@@ -491,7 +491,7 @@ function Step5({
             <ul className="mb-6 space-y-2 flex-1">
               {oneTimeFeatures.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-[12px]">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#c15a3a]" />
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#D5592E]" />
                   <span>{f}</span>
                 </li>
               ))}
@@ -507,7 +507,7 @@ function Step5({
             </button>
           </div>
         </div>
-        {error && <p className="text-[12px] text-[#c15a3a] text-center">{error}</p>}
+        {error && <p className="text-[12px] text-[#D5592E] text-center">{error}</p>}
         <p className="mt-6 text-center text-[11px] text-[#14110e]/55">
           Ved å starte bekrefter du at{" "}
           <a href="/vilkar" className="underline underline-offset-2 hover:text-[#14110e]">

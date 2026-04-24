@@ -33,8 +33,8 @@ const TASK_TYPES: { id: string; label: string }[] = [
 const TASK_PRIORITIES: { id: string; label: string; color: string }[] = [
   { id: "low", label: "Lav", color: "#94a3b8" },
   { id: "medium", label: "Medium", color: "#14110e" },
-  { id: "high", label: "Høy", color: "#c15a3a" },
-  { id: "urgent", label: "Haster", color: "#c15a3a" },
+  { id: "high", label: "Høy", color: "#D5592E" },
+  { id: "urgent", label: "Haster", color: "#D5592E" },
 ];
 
 const CHANNELS: { id: string; label: string }[] = [
@@ -281,7 +281,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10 space-y-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[12px] text-[#14110e]/55">
-        <Link href="/app/pipeline" className="hover:text-[#c15a3a]">
+        <Link href="/app/pipeline" className="hover:text-[#D5592E]">
           Pipeline
         </Link>
         <span>/</span>
@@ -329,7 +329,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           </button>
           <button
             onClick={deleteApp}
-            className="px-4 py-2 rounded-full border border-[#c15a3a]/30 text-[12px] text-[#c15a3a] hover:bg-[#c15a3a]/5"
+            className="px-4 py-2 rounded-full border border-[#D5592E]/30 text-[12px] text-[#D5592E] hover:bg-[#D5592E]/5"
           >
             Slett
           </button>
@@ -337,7 +337,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       </div>
 
       {error && (
-        <div className="px-4 py-2.5 rounded-2xl bg-[#c15a3a]/10 border border-[#c15a3a]/30 text-[12px] text-[#c15a3a]">
+        <div className="px-4 py-2.5 rounded-2xl bg-[#D5592E]/10 border border-[#D5592E]/30 text-[12px] text-[#D5592E]">
           {error}
         </div>
       )}
@@ -508,7 +508,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
                 placeholder="Ny oppgave…"
-                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]"
+                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]"
               />
               {newTaskExpanded ? (
                 <>
@@ -517,13 +517,13 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                     onChange={(e) => setNewTaskDesc(e.target.value)}
                     placeholder="Detaljer (valgfritt)"
                     rows={2}
-                    className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] resize-y"
+                    className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E] resize-y"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <select
                       value={newTaskType}
                       onChange={(e) => setNewTaskType(e.target.value)}
-                      className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a]"
+                      className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E]"
                     >
                       {TASK_TYPES.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -534,7 +534,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                     <select
                       value={newTaskPriority}
                       onChange={(e) => setNewTaskPriority(e.target.value)}
-                      className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a]"
+                      className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E]"
                     >
                       {TASK_PRIORITIES.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -549,7 +549,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 type="date"
                 value={newTaskDue}
                 onChange={(e) => setNewTaskDue(e.target.value)}
-                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] text-[#14110e]/70"
+                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E] text-[#14110e]/70"
               />
               <div className="flex items-center justify-between gap-2">
                 <button
@@ -562,7 +562,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 <button
                   type="submit"
                   disabled={!newTask.trim()}
-                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-40 whitespace-nowrap"
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-40 whitespace-nowrap"
                 >
                   <IconPlus size={12} />
                   Legg til
@@ -622,7 +622,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 <select
                   value={commChannel}
                   onChange={(e) => setCommChannel(e.target.value)}
-                  className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a]"
+                  className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E]"
                 >
                   {CHANNELS.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -634,7 +634,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   type="datetime-local"
                   value={commDate}
                   onChange={(e) => setCommDate(e.target.value)}
-                  className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] text-[#14110e]/70"
+                  className="bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E] text-[#14110e]/70"
                 />
               </div>
               <textarea
@@ -646,12 +646,12 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                     : "Hva svarte de?"
                 }
                 rows={3}
-                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#c15a3a] resize-y"
+                className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#D5592E] resize-y"
               />
               <button
                 type="submit"
                 disabled={!commNote.trim()}
-                className="w-full inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-40"
+                className="w-full inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-40"
               >
                 Loggfør
               </button>
@@ -671,7 +671,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                           className={cn(
                             "inline-block w-1.5 h-1.5 rounded-full",
                             a.direction === "outbound"
-                              ? "bg-[#c15a3a]"
+                              ? "bg-[#D5592E]"
                               : "bg-[#14110e]",
                           )}
                         />
@@ -683,7 +683,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                       <button
                         type="button"
                         onClick={() => deleteActivity(a.id)}
-                        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#c15a3a]"
+                        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#D5592E]"
                         aria-label="Slett"
                       >
                         <IconClose size={12} />
@@ -712,7 +712,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
             <ul className="space-y-3">
               {app.activities.map((a) => (
                 <li key={a.id} className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#c15a3a] mt-[7px] shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#D5592E] mt-[7px] shrink-0" />
                   <div className="min-w-0">
                     <div className="text-[12px] text-[#14110e]/80">
                       {a.type === "communication"
@@ -750,7 +750,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 </p>
                 <Link
                   href={`/app/brev/${app.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
                 >
                   Endre søknadsbrev
                   <IconArrowRight size={14} />
@@ -763,7 +763,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 </p>
                 <Link
                   href={`/app/brev/${app.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
                 >
                   Opprett søknadsbrev
                   <IconArrowRight size={14} />
@@ -851,7 +851,7 @@ function TaskRow({
             {task.dueAt && (
               <span
                 className={cn(
-                  overdue ? "text-[#c15a3a]" : "text-[#14110e]/50",
+                  overdue ? "text-[#D5592E]" : "text-[#14110e]/50",
                 )}
               >
                 Frist{" "}
@@ -872,7 +872,7 @@ function TaskRow({
       <button
         type="button"
         onClick={() => onDelete(task)}
-        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#c15a3a] transition-opacity"
+        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 hover:text-[#D5592E] transition-opacity"
         aria-label="Slett oppgave"
       >
         <IconClose size={14} />
@@ -946,7 +946,7 @@ function TextField({
         list={listId}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => v !== value && onCommit(v)}
-        className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]"
+        className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]"
       />
       {list && (
         <datalist id={listId}>
@@ -982,7 +982,7 @@ function DateField({
           const iso = fromDateInput(v);
           if (iso !== value) onCommit(iso);
         }}
-        className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]"
+        className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]"
       />
     </div>
   );
@@ -1007,7 +1007,7 @@ function Textarea({
       placeholder={placeholder}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => v !== value && onCommit(v)}
-      className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#c15a3a] resize-y"
+      className="w-full bg-[#faf8f5] border border-black/8 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#D5592E] resize-y"
     />
   );
 }

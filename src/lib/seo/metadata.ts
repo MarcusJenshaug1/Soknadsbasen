@@ -10,6 +10,8 @@ type BuildMetadataArgs = {
   noindex?: boolean;
 };
 
+const DEFAULT_OG_IMAGE = "/og-default.png";
+
 export function buildMetadata({
   path,
   title,
@@ -23,6 +25,8 @@ export function buildMetadata({
     : `${siteConfig.name}: ${siteConfig.tagline}`;
   const desc = description ?? siteConfig.description;
   const canonical = absoluteUrl(path);
+  const image = ogImage ?? DEFAULT_OG_IMAGE;
+  const imageAlt = ogImageAlt ?? fullTitle;
 
   const openGraph: NonNullable<Metadata["openGraph"]> = {
     type: "website",
@@ -31,19 +35,15 @@ export function buildMetadata({
     siteName: siteConfig.name,
     title: fullTitle,
     description: desc,
+    images: [{ url: image, width: 1200, height: 630, alt: imageAlt }],
   };
-  if (ogImage) {
-    openGraph.images = [
-      { url: ogImage, alt: ogImageAlt ?? fullTitle },
-    ];
-  }
 
   const twitter: NonNullable<Metadata["twitter"]> = {
     card: "summary_large_image",
     title: fullTitle,
     description: desc,
+    images: [image],
   };
-  if (ogImage) twitter.images = [ogImage];
 
   return {
     title: fullTitle,

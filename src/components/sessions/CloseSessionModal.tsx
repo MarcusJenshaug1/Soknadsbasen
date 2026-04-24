@@ -17,7 +17,7 @@ const OUTCOMES: { value: Outcome; label: string; description: string }[] = [
 ];
 
 const INPUT =
-  "w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]";
+  "w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
 const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-1.5";
 
 interface Props {
@@ -166,7 +166,7 @@ export function CloseSessionModal({ open, onClose }: Props) {
           )}
 
           {error && (
-            <div className="px-4 py-2.5 rounded-xl bg-[#c15a3a]/10 border border-[#c15a3a]/30 text-[12px] text-[#c15a3a]">
+            <div className="px-4 py-2.5 rounded-xl bg-[#D5592E]/10 border border-[#D5592E]/30 text-[12px] text-[#D5592E]">
               {error}
             </div>
           )}
@@ -182,7 +182,7 @@ export function CloseSessionModal({ open, onClose }: Props) {
           <button
             onClick={handleClose}
             disabled={saving || !outcome}
-            className="px-5 py-2 rounded-full bg-[#c15a3a] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a34a2f] disabled:opacity-50"
+            className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50"
           >
             {saving ? "Avslutter …" : "Avslutt sesjon"}
           </button>

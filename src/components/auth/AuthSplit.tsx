@@ -15,9 +15,9 @@ import { cn } from "@/lib/cn";
 type Mode = "login" | "register";
 
 const underline =
-  "w-full bg-transparent border-b border-black/15 focus:border-[#c15a3a] py-2.5 outline-none text-[15px]";
+  "w-full bg-transparent border-b border-black/15 focus:border-[#D5592E] py-2.5 outline-none text-[15px]";
 const primary =
-  "w-full py-3.5 mt-4 rounded-full bg-[#14110e] text-[#faf8f5] text-[14px] font-medium hover:bg-[#c15a3a] transition-colors disabled:opacity-50";
+  "w-full py-3.5 mt-4 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50";
 const label =
   "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-2";
 
@@ -56,7 +56,7 @@ export function AuthSplit({ focus }: { focus: Mode }) {
             Ny her?{" "}
             <button
               onClick={() => setMode("register")}
-              className="text-[#c15a3a] hover:text-[#14110e] underline-offset-2 hover:underline"
+              className="text-[#D5592E] hover:text-[#14110e] underline-offset-2 hover:underline"
             >
               Opprett konto
             </button>
@@ -66,7 +66,7 @@ export function AuthSplit({ focus }: { focus: Mode }) {
             Har du allerede konto?{" "}
             <button
               onClick={() => setMode("login")}
-              className="text-[#c15a3a] hover:text-[#14110e] underline-offset-2 hover:underline"
+              className="text-[#D5592E] hover:text-[#14110e] underline-offset-2 hover:underline"
             >
               Logg inn
             </button>
@@ -165,14 +165,14 @@ function LoginForm() {
             className={underline}
           />
         </div>
-        {error && <p className="text-[12px] text-[#c15a3a]">{error}</p>}
+        {error && <p className="text-[12px] text-[#D5592E]">{error}</p>}
         <button type="submit" disabled={submitting} className={primary}>
           {submitting ? "Logger inn…" : "Logg inn"}
         </button>
         <div className="text-right">
           <Link
             href="/glemt-passord"
-            className="text-[12px] text-[#14110e]/60 hover:text-[#c15a3a]"
+            className="text-[12px] text-[#14110e]/60 hover:text-[#D5592E]"
           >
             Glemt passord?
           </Link>
@@ -261,7 +261,7 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
           />
           <PasswordStrength score={score} />
         </div>
-        {error && <p className="text-[12px] text-[#c15a3a]">{error}</p>}
+        {error && <p className="text-[12px] text-[#D5592E]">{error}</p>}
         <button type="submit" disabled={submitting} className={primary}>
           {submitting ? "Oppretter…" : "Opprett konto"}
         </button>

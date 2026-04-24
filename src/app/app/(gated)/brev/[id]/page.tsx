@@ -58,7 +58,7 @@ export default async function BrevDetailPage({
         body: "",
         closing: "Med vennlig hilsen",
         fontFamily: "geist",
-        accentColor: "#c15a3a",
+        accentColor: "#D5592E",
         fontSize: "medium",
         createdAt: new Date(),
         updatedAt: new Date(),

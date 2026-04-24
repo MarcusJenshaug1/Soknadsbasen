@@ -22,9 +22,9 @@ export function Input({
   const inputId = id ?? React.useId();
 
   const boxStyle =
-    "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#c15a3a]";
+    "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#D5592E]";
   const underlineStyle =
-    "w-full bg-transparent border-b border-black/15 focus:border-[#c15a3a] py-2.5 outline-none text-[15px]";
+    "w-full bg-transparent border-b border-black/15 focus:border-[#D5592E] py-2.5 outline-none text-[15px]";
 
   return (
     <div>
@@ -40,7 +40,7 @@ export function Input({
         id={inputId}
         className={cn(
           variant === "underline" ? underlineStyle : boxStyle,
-          error && "border-[#c15a3a]",
+          error && "border-[#D5592E]",
           className,
         )}
         {...rest}
@@ -49,7 +49,7 @@ export function Input({
         <p className="text-[11px] text-[#14110e]/50 mt-2">{hint}</p>
       )}
       {error && (
-        <p className="text-[11px] text-[#c15a3a] mt-2">{error}</p>
+        <p className="text-[11px] text-[#D5592E] mt-2">{error}</p>
       )}
     </div>
   );
@@ -75,7 +75,7 @@ export function Textarea({ label, hint, className, id, ...rest }: TextareaProps)
       <textarea
         id={inputId}
         className={cn(
-          "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#c15a3a] resize-none",
+          "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#D5592E] resize-none",
           className,
         )}
         {...rest}

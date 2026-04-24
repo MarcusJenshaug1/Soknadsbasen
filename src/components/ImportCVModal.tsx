@@ -261,7 +261,7 @@ export function ImportCVModal({
               </button>
               <button
                 onClick={applyToStore}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a]"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424]"
               >
                 Bruk denne CVen
                 <IconArrowRight size={14} />
@@ -308,7 +308,7 @@ function UploadStep({
         className={cn(
           "cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-colors",
           dragOver
-            ? "border-[#c15a3a] bg-[#c15a3a]/5"
+            ? "border-[#D5592E] bg-[#D5592E]/5"
             : "border-black/15 hover:border-black/40 bg-white",
         )}
       >
@@ -359,7 +359,7 @@ function Tile({ title, desc }: { title: string; desc: string }) {
 function ParsingStep({ fileName }: { fileName: string }) {
   return (
     <div className="py-14 text-center">
-      <div className="inline-flex size-10 rounded-full border-2 border-[#c15a3a] border-t-transparent animate-spin mb-5" />
+      <div className="inline-flex size-10 rounded-full border-2 border-[#D5592E] border-t-transparent animate-spin mb-5" />
       <div className="text-[15px] font-medium">Leser {fileName} …</div>
       <p className="text-[12px] text-[#14110e]/55 mt-2">
         AI ekstraherer strukturerte felter. Tar vanligvis 10-20 sekunder.
@@ -453,7 +453,7 @@ function PreviewStep({ parsed }: { parsed: Parsed }) {
 function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="py-10 text-center">
-      <div className="inline-flex size-10 rounded-full bg-[#c15a3a]/10 text-[#c15a3a] items-center justify-center mb-4">
+      <div className="inline-flex size-10 rounded-full bg-[#D5592E]/10 text-[#D5592E] items-center justify-center mb-4">
         <IconClose size={20} />
       </div>
       <div className="text-[15px] font-medium mb-2">Import mislyktes</div>
@@ -462,7 +462,7 @@ function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void 
       </p>
       <button
         onClick={onRetry}
-        className="px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a]"
+        className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424]"
       >
         Prøv igjen
       </button>

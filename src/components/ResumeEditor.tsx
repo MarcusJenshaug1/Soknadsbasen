@@ -183,7 +183,7 @@ export function ResumeEditor() {
           <button
             onClick={nextStep}
             disabled={currentStep === STEPS.length - 1}
-            className="inline-flex items-center gap-1.5 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[13px] font-medium transition-colors disabled:opacity-40 bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a]"
+            className="inline-flex items-center gap-1.5 px-4 md:px-5 py-2 md:py-2.5 rounded-full text-[13px] font-medium transition-colors disabled:opacity-40 bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]"
           >
             <span className="hidden sm:inline">Neste steg</span>
             <span className="sm:hidden">Neste</span>
@@ -305,7 +305,7 @@ function ContactForm() {
                 <button
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
-                  className="px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
+                  className="px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors"
                 >
                   {data.photoUrl ? "Bytt bilde" : "Velg bilde"}
                 </button>
@@ -322,7 +322,7 @@ function ContactForm() {
                   <button
                     type="button"
                     onClick={() => updateContact({ photoUrl: "" })}
-                    className="text-[12px] text-[#14110e]/55 hover:text-[#c15a3a]"
+                    className="text-[12px] text-[#14110e]/55 hover:text-[#D5592E]"
                   >
                     Fjern
                   </button>
@@ -414,11 +414,11 @@ function CVSwitcher() {
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         onBlur={commitRename}
-                        className="flex-1 min-w-0 px-2 py-1 rounded-md border border-[#c15a3a] text-[12px] outline-none"
+                        className="flex-1 min-w-0 px-2 py-1 rounded-md border border-[#D5592E] text-[12px] outline-none"
                       />
                       <button
                         type="submit"
-                        className="p-0.5 text-[#c15a3a]"
+                        className="p-0.5 text-[#D5592E]"
                       >
                         <Check className="size-3" />
                       </button>
@@ -437,14 +437,14 @@ function CVSwitcher() {
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button
                           onClick={() => startRename(r)}
-                          className="p-1 hover:text-[#c15a3a]"
+                          className="p-1 hover:text-[#D5592E]"
                           title="Gi nytt navn"
                         >
                           <Pencil className="size-3" />
                         </button>
                         <button
                           onClick={() => duplicateResume(r.id)}
-                          className="p-1 hover:text-[#c15a3a]"
+                          className="p-1 hover:text-[#D5592E]"
                           title="Dupliser"
                         >
                           <Copy className="size-3" />
@@ -452,7 +452,7 @@ function CVSwitcher() {
                         {resumes.length > 1 && (
                           <button
                             onClick={() => removeResume(r.id)}
-                            className="p-1 hover:text-[#c15a3a]"
+                            className="p-1 hover:text-[#D5592E]"
                             title="Slett"
                           >
                             <Trash2 className="size-3" />
@@ -469,7 +469,7 @@ function CVSwitcher() {
                 addResume();
                 setOpen(false);
               }}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-medium text-[#c15a3a] hover:bg-[#c15a3a]/5 border-t border-black/8 transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-medium text-[#D5592E] hover:bg-[#D5592E]/5 border-t border-black/8 transition-colors"
             >
               <Plus className="size-3.5" />
               Ny CV

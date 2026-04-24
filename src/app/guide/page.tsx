@@ -61,7 +61,7 @@ export default async function GuideHubPage({ searchParams }: Props) {
         </div>
 
         <section aria-labelledby="guide-hub-heading" className="mb-14">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-4">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-4">
             Guide
           </div>
           <h1

@@ -127,7 +127,7 @@ export function AvatarCropper({ file, onCancel, onConfirm }: Props) {
               step="0.05"
               value={scale}
               onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="flex-1 accent-[#c15a3a]"
+              className="flex-1 accent-[#D5592E]"
             />
           </div>
         </div>
@@ -142,7 +142,7 @@ export function AvatarCropper({ file, onCancel, onConfirm }: Props) {
           <button
             onClick={confirm}
             disabled={!completedCrop || saving}
-            className="px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+            className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50"
           >
             {saving ? "Beskjærer …" : "Lagre bilde"}
           </button>

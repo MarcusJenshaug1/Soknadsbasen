@@ -94,9 +94,9 @@ export default function Home() {
           className="max-w-[1100px] mx-auto px-5 md:px-10 pt-16 md:pt-24 pb-20 md:pb-32 text-center"
         >
           <div className="inline-flex items-center gap-2 text-[11px] text-[#14110e]/55 mb-10">
-            <span className="w-1 h-1 rounded-full bg-[#c15a3a]" />
+            <span className="w-1 h-1 rounded-full bg-[#D5592E]" />
             Ny utgave 2026
-            <span className="w-1 h-1 rounded-full bg-[#c15a3a]" />
+            <span className="w-1 h-1 rounded-full bg-[#D5592E]" />
           </div>
           <h1
             id="hero-heading"
@@ -116,7 +116,7 @@ export default function Home() {
               href="#produkt"
               className="px-6 py-3.5 rounded-full text-[14px] text-[#14110e]/70 hover:text-[#14110e] hover:bg-black/5 transition-colors inline-flex items-center gap-1.5"
             >
-              Se demo <span className="text-[#c15a3a]">→</span>
+              Se demo <span className="text-[#D5592E]">→</span>
             </Link>
           </div>
         </section>
@@ -208,7 +208,7 @@ export default function Home() {
                 className="col-span-12 md:col-span-6 border-t border-white/10 pt-5 pb-2"
               >
                 <div className="flex items-baseline gap-4 mb-2">
-                  <span className="text-[12px] text-[#c15a3a] font-mono">
+                  <span className="text-[12px] text-[#D5592E] font-mono">
                     {f.n}
                   </span>
                   <h3 className="text-[20px] md:text-[22px] font-medium tracking-tight">

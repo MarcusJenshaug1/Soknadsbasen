@@ -13,11 +13,11 @@ export function Prose({ html }: { html: string }) {
         [&_p]:mb-5
         [&_ul]:mb-6 [&_ul]:pl-5 [&_ul]:list-disc [&_ul]:space-y-2
         [&_ol]:mb-6 [&_ol]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2
-        [&_li]:marker:text-[#c15a3a]/60
-        [&_a]:text-[#c15a3a] [&_a]:underline-offset-2 hover:[&_a]:underline
+        [&_li]:marker:text-[#D5592E]/60
+        [&_a]:text-[#D5592E] [&_a]:underline-offset-2 hover:[&_a]:underline
         [&_strong]:text-[#14110e] [&_strong]:font-medium
         [&_em]:italic
-        [&_blockquote]:border-l-2 [&_blockquote]:border-[#c15a3a]/40
+        [&_blockquote]:border-l-2 [&_blockquote]:border-[#D5592E]/40
         [&_blockquote]:pl-5 [&_blockquote]:my-6 [&_blockquote]:text-[#14110e]/70
         [&_blockquote]:italic
         [&_code]:text-[13px] [&_code]:bg-black/[0.04] [&_code]:px-1.5

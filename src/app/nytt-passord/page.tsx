@@ -85,7 +85,7 @@ export default function NyttPassordPage() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-transparent border-b border-black/15 focus:border-[#c15a3a] py-2.5 outline-none text-[15px]"
+                className="w-full bg-transparent border-b border-black/15 focus:border-[#D5592E] py-2.5 outline-none text-[15px]"
               />
               <PasswordStrength score={score} />
             </div>
@@ -99,20 +99,20 @@ export default function NyttPassordPage() {
                 autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="w-full bg-transparent border-b border-black/15 focus:border-[#c15a3a] py-2.5 outline-none text-[15px]"
+                className="w-full bg-transparent border-b border-black/15 focus:border-[#D5592E] py-2.5 outline-none text-[15px]"
               />
             </div>
-            {error && <p className="text-[12px] text-[#c15a3a]">{error}</p>}
+            {error && <p className="text-[12px] text-[#D5592E]">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3.5 mt-4 rounded-full bg-[#14110e] text-[#faf8f5] text-[14px] font-medium hover:bg-[#c15a3a] transition-colors disabled:opacity-50"
+              className="w-full py-3.5 mt-4 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
             >
               {submitting ? "Oppdaterer…" : "Lagre passord"}
             </button>
             <Link
               href="/logg-inn"
-              className="block text-[12px] text-[#14110e]/60 hover:text-[#c15a3a]"
+              className="block text-[12px] text-[#14110e]/60 hover:text-[#D5592E]"
             >
               ← Tilbake til innlogging
             </Link>

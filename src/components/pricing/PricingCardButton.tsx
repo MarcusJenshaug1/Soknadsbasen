@@ -49,7 +49,7 @@ export function PricingCardButton({ priceId, mode, label, variant = "primary" }:
         {loading ? "Sender deg til Stripe…" : label}
       </Button>
       {error && (
-        <p className={variant === "inverse" ? "text-[12px] text-white/80" : "text-[12px] text-[#c15a3a]"}>
+        <p className={variant === "inverse" ? "text-[12px] text-white/80" : "text-[12px] text-[#D5592E]"}>
           {error}
         </p>
       )}

@@ -30,7 +30,7 @@ export const siteConfig = {
   brandColors: {
     bg: "#faf8f5",
     ink: "#14110e",
-    accent: "#c15a3a",
+    accent: "#D5592E",
   },
 } as const;
 

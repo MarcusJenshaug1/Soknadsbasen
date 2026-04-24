@@ -7,7 +7,7 @@ export function GuideHeader({ guide }: { guide: Guide }) {
   return (
     <header className="mb-12">
       <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] mb-6">
-        <span className="text-[#c15a3a]">{tag ?? "Guide"}</span>
+        <span className="text-[#D5592E]">{tag ?? "Guide"}</span>
         <span className="w-1 h-1 rounded-full bg-[#14110e]/30" />
         <span className="text-[#14110e]/55">{readingMinutes} min lesing</span>
       </div>
@@ -44,13 +44,13 @@ export function GuideTldr({ tldr }: { tldr: string[] }) {
       aria-label="Kort oppsummering"
       className="mb-14 rounded-2xl border border-black/10 bg-[#f3ede3]/60 p-7 md:p-8"
     >
-      <div className="text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-3">
+      <div className="text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-3">
         Kort sagt
       </div>
       <ul className="space-y-2.5 text-[15px] leading-[1.55] text-[#14110e]/85">
         {tldr.map((item, i) => (
           <li key={i} className="flex items-start gap-3">
-            <span className="mt-[0.55em] w-1.5 h-1.5 rounded-full bg-[#c15a3a] shrink-0" />
+            <span className="mt-[0.55em] w-1.5 h-1.5 rounded-full bg-[#D5592E] shrink-0" />
             <span>{item}</span>
           </li>
         ))}

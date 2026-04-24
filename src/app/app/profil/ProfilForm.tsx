@@ -187,7 +187,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
             "mb-6 px-4 py-2.5 rounded-2xl text-[12px]",
             msg.kind === "ok"
               ? "bg-[#16a34a]/10 text-[#16a34a] border border-[#16a34a]/30"
-              : "bg-[#c15a3a]/10 text-[#c15a3a] border border-[#c15a3a]/30",
+              : "bg-[#D5592E]/10 text-[#D5592E] border border-[#D5592E]/30",
           )}
         >
           {msg.text}
@@ -230,7 +230,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
                   disabled={uploadingAvatar}
-                  className="px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50 transition-colors"
                 >
                   {uploadingAvatar
                     ? "Laster opp …"
@@ -266,7 +266,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors disabled:opacity-50"
+                className="px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
               >
                 {saving ? "Lagrer…" : "Lagre endringer"}
               </button>
@@ -282,7 +282,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               <button
                 type="button"
                 onClick={() => setPwOpen(true)}
-                className="text-[13px] text-[#c15a3a] hover:text-[#14110e]"
+                className="text-[13px] text-[#D5592E] hover:text-[#14110e]"
               >
                 Endre passord →
               </button>
@@ -320,7 +320,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors disabled:opacity-50"
+                    className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
                   >
                     {saving ? "Lagrer…" : "Oppdater passord"}
                   </button>
@@ -350,10 +350,10 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
             ) : (
               <form
                 onSubmit={onDelete}
-                className="p-5 rounded-2xl border border-[#c15a3a]/30 bg-[#c15a3a]/5 space-y-4"
+                className="p-5 rounded-2xl border border-[#D5592E]/30 bg-[#D5592E]/5 space-y-4"
               >
                 <div>
-                  <h3 className="text-[14px] font-medium text-[#c15a3a] mb-1">
+                  <h3 className="text-[14px] font-medium text-[#D5592E] mb-1">
                     Bekreft sletting
                   </h3>
                   <p className="text-[12px] text-[#14110e]/65">
@@ -382,7 +382,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
                   <button
                     type="submit"
                     disabled={deleting || !deletePw}
-                    className="px-5 py-2 rounded-full bg-[#c15a3a] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a34a2f] transition-colors disabled:opacity-50"
+                    className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors disabled:opacity-50"
                   >
                     {deleting ? "Sletter…" : "Slett konto permanent"}
                   </button>
@@ -467,7 +467,7 @@ function Field({
         autoComplete={autoComplete}
         onChange={(e) => onChange?.(e.target.value)}
         className={cn(
-          "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#c15a3a]",
+          "w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:border-[#D5592E]",
           disabled && "bg-[#eee9df]/40 text-[#14110e]/60 cursor-not-allowed",
         )}
       />
@@ -493,7 +493,7 @@ function Row({
       className={cn(
         "flex items-center justify-between gap-4 p-5 rounded-2xl border",
         danger
-          ? "border-[#c15a3a]/30 bg-[#c15a3a]/5"
+          ? "border-[#D5592E]/30 bg-[#D5592E]/5"
           : "border-black/8 bg-white",
       )}
     >
@@ -501,7 +501,7 @@ function Row({
         <div
           className={cn(
             "text-[14px] font-medium",
-            danger && "text-[#c15a3a]",
+            danger && "text-[#D5592E]",
           )}
         >
           {title}
@@ -514,8 +514,8 @@ function Row({
         className={cn(
           "shrink-0 px-4 py-2 rounded-full text-[12px] font-medium transition-colors",
           danger
-            ? "bg-[#c15a3a] text-[#faf8f5] hover:bg-[#a34a2f]"
-            : "bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a]",
+            ? "bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]"
+            : "bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424]",
         )}
       >
         {action}

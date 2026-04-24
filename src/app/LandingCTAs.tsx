@@ -15,7 +15,7 @@ export function HeaderCTA() {
     return (
       <Link
         href="/app"
-        className="text-[13px] px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a] transition-colors"
+        className="text-[13px] px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424] transition-colors"
       >
         Åpne basen
       </Link>
@@ -31,7 +31,7 @@ export function HeaderCTA() {
       </Link>
       <Link
         href="/registrer"
-        className="text-[13px] px-4 py-2 rounded-full bg-[#14110e] text-[#faf8f5] hover:bg-[#c15a3a] transition-colors"
+        className="text-[13px] px-4 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] hover:bg-[#a94424] transition-colors"
       >
         Kom i gang
       </Link>
@@ -44,7 +44,7 @@ export function HeroCTA() {
   return (
     <Link
       href={loggedIn ? "/app" : "/registrer"}
-      className="px-6 py-3.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[14px] font-medium hover:bg-[#c15a3a] transition-colors"
+      className="px-6 py-3.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] transition-colors"
     >
       {loggedIn ? "Åpne basen" : "Start din base"}
     </Link>
@@ -56,7 +56,7 @@ export function ClosingCTA() {
   return (
     <Link
       href={loggedIn ? "/app" : "/registrer"}
-      className="inline-flex px-8 py-4 rounded-full bg-[#14110e] text-[#faf8f5] text-[15px] font-medium hover:bg-[#c15a3a] transition-colors"
+      className="inline-flex px-8 py-4 rounded-full bg-[#D5592E] text-[#faf8f5] text-[15px] font-medium hover:bg-[#a94424] transition-colors"
     >
       {loggedIn ? "Åpne basen" : "Start med 7 dager gratis"}
     </Link>

@@ -203,7 +203,7 @@ export default async function InnsiktPage({
         </p>
         <Link
           href="/app/pipeline"
-          className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a]"
+          className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
         >
           Åpne pipeline
         </Link>
@@ -246,7 +246,7 @@ export default async function InnsiktPage({
             {changePp !== 0 && (
               <div
                 className={
-                  changePp > 0 ? "text-[#c15a3a] text-[16px]" : "text-white/50 text-[16px]"
+                  changePp > 0 ? "text-[#D5592E] text-[16px]" : "text-white/50 text-[16px]"
                 }
               >
                 {changePp > 0 ? "+" : ""}
@@ -263,7 +263,7 @@ export default async function InnsiktPage({
           <svg width="340" height="90" className="max-w-full">
             <path
               d={buildSparkline(points)}
-              stroke="#c15a3a"
+              stroke="#D5592E"
               strokeWidth={1.8}
               fill="none"
               strokeLinecap="round"
@@ -387,7 +387,7 @@ export default async function InnsiktPage({
           </div>
           <p className="text-[12px] text-[#14110e]/70 mt-5 leading-relaxed">
             Oppfølging etter 5 dager øker svarprosent med{" "}
-            <span className="text-[#c15a3a] font-medium">2,1×</span> basert på
+            <span className="text-[#D5592E] font-medium">2,1×</span> basert på
             bransjedata.
           </p>
         </div>
@@ -409,7 +409,7 @@ export default async function InnsiktPage({
                 <span className="text-[#14110e]/55 w-20 text-right text-[12px]">
                   {r.sent} sendt
                 </span>
-                <span className="text-[#c15a3a] font-medium w-20 text-right text-[12px]">
+                <span className="text-[#D5592E] font-medium w-20 text-right text-[12px]">
                   {r.responded} svar
                 </span>
                 <span className="text-[18px] tracking-tight font-medium w-14 text-right">

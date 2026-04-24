@@ -55,10 +55,10 @@ export default async function SuksessPage({ searchParams }: Props) {
     <div className="min-h-dvh flex flex-col bg-[#14110e] text-[#faf8f5]">
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-[560px] w-full text-center">
-          <div className="inline-flex items-center gap-2 text-[11px] text-[#c15a3a] mb-6">
-            <span className="w-1 h-1 rounded-full bg-[#c15a3a]" />
+          <div className="inline-flex items-center gap-2 text-[11px] text-[#D5592E] mb-6">
+            <span className="w-1 h-1 rounded-full bg-[#D5592E]" />
             {isTrialing ? "Prøveperiode aktiv" : "Betaling bekreftet"}
-            <span className="w-1 h-1 rounded-full bg-[#c15a3a]" />
+            <span className="w-1 h-1 rounded-full bg-[#D5592E]" />
           </div>
 
           <h1 className="text-[44px] md:text-[64px] leading-[1] tracking-[-0.035em] font-medium mb-5">
@@ -138,10 +138,10 @@ function NextStep({
       href={href}
       className="group bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 hover:border-white/20 transition-colors"
     >
-      <div className="text-[10px] font-mono text-[#c15a3a] mb-2">{n}</div>
+      <div className="text-[10px] font-mono text-[#D5592E] mb-2">{n}</div>
       <div className="text-[14px] font-medium mb-1">{title}</div>
       <div className="text-[11px] text-white/55 leading-[1.4]">{desc}</div>
-      <div className="mt-3 text-[11px] text-white/40 group-hover:text-[#c15a3a] transition-colors">
+      <div className="mt-3 text-[11px] text-white/40 group-hover:text-[#D5592E] transition-colors">
         Gå dit →
       </div>
     </Link>

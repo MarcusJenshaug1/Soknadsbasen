@@ -12,7 +12,7 @@ export function Pill({
   ...rest
 }: PillProps) {
   const variants = {
-    accent: "bg-[#c15a3a] text-[#faf8f5]",
+    accent: "bg-[#D5592E] text-[#faf8f5]",
     ink: "bg-[#14110e] text-[#faf8f5]",
     muted: "bg-[#eee9df] text-[#14110e]/70",
   } as const;
@@ -44,7 +44,7 @@ export function SectionLabel({
     <div
       className={cn(
         "text-[11px] uppercase tracking-[0.2em]",
-        tone === "accent" ? "text-[#c15a3a]" : "text-[#14110e]/55",
+        tone === "accent" ? "text-[#D5592E]" : "text-[#14110e]/55",
         className,
       )}
     >

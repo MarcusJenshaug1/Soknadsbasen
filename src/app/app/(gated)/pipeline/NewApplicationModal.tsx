@@ -35,7 +35,7 @@ const EMPTY: Draft = {
 const SOURCES = ["LinkedIn", "FINN.no", "Webcruiter", "Direkte kontakt", "Referanse", "Annet"];
 
 const INPUT =
-  "w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#c15a3a]";
+  "w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
 const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 block mb-1.5";
 
 export function NewApplicationModal({
@@ -244,7 +244,7 @@ export function NewApplicationModal({
           )}
 
           {error && (
-            <div className="mt-4 px-4 py-2.5 rounded-xl bg-[#c15a3a]/10 border border-[#c15a3a]/30 text-[12px] text-[#c15a3a]">
+            <div className="mt-4 px-4 py-2.5 rounded-xl bg-[#D5592E]/10 border border-[#D5592E]/30 text-[12px] text-[#D5592E]">
               {error}
             </div>
           )}
@@ -261,7 +261,7 @@ export function NewApplicationModal({
             <button
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50"
             >
               <IconPlus size={14} />
               {saving ? "Lagrer …" : "Opprett søknad"}
@@ -304,7 +304,7 @@ function UrlStep({
       <button
         onClick={onExtract}
         disabled={extracting || !url.trim()}
-        className="w-full py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+        className="w-full py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] disabled:opacity-50"
       >
         {extracting ? "Henter og tolker …" : "Hent fra lenke"}
       </button>
@@ -342,7 +342,7 @@ function PasteStep({
       <button
         onClick={onExtract}
         disabled={extracting || !text.trim()}
-        className="w-full py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+        className="w-full py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] disabled:opacity-50"
       >
         {extracting ? "Tolker …" : "Tolk teksten"}
       </button>

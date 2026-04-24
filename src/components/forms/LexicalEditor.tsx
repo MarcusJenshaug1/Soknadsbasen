@@ -66,7 +66,7 @@ export function LexicalEditor({
   };
 
   return (
-    <div className="relative rounded-2xl bg-white border border-black/8 focus-within:border-[#c15a3a] transition-colors overflow-hidden">
+    <div className="relative rounded-2xl bg-white border border-black/8 focus-within:border-[#D5592E] transition-colors overflow-hidden">
       <LexicalComposer initialConfig={initialConfig}>
         <Toolbar />
         <RichTextPlugin

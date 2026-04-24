@@ -21,8 +21,8 @@ export function GuideCTAInline({ cta, variant = "mid" }: Props) {
       <div
         className={
           isEnd
-            ? "text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-3"
-            : "text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-3"
+            ? "text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-3"
+            : "text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-3"
         }
       >
         Fra Søknadsbasen

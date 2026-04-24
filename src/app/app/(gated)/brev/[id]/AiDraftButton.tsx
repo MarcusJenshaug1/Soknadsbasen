@@ -64,7 +64,7 @@ export function AiDraftButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a] transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] transition-colors"
       >
         <Spark />
         Skriv utkast med AI
@@ -95,7 +95,7 @@ export function AiDraftButton({
         type="button"
         onClick={generate}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a] disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] disabled:opacity-50"
       >
         {loading ? "Skriver …" : "Generer"}
       </button>
@@ -110,7 +110,7 @@ export function AiDraftButton({
         Avbryt
       </button>
       {error && (
-        <span className="text-[11px] text-[#c15a3a]">{error}</span>
+        <span className="text-[11px] text-[#D5592E]">{error}</span>
       )}
     </div>
   );

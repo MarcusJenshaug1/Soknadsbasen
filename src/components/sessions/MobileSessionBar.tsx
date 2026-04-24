@@ -75,7 +75,7 @@ export function MobileSessionBar() {
               <div className="flex gap-2">
                 <button
                   onClick={() => { setShowClose(true); setOpen(false); }}
-                  className="text-[11px] text-[#c15a3a] hover:underline"
+                  className="text-[11px] text-[#D5592E] hover:underline"
                 >
                   Avslutt sesjon
                 </button>
@@ -91,7 +91,7 @@ export function MobileSessionBar() {
                   key={s.id}
                   href={`/app/pipeline?session=${s.id}`}
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-between py-1.5 text-[12px] hover:text-[#c15a3a] transition-colors"
+                  className="flex items-center justify-between py-1.5 text-[12px] hover:text-[#D5592E] transition-colors"
                 >
                   <span className="truncate">{s.name}</span>
                   <span className="text-[10px] text-[#14110e]/40 ml-2 shrink-0">
@@ -114,7 +114,7 @@ export function MobileSessionBar() {
             ) : (
               <button
                 onClick={() => { setShowNew(true); setOpen(false); }}
-                className="w-full py-2 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
+                className="w-full py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors"
               >
                 Start ny sesjon
               </button>

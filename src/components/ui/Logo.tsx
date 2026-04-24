@@ -1,44 +1,49 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
+type LogoProps = {
+  href?: string;
+  size?: "sm" | "md" | "lg";
+  tone?: "ink" | "bg";
+  className?: string;
+};
+
 export function Logo({
   href = "/",
   size = "md",
   tone = "ink",
   className,
-}: {
-  href?: string;
-  size?: "sm" | "md" | "lg";
-  tone?: "ink" | "bg";
-  className?: string;
-}) {
-  const dims =
+}: LogoProps) {
+  const mark =
     size === "lg" ? "w-8 h-8" : size === "sm" ? "w-5 h-5" : "w-6 h-6";
-  const inner =
-    size === "lg" ? "w-2.5 h-2.5" : size === "sm" ? "w-1.5 h-1.5" : "w-2 h-2";
   const text =
     size === "lg" ? "text-[17px]" : size === "sm" ? "text-[13px]" : "text-[14px]";
 
-  const mark =
-    tone === "bg"
-      ? "bg-[#faf8f5]"
-      : "bg-[#14110e]";
-  const dot =
-    tone === "bg" ? "bg-[#14110e]" : "bg-[#faf8f5]";
+  const leafFill = tone === "bg" ? "#faf8f5" : "#D5592E";
+  const foldFill = tone === "bg" ? "rgba(20,17,14,0.25)" : "#A94424";
   const textColor = tone === "bg" ? "text-[#faf8f5]" : "text-[#14110e]";
 
   return (
     <Link
       href={href}
-      className={cn("inline-flex items-center gap-2.5 shrink-0", className)}
+      className={cn("inline-flex items-center gap-2 shrink-0", className)}
+      aria-label="Søknadsbasen"
     >
-      <span
-        className={cn("rounded-full flex items-center justify-center", dims, mark)}
+      <svg
+        className={mark}
+        viewBox="0 0 32 32"
+        xmlns="http://www.w3.org/2000/svg"
+        shapeRendering="geometricPrecision"
+        aria-hidden="true"
       >
-        <span className={cn("rounded-full", inner, dot)} />
-      </span>
+        <path
+          d="M10 3 C25 3 29 7 29 16 C29 25 25 29 16 29 L10 29 L3 22 L3 10 C3 6 5 3 10 3 Z"
+          fill={leafFill}
+        />
+        <path d="M3 22 L10 29 L3 29 Z" fill={foldFill} />
+      </svg>
       <span className={cn("font-medium tracking-tight", text, textColor)}>
-        søknadsbasen
+        Søknadsbasen
       </span>
     </Link>
   );

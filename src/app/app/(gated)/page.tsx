@@ -236,7 +236,7 @@ export default async function AppHomePage() {
           </Link>
           <Link
             href="/app/cv"
-            className="px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+            className="px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
           >
             Rediger CV
           </Link>
@@ -267,7 +267,7 @@ export default async function AppHomePage() {
           </div>
           <Link
             href="/app/cv"
-            className="text-[13px] text-[#c15a3a] hover:text-[#14110e]"
+            className="text-[13px] text-[#D5592E] hover:text-[#14110e]"
           >
             Fullfør →
           </Link>
@@ -335,7 +335,7 @@ export default async function AppHomePage() {
           </div>
           <Link
             href="/app/pipeline"
-            className="text-[13px] text-[#c15a3a] hover:text-[#14110e]"
+            className="text-[13px] text-[#D5592E] hover:text-[#14110e]"
           >
             Se alle {apps.length} →
           </Link>

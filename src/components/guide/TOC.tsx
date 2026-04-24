@@ -9,7 +9,7 @@ export function TOC({ items }: { items: GuideTocItem[] }) {
     >
       <h2
         id="toc-heading"
-        className="text-[11px] uppercase tracking-[0.2em] text-[#c15a3a] mb-4"
+        className="text-[11px] uppercase tracking-[0.2em] text-[#D5592E] mb-4"
       >
         I denne guiden
       </h2>
@@ -21,7 +21,7 @@ export function TOC({ items }: { items: GuideTocItem[] }) {
           >
             <a
               href={`#${it.id}`}
-              className="block -ml-px pl-0 border-l-2 border-transparent hover:border-[#c15a3a] hover:text-[#14110e] text-[#14110e]/60 transition-colors py-0.5"
+              className="block -ml-px pl-0 border-l-2 border-transparent hover:border-[#D5592E] hover:text-[#14110e] text-[#14110e]/60 transition-colors py-0.5"
             >
               {it.text}
             </a>

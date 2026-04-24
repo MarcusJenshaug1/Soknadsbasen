@@ -43,7 +43,7 @@ export default async function BrevPage() {
           </p>
           <Link
             href="/app/pipeline"
-            className="inline-flex px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a]"
+            className="inline-flex px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
           >
             Åpne pipeline
           </Link>
@@ -119,7 +119,7 @@ function LetterRow({
             )}
           </div>
         </div>
-        <span className="shrink-0 text-[12px] text-[#c15a3a]">
+        <span className="shrink-0 text-[12px] text-[#D5592E]">
           {hasLetter ? "Åpne →" : "Skriv →"}
         </span>
       </Link>

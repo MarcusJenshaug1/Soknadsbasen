@@ -88,7 +88,7 @@ export default async function SelskaperPage() {
         </p>
         <Link
           href="/app/pipeline"
-          className="inline-flex px-5 py-2.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a]"
+          className="inline-flex px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424]"
         >
           Åpne pipeline
         </Link>
@@ -133,7 +133,7 @@ export default async function SelskaperPage() {
                 <li key={a.id}>
                   <Link
                     href={`/app/pipeline/${a.id}`}
-                    className="flex items-center justify-between gap-2 hover:text-[#c15a3a]"
+                    className="flex items-center justify-between gap-2 hover:text-[#D5592E]"
                   >
                     <span className="truncate">{a.title}</span>
                     <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-[#14110e]/45">

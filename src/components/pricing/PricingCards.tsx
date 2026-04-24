@@ -37,13 +37,13 @@ export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
           </div>
         </div>
         <ul className="mb-8 space-y-3">
-          <li className="flex items-start gap-2 text-[13px] font-medium text-[#c15a3a]">
+          <li className="flex items-start gap-2 text-[13px] font-medium text-[#D5592E]">
             <Check className="mt-0.5 h-4 w-4 shrink-0" />
             <span>7 dager gratis — kanseller før belastning</span>
           </li>
           {monthlyFeatures.map((f) => (
             <li key={f} className="flex items-start gap-2 text-[13px] text-[#14110e]">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#c15a3a]" />
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D5592E]" />
               <span>{f}</span>
             </li>
           ))}
@@ -63,7 +63,7 @@ export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
         <ul className="mb-8 space-y-3">
           {oneTimeFeatures.map((f) => (
             <li key={f} className="flex items-start gap-2 text-[13px]">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#c15a3a]" />
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#D5592E]" />
               <span>{f}</span>
             </li>
           ))}

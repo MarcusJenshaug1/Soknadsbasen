@@ -89,15 +89,15 @@ export function AiTools({ applicationId }: { applicationId: string }) {
       <div className="space-y-1">
         <button onClick={runAnalyze} className={btn}>
           <span>Analyser stillingen</span>
-          <span className="text-[11px] text-[#c15a3a]">→</span>
+          <span className="text-[11px] text-[#D5592E]">→</span>
         </button>
         <button onClick={runInterview} className={btn}>
           <span>Intervjuforberedelse</span>
-          <span className="text-[11px] text-[#c15a3a]">→</span>
+          <span className="text-[11px] text-[#D5592E]">→</span>
         </button>
         <button onClick={runFollowUp} className={btn}>
           <span>Skriv oppfølgings-e-post</span>
-          <span className="text-[11px] text-[#c15a3a]">→</span>
+          <span className="text-[11px] text-[#D5592E]">→</span>
         </button>
       </div>
 
@@ -109,7 +109,7 @@ export function AiTools({ applicationId }: { applicationId: string }) {
             </div>
           )}
           {error && (
-            <div className="py-4 text-[12px] text-[#c15a3a]">{error}</div>
+            <div className="py-4 text-[12px] text-[#D5592E]">{error}</div>
           )}
 
           {panel === "analyze" && analysis && !loading && !error && (
@@ -154,7 +154,7 @@ function Group({
       <div
         className={cn(
           "text-[10px] uppercase tracking-[0.2em] mb-1.5",
-          accent ? "text-[#c15a3a]" : "text-[#14110e]/55",
+          accent ? "text-[#D5592E]" : "text-[#14110e]/55",
         )}
       >
         {title}
@@ -200,7 +200,7 @@ function InterviewView({ data }: { data: InterviewPrep }) {
     <ul className="space-y-3">
       {data.questions.map((q, i) => (
         <li key={i}>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-[#c15a3a] mb-1">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-[#D5592E] mb-1">
             {q.category}
           </div>
           <div className="text-[13px] text-[#14110e] font-medium leading-snug">
@@ -258,7 +258,7 @@ function FollowUpView({ data }: { data: FollowUp }) {
       <div className="flex gap-2 pt-2 border-t border-black/5">
         <button
           onClick={copy}
-          className="px-3 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[11px] font-medium hover:bg-[#c15a3a]"
+          className="px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424]"
         >
           {copied ? "Kopiert" : "Kopier"}
         </button>

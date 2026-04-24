@@ -43,7 +43,7 @@ export function InnsiktFilters({ currentPeriod, currentSession, sessions }: Prop
   }
 
   const SELECT =
-    "bg-white border border-black/10 rounded-full px-4 py-2 text-[12px] outline-none focus:border-[#c15a3a]";
+    "bg-white border border-black/10 rounded-full px-4 py-2 text-[12px] outline-none focus:border-[#D5592E]";
 
   return (
     <div className="flex flex-wrap items-center gap-2">

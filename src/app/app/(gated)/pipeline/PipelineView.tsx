@@ -282,7 +282,7 @@ export function PipelineView({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Søk…"
-              className="pl-8 pr-4 py-1.5 rounded-full bg-white border border-black/8 text-[12px] w-40 outline-none focus:border-[#c15a3a]"
+              className="pl-8 pr-4 py-1.5 rounded-full bg-white border border-black/8 text-[12px] w-40 outline-none focus:border-[#D5592E]"
             />
           </label>
 
@@ -290,7 +290,7 @@ export function PipelineView({
             <button
               type="button"
               onClick={() => setNewModalOpen(true)}
-              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[#14110e] text-[#faf8f5] text-[12px] font-medium hover:bg-[#c15a3a] transition-colors"
+              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] transition-colors"
             >
               <IconPlus size={14} />
               Ny søknad
@@ -300,7 +300,7 @@ export function PipelineView({
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-2.5 rounded-2xl bg-[#c15a3a]/10 border border-[#c15a3a]/30 text-[12px] text-[#c15a3a]">
+        <div className="mb-4 px-4 py-2.5 rounded-2xl bg-[#D5592E]/10 border border-[#D5592E]/30 text-[12px] text-[#D5592E]">
           {error}
         </div>
       )}
@@ -457,7 +457,7 @@ function ApplicationCard({
       {...(overlay ? {} : attributes)}
       {...(overlay ? {} : listeners)}
       className={cn(
-        "group bg-white rounded-2xl p-4 border border-black/5 cursor-grab active:cursor-grabbing hover:border-[#c15a3a]/40 transition-colors",
+        "group bg-white rounded-2xl p-4 border border-black/5 cursor-grab active:cursor-grabbing hover:border-[#D5592E]/40 transition-colors",
         overlay && "shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] rotate-[1deg]",
         isArchived && "opacity-60",
       )}
@@ -505,7 +505,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
           <div className="w-16 h-20 rounded-2xl border-2 border-dashed border-black/15" />
           <button
             onClick={onCreate}
-            className="w-16 h-20 rounded-2xl border-2 border-[#c15a3a] bg-[#c15a3a]/10 flex items-center justify-center text-[#c15a3a] hover:bg-[#c15a3a]/20 transition-colors"
+            className="w-16 h-20 rounded-2xl border-2 border-[#D5592E] bg-[#D5592E]/10 flex items-center justify-center text-[#D5592E] hover:bg-[#D5592E]/20 transition-colors"
             aria-label="Ny søknad"
           >
             <IconPlus size={24} />
@@ -521,7 +521,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         <div className="flex flex-col gap-2 w-full max-w-xs">
           <button
             onClick={onCreate}
-            className="px-5 py-3 rounded-full bg-[#14110e] text-[#faf8f5] text-[13px] font-medium hover:bg-[#c15a3a] transition-colors"
+            className="px-5 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
           >
             Opprett manuelt
           </button>
@@ -633,7 +633,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
         at: new Date(a.applicationDate),
         app: a,
         label: "Søknad sendt",
-        color: "#c15a3a",
+        color: "#D5592E",
       });
     } else {
       events.push({
@@ -650,7 +650,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
         at: new Date(a.deadlineAt),
         app: a,
         label: "Søknadsfrist",
-        color: "#c15a3a",
+        color: "#D5592E",
       });
     }
     if (a.interviewAt) {
@@ -668,7 +668,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
         at: new Date(a.followUpAt),
         app: a,
         label: "Oppfølging",
-        color: "#c15a3a",
+        color: "#D5592E",
       });
     }
   }
@@ -716,10 +716,10 @@ function TimelineView({ apps }: { apps: Application[] }) {
                         <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 mb-0.5">
                           {e.label}
                           {future && (
-                            <span className="ml-2 text-[#c15a3a]">kommende</span>
+                            <span className="ml-2 text-[#D5592E]">kommende</span>
                           )}
                         </div>
-                        <div className="text-[14px] font-medium group-hover:text-[#c15a3a] transition-colors truncate">
+                        <div className="text-[14px] font-medium group-hover:text-[#D5592E] transition-colors truncate">
                           {e.app.title}
                         </div>
                         <div className="text-[12px] text-[#14110e]/55 truncate">
