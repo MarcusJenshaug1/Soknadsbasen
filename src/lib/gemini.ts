@@ -5,6 +5,7 @@
 
 const MODEL = "gemini-flash-latest";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const STREAM_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?alt=sse`;
 
 type GeminiPart = { text: string };
 type GeminiContent = { role?: "user" | "model"; parts: GeminiPart[] };
@@ -80,4 +81,86 @@ export async function geminiGenerate(
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!text) throw new Error("Tomt svar fra Gemini");
   return text;
+}
+
+/**
+ * Streaming variant — returns a ReadableStream<string> of text chunks.
+ * Uses Gemini's SSE endpoint. Callers must be server-side.
+ */
+export async function geminiStream(
+  userPrompt: string,
+  opts: GeminiOptions = {},
+): Promise<ReadableStream<string>> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY ikke satt");
+
+  const generationConfig: Record<string, unknown> = {
+    temperature: opts.temperature ?? 0.7,
+    maxOutputTokens: opts.maxOutputTokens ?? 2048,
+  };
+
+  const requestBody: {
+    contents: GeminiContent[];
+    systemInstruction?: GeminiContent;
+    generationConfig?: Record<string, unknown>;
+  } = {
+    contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    generationConfig,
+  };
+  if (opts.system) {
+    requestBody.systemInstruction = { parts: [{ text: opts.system }] };
+  }
+
+  const res = await fetch(STREAM_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-goog-api-key": key,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    if (res.status === 503) {
+      throw new Error("AI-tjenesten er overbelastet akkurat nå. Prøv igjen om et minutt.");
+    }
+    throw new Error(`Gemini ${res.status}: ${err.slice(0, 200)}`);
+  }
+
+  const upstream = res.body!;
+  const decoder = new TextDecoder();
+
+  return new ReadableStream<string>({
+    async start(controller) {
+      const reader = upstream.getReader();
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payload = line.slice(6).trim();
+            if (!payload || payload === "[DONE]") continue;
+            try {
+              const evt = JSON.parse(payload) as {
+                candidates?: { content?: { parts?: { text?: string }[] } }[];
+              };
+              const chunk = evt.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (chunk) controller.enqueue(chunk);
+            } catch {
+              // ignore malformed SSE lines
+            }
+          }
+        }
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
 }

@@ -230,23 +230,65 @@ export function SummaryForm() {
   const [tone, setTone] = useState<"varm" | "formell" | "konsis">("varm");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [streamText, setStreamText] = useState<string | null>(null);
 
   async function runImprove() {
     setAiLoading(true);
     setAiError(null);
+    setStreamText("");
     try {
       const res = await fetch("/api/ai/improve-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ summary, tone }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "AI-feil");
-      updateSummary(`<p>${String(data.summary).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>`);
-      setEditorKey((k) => k + 1);
-      setAiOpen(false);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "AI-feil");
+      }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          try {
+            const evt = JSON.parse(payload) as {
+              chunk?: string;
+              done?: boolean;
+              text?: string;
+              error?: string;
+            };
+            if (evt.error) throw new Error(evt.error);
+            if (evt.chunk) {
+              accumulated += evt.chunk;
+              setStreamText(accumulated);
+            }
+            if (evt.done && evt.text != null) {
+              const converted = `<p>${evt.text.replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
+              updateSummary(converted);
+              setEditorKey((k) => k + 1);
+              setStreamText(null);
+              setAiOpen(false);
+            }
+          } catch (parseErr) {
+            if (parseErr instanceof SyntaxError) continue;
+            throw parseErr;
+          }
+        }
+      }
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Ukjent feil");
+      setStreamText(null);
     } finally {
       setAiLoading(false);
     }
@@ -309,12 +351,27 @@ export function SummaryForm() {
         )}
       </div>
       {aiError && <p className="text-[11px] text-[#D5592E]">{aiError}</p>}
-      <LexicalEditor
-        key={editorKey}
-        value={summary}
-        onChange={(val) => updateSummary(val)}
-        placeholder="I over 10 år har jeg jobbet med..."
-      />
+      {streamText !== null ? (
+        <div className="relative rounded-2xl bg-white border border-[#D5592E] overflow-hidden min-h-[160px]">
+          <div className="px-5 py-4 text-[14px] text-[#14110e] leading-[1.6] whitespace-pre-wrap">
+            {streamText ? (
+              <>
+                {streamText}
+                <span className="inline-block w-[2px] h-[0.9em] bg-[#D5592E] ml-[2px] align-[-0.05em] animate-pulse" />
+              </>
+            ) : (
+              <span className="text-[#14110e]/35 animate-pulse">AI skriver …</span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <LexicalEditor
+          key={editorKey}
+          value={summary}
+          onChange={(val) => updateSummary(val)}
+          placeholder="I over 10 år har jeg jobbet med..."
+        />
+      )}
       <div className="flex justify-end text-xs text-neutral-400">
         {summary.length} tegn (inkl. HTML)
       </div>

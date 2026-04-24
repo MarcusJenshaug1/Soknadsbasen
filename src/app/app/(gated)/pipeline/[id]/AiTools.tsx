@@ -104,8 +104,25 @@ export function AiTools({ applicationId }: { applicationId: string }) {
       {panel && (
         <div className="mt-3 rounded-2xl border border-black/8 bg-[#faf8f5] p-4">
           {loading && (
-            <div className="py-6 text-center text-[12px] text-[#14110e]/55">
-              AI jobber …
+            <div className="py-4 space-y-3">
+              <div className="flex items-center gap-2 text-[12px] text-[#14110e]/55">
+                <span className="inline-flex gap-[3px]">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#D5592E] animate-bounce"
+                      style={{ animationDelay: `${i * 150}ms` }}
+                    />
+                  ))}
+                </span>
+                AI analyserer …
+              </div>
+              <div className="space-y-2 animate-pulse">
+                <div className="h-2.5 bg-[#eee9df] rounded-full w-3/4" />
+                <div className="h-2.5 bg-[#eee9df] rounded-full w-1/2" />
+                <div className="h-2.5 bg-[#eee9df] rounded-full w-2/3" />
+                <div className="h-2.5 bg-[#eee9df] rounded-full w-5/6" />
+              </div>
             </div>
           )}
           {error && (

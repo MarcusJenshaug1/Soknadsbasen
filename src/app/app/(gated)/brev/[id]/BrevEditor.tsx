@@ -45,6 +45,7 @@ export function BrevEditor({
 }) {
   const [letter, setLetter] = useState<Letter>(initial);
   const [editorKey, setEditorKey] = useState(0);
+  const [streamText, setStreamText] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const timer = useRef<NodeJS.Timeout | null>(null);
@@ -229,6 +230,7 @@ export function BrevEditor({
                     recipientTitle: letter.recipientTitle,
                     companyAddress: letter.companyAddress,
                   }}
+                  onStream={(text) => setStreamText(text)}
                   onDraft={(html) => {
                     dirtyRef.current = true;
                     setLetter((l) => ({ ...l, body: html }));
@@ -236,12 +238,16 @@ export function BrevEditor({
                   }}
                 />
               </div>
-              <LexicalEditor
-                key={editorKey}
-                value={letter.body ?? ""}
-                onChange={(v) => update("body", v)}
-                placeholder="Kjære rekrutterer, …"
-              />
+              {streamText !== null ? (
+                <StreamingPreview text={streamText} minHeight="min-h-[320px]" />
+              ) : (
+                <LexicalEditor
+                  key={editorKey}
+                  value={letter.body ?? ""}
+                  onChange={(v) => update("body", v)}
+                  placeholder="Kjære rekrutterer, …"
+                />
+              )}
             </div>
             <Field
               label="Avslutning"
@@ -250,6 +256,31 @@ export function BrevEditor({
             />
           </Card>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function StreamingPreview({
+  text,
+  minHeight = "min-h-[160px]",
+}: {
+  text: string;
+  minHeight?: string;
+}) {
+  return (
+    <div
+      className={`relative rounded-2xl bg-white border border-[#D5592E] overflow-hidden ${minHeight}`}
+    >
+      <div className="px-5 py-4 text-[14px] text-[#14110e] leading-[1.6] whitespace-pre-wrap">
+        {text ? (
+          <>
+            {text}
+            <span className="inline-block w-[2px] h-[0.9em] bg-[#D5592E] ml-[2px] align-[-0.05em] animate-pulse" />
+          </>
+        ) : (
+          <span className="text-[#14110e]/35 animate-pulse">AI skriver …</span>
+        )}
       </div>
     </div>
   );

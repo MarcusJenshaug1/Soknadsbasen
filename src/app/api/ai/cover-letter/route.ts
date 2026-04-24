@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { geminiStream } from "@/lib/gemini";
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -234,26 +234,53 @@ ${
 
 Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved navn hvis oppgitt. Bruk avsenderens navn/kontaktinfo bare hvis det passer naturlig i teksten — den vises uansett i egne felter utenfor brødteksten.`;
 
+  let geminiReadable: ReadableStream<string>;
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    geminiReadable = await geminiStream(userPrompt, {
       system,
       temperature: 0.8,
       maxOutputTokens: 1500,
     });
-
-    // Strip accidental code fences Gemini sometimes adds around markdown.
-    const cleaned = raw
-      .replace(/^```(?:markdown|md)?\s*/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
-
-    const html = marked.parse(cleaned, { async: false }) as string;
-
-    return NextResponse.json({ body: html, markdown: cleaned });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-feil" },
       { status: 502 },
     );
   }
+
+  const encoder = new TextEncoder();
+  const geminiReader = geminiReadable.getReader();
+
+  const outputStream = new ReadableStream({
+    async start(controller) {
+      let accumulated = "";
+      try {
+        while (true) {
+          const { done, value } = await geminiReader.read();
+          if (done) break;
+          accumulated += value;
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: value })}\n\n`));
+        }
+        const cleaned = accumulated
+          .replace(/^```(?:markdown|md)?\s*/i, "")
+          .replace(/```\s*$/i, "")
+          .trim();
+        const html = marked.parse(cleaned, { async: false }) as string;
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, html, markdown: cleaned })}\n\n`));
+      } catch (err) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : "AI-feil" })}\n\n`),
+        );
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(outputStream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { geminiStream } from "@/lib/gemini";
 import { parseActiveResume } from "@/lib/resume-server";
 
 /**
@@ -85,17 +85,48 @@ ${cvSummary}
 
 ${body.summary ? `EKSISTERENDE PROFIL-TEKST (forbedre denne, behold fakta):\n${body.summary}` : "Ingen eksisterende profil — skriv én fra bunn av basert på CV-dataene."}`;
 
+  let geminiReadable: ReadableStream<string>;
   try {
-    const text = await geminiGenerate(userPrompt, {
+    geminiReadable = await geminiStream(userPrompt, {
       system,
       temperature: 0.7,
       maxOutputTokens: 400,
     });
-    return NextResponse.json({ summary: text.trim() });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-feil" },
       { status: 502 },
     );
   }
+
+  const encoder = new TextEncoder();
+  const geminiReader = geminiReadable.getReader();
+
+  const outputStream = new ReadableStream({
+    async start(controller) {
+      let accumulated = "";
+      try {
+        while (true) {
+          const { done, value } = await geminiReader.read();
+          if (done) break;
+          accumulated += value;
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: value })}\n\n`));
+        }
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, text: accumulated.trim() })}\n\n`));
+      } catch (err) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : "AI-feil" })}\n\n`),
+        );
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(outputStream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
