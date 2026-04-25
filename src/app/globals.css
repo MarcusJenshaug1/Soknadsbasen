@@ -19,6 +19,31 @@
   --hover-overlay: rgba(0, 0, 0, 0.05);
   --success: #16a34a;
   --neutral: #94a3b8;
+
+  /* Sales pipeline stages */
+  --sales-stage-ny:           #94A3B8;
+  --sales-stage-kontaktet:    #60A5FA;
+  --sales-stage-demo:         #818CF8;
+  --sales-stage-tilbud:       #A78BFA;
+  --sales-stage-forhandling:  #F59E0B;
+  --sales-stage-vunnet:       #10B981;
+  --sales-stage-tapt:         #DC2626;
+
+  /* Commission lifecycle */
+  --sales-commission-pending:   #94A3B8;
+  --sales-commission-eligible:  #F59E0B;
+  --sales-commission-paid:      #10B981;
+  --sales-commission-clawback:  #DC2626;
+
+  /* Leaderboard ranks */
+  --sales-rank-1: #EAB308;
+  --sales-rank-2: #94A3B8;
+  --sales-rank-3: #B45309;
+
+  /* Layout */
+  --kanban-col-min-width: 240px;
+  --kanban-card-padding: 10px;
+  --table-row-height: 36px;
 }
 
 .dark {

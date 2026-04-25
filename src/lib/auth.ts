@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { UserRole } from "@prisma/client";
 import { supabaseServer } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -20,7 +21,20 @@ export interface OrgContext {
 
 export interface SessionWithAccess extends SessionPayload {
   hasAccess: boolean;
+  role: UserRole;
+  isInternalAdmin: boolean;
+  isSalesRep: boolean;
   org: OrgContext | null;
+}
+
+export interface SalesRepSession extends SessionPayload {
+  role: UserRole;
+  salesRep: {
+    id: string;
+    status: string;
+    commissionRateBp: number;
+    monthlyQuotaCents: number;
+  };
 }
 
 export interface UserRoles {
@@ -104,7 +118,9 @@ export const getSessionWithAccess = cache(
         email: true,
         name: true,
         isAdmin: true,
+        role: true,
         subscription: { select: { status: true, currentPeriodEnd: true } },
+        salesRepProfile: { select: { status: true } },
         orgMemberships: {
           where: { status: "active" },
           select: {
@@ -137,13 +153,17 @@ export const getSessionWithAccess = cache(
           name: (user.user_metadata?.name as string | undefined) ?? null,
           isAdmin: (user.user_metadata?.isAdmin as boolean | undefined) ?? false,
         },
-        select: { id: true, email: true, name: true },
+        select: { id: true, email: true, name: true, role: true },
       });
+      const isInternalAdmin = created.email === process.env.ADMIN_EMAIL || created.role === "admin";
       return {
         userId: created.id,
         email: created.email,
         name: created.name,
-        hasAccess: created.email === process.env.ADMIN_EMAIL,
+        hasAccess: isInternalAdmin,
+        role: created.role,
+        isInternalAdmin,
+        isSalesRep: false,
         org: null,
       };
     }
@@ -156,8 +176,11 @@ export const getSessionWithAccess = cache(
     const orgAccess =
       !!activeMembership && ACTIVE_STATUSES.has(activeMembership.org.status);
 
-    const isAdmin = profile.email === process.env.ADMIN_EMAIL || profile.isAdmin;
-    const hasAccess = personalAccess || orgAccess || isAdmin;
+    const isInternalAdmin =
+      profile.role === "admin" || profile.email === process.env.ADMIN_EMAIL || profile.isAdmin;
+    const isSalesRep =
+      profile.role === "selger" && profile.salesRepProfile?.status === "active";
+    const hasAccess = personalAccess || orgAccess || isInternalAdmin || isSalesRep;
 
     const org: OrgContext | null = activeMembership
       ? {
@@ -176,7 +199,52 @@ export const getSessionWithAccess = cache(
       email: profile.email,
       name: profile.name,
       hasAccess,
+      role: profile.role,
+      isInternalAdmin,
+      isSalesRep,
       org,
+    };
+  },
+);
+
+/// Cached selger-session for /selger/* layouts. Returns null hvis ikke selger eller status != 'active'.
+export const getSalesRepSession = cache(
+  async (): Promise<SalesRepSession | null> => {
+    const session = await getSession();
+    if (!session) return null;
+
+    const profile = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        salesRepProfile: {
+          select: {
+            id: true,
+            status: true,
+            commissionRateBp: true,
+            monthlyQuotaCents: true,
+          },
+        },
+      },
+    });
+
+    if (!profile || profile.role !== "selger" || !profile.salesRepProfile) return null;
+    if (profile.salesRepProfile.status !== "active") return null;
+
+    return {
+      userId: profile.id,
+      email: profile.email,
+      name: profile.name,
+      role: profile.role,
+      salesRep: {
+        id: profile.salesRepProfile.id,
+        status: profile.salesRepProfile.status,
+        commissionRateBp: profile.salesRepProfile.commissionRateBp,
+        monthlyQuotaCents: profile.salesRepProfile.monthlyQuotaCents,
+      },
     };
   },
 );
@@ -185,7 +253,14 @@ export const getUserRoles = cache(async (): Promise<UserRoles | null> => {
   const session = await getSession();
   if (!session) return null;
 
-  const isInternalAdmin = session.email === process.env.ADMIN_EMAIL;
+  const profile = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { role: true, isAdmin: true },
+  });
+  const isInternalAdmin =
+    session.email === process.env.ADMIN_EMAIL ||
+    profile?.role === "admin" ||
+    profile?.isAdmin === true;
 
   const orgMemberships = await prisma.orgMembership.findMany({
     where: {

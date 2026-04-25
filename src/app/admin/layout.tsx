@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
-import { Building2, Users, Tag, Inbox, LayoutDashboard } from "lucide-react";
+import { prisma } from "@/lib/prisma";
+import { Building2, Users, Tag, Inbox, LayoutDashboard, UserCheck } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Oversikt", icon: LayoutDashboard, exact: true },
   { href: "/admin/orger", label: "Organisasjoner", icon: Building2 },
+  { href: "/admin/selgere", label: "Selgere", icon: UserCheck },
   { href: "/admin/brukere", label: "Brukere", icon: Users },
   { href: "/admin/promo", label: "Rabattkoder", icon: Tag },
   { href: "/admin/innboks", label: "Innboks", icon: Inbox },
@@ -13,9 +15,16 @@ const NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  if (!session || session.email !== process.env.ADMIN_EMAIL) {
-    redirect("/logg-inn");
-  }
+  if (!session) redirect("/logg-inn");
+  const profile = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { role: true, isAdmin: true },
+  });
+  const isInternalAdmin =
+    session.email === process.env.ADMIN_EMAIL ||
+    profile?.role === "admin" ||
+    profile?.isAdmin === true;
+  if (!isInternalAdmin) redirect("/logg-inn");
 
   return (
     <div className="min-h-dvh bg-[#f9f9f8] flex">

@@ -40,7 +40,17 @@ function displayName(name?: string | null, email?: string | null): string {
   return "Uinnlogget";
 }
 
-export function Sidebar({ hasAccess, org }: { hasAccess: boolean; org: OrgContext | null }) {
+export function Sidebar({
+  hasAccess,
+  org,
+  isInternalAdmin = false,
+  isSalesRep = false,
+}: {
+  hasAccess: boolean;
+  org: OrgContext | null;
+  isInternalAdmin?: boolean;
+  isSalesRep?: boolean;
+}) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const initials = initialsFor(user?.name, user?.email);
@@ -98,6 +108,28 @@ export function Sidebar({ hasAccess, org }: { hasAccess: boolean; org: OrgContex
           <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-2">
             <NotificationBell />
             <SessionSwitcher />
+          </div>
+        )}
+        {(isInternalAdmin || isSalesRep) && (
+          <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-0.5">
+            {isSalesRep && (
+              <Link
+                href="/selger"
+                prefetch={true}
+                className="block px-3 py-2 rounded-full text-[12px] text-ink/55 hover:text-ink hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                Selger-CRM →
+              </Link>
+            )}
+            {isInternalAdmin && (
+              <Link
+                href="/admin"
+                prefetch={true}
+                className="block px-3 py-2 rounded-full text-[12px] text-ink/55 hover:text-ink hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                Admin →
+              </Link>
+            )}
           </div>
         )}
       </nav>
