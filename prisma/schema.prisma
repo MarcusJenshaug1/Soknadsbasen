@@ -411,6 +411,14 @@ model Organization {
   stripeSubscriptionId String?  @unique
   /// "active" | "trialing" | "past_due" | "canceled" | "incomplete"
   status               String   @default("incomplete")
+  /// Antall forhåndskjøpte lisenser (= Stripe sub item quantity)
+  seatLimit            Int      @default(1)
+  /// "card" | "invoice" — hvordan kunden betaler
+  billingMethod        String   @default("card")
+  /// Organisasjonsnummer (9 siffer). Påkrevd for invoice-billing.
+  orgNumber            String?
+  /// Faktura-epost (brukes av Stripe Invoicing)
+  invoiceEmail         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

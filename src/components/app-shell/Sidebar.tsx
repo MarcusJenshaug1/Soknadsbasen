@@ -93,20 +93,6 @@ export function Sidebar({ hasAccess, org }: { hasAccess: boolean; org: OrgContex
             </Link>
           );
         })}
-        {org && (
-          <Link
-            href={`/org/${org.slug}`}
-            prefetch={true}
-            className={cn(
-              "block px-3 py-2 rounded-full transition-colors",
-              pathname.startsWith(`/org/${org.slug}`)
-                ? "bg-ink text-bg dark:bg-white/12 dark:text-ink"
-                : "text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-ink",
-            )}
-          >
-            Min organisasjon
-          </Link>
-        )}
         </div>
         {hasAccess && (
           <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-2">

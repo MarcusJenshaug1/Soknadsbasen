@@ -22,6 +22,7 @@ function NyOrgForm() {
     displayName: prefillOrg,
     name: prefillOrg,
     slug: toSlugClient(prefillOrg),
+    orgNumber: "",
     adminEmail: prefillEmail,
     status: "active",
     logoUrl: "",
@@ -71,6 +72,7 @@ function NyOrgForm() {
           name: fields.name,
           displayName: fields.displayName,
           slug: fields.slug || undefined,
+          orgNumber: fields.orgNumber || undefined,
           adminEmail: fields.adminEmail,
           status: fields.status,
           logoUrl: fields.logoUrl || undefined,
@@ -108,6 +110,12 @@ function NyOrgForm() {
           <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">Internt navn</label>
           <input className={inp} value={fields.name} onChange={(e) => set("name", e.target.value)} placeholder="velle-as" required />
           <p className="text-[11px] text-ink/40 mt-1">Juridisk/internt navn</p>
+        </div>
+
+        <div>
+          <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">Organisasjonsnummer (valgfritt)</label>
+          <input className={inp} value={fields.orgNumber} onChange={(e) => set("orgNumber", e.target.value)} placeholder="989 645 917" />
+          <p className="text-[11px] text-ink/40 mt-1">9-siffer norsk organisasjonsnummer</p>
         </div>
 
         <div>

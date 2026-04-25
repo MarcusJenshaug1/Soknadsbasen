@@ -23,6 +23,16 @@ export interface SessionWithAccess extends SessionPayload {
   org: OrgContext | null;
 }
 
+export interface UserRoles {
+  isInternalAdmin: boolean;
+  orgMemberships: Array<{
+    id: string;
+    slug: string;
+    displayName: string;
+    role: "admin" | "member";
+  }>;
+}
+
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
 // Deduped per request via React cache — flere layout/page-kall = 1 I/O.
@@ -170,3 +180,38 @@ export const getSessionWithAccess = cache(
     };
   },
 );
+
+export const getUserRoles = cache(async (): Promise<UserRoles | null> => {
+  const session = await getSession();
+  if (!session) return null;
+
+  const isInternalAdmin = session.email === process.env.ADMIN_EMAIL;
+
+  const orgMemberships = await prisma.orgMembership.findMany({
+    where: {
+      userId: session.userId,
+      role: "admin",
+      status: "active",
+    },
+    select: {
+      org: {
+        select: {
+          id: true,
+          slug: true,
+          displayName: true,
+        },
+      },
+      role: true,
+    },
+  });
+
+  return {
+    isInternalAdmin,
+    orgMemberships: orgMemberships.map((m) => ({
+      id: m.org.id,
+      slug: m.org.slug,
+      displayName: m.org.displayName,
+      role: m.role as "admin" | "member",
+    })),
+  };
+});
