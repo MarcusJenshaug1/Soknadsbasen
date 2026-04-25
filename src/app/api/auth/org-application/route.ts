@@ -37,7 +37,6 @@ export async function POST(req: Request) {
     const inquiry = await prisma.orgInquiry.create({
       data: {
         orgName: orgName.trim(),
-        orgNumber: cleanOrgNumber || null,
         contactName: contactName.trim(),
         contactEmail: cleanEmail,
         message: message?.trim() || null,
@@ -112,7 +111,6 @@ export async function POST(req: Request) {
           <h2 style="color: #D5592E;">Ny organisasjonssøknad</h2>
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
             <tr><td style="padding: 6px 0; color: #888; font-size: 13px; width: 140px;">Organisasjon</td><td style="font-weight: 600;">${orgName.trim()}</td></tr>
-            ${cleanOrgNumber ? `<tr><td style="padding: 6px 0; color: #888; font-size: 13px;">Org.nr</td><td>${cleanOrgNumber}</td></tr>` : ""}
             <tr><td style="padding: 6px 0; color: #888; font-size: 13px;">Kontaktperson</td><td>${contactName.trim()}</td></tr>
             <tr><td style="padding: 6px 0; color: #888; font-size: 13px;">E-post</td><td><a href="mailto:${cleanEmail}">${cleanEmail}</a></td></tr>
             ${message?.trim() ? `<tr><td style="padding: 6px 0; color: #888; font-size: 13px; vertical-align: top;">Melding</td><td style="white-space: pre-wrap;">${message.trim()}</td></tr>` : ""}

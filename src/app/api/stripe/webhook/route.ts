@@ -146,6 +146,17 @@ export async function POST(req: Request) {
           where: { stripeSubscriptionId: subscription.id },
           data: { status: "canceled" },
         });
+
+        // Clawback: alle pending entries for orger på denne subscription innen 90d
+        const cutoff = new Date(Date.now() - 90 * 86_400_000);
+        await prisma.commissionEntry.updateMany({
+          where: {
+            org: { stripeSubscriptionId: subscription.id },
+            status: "pending",
+            paidAt: { gte: cutoff },
+          },
+          data: { status: "clawback", notes: `Subscription canceled ${subscription.id}` },
+        });
         break;
       }
 
@@ -161,6 +172,98 @@ export async function POST(req: Request) {
           where: { stripeSubscriptionId: subscriptionId },
           data: { status: "past_due" },
         });
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object;
+        const subscriptionId = extractSubscriptionId(invoice);
+        if (!subscriptionId) break;
+
+        const org = await prisma.organization.findFirst({
+          where: { stripeSubscriptionId: subscriptionId },
+          select: { id: true, salesRepId: true },
+        });
+        if (!org?.salesRepId) break;
+
+        const existing = await prisma.commissionEntry.findUnique({
+          where: { stripeInvoiceId: invoice.id ?? "" },
+          select: { id: true },
+        });
+        if (existing || !invoice.id) break;
+
+        const profile = await prisma.salesRepProfile.findUnique({
+          where: { userId: org.salesRepId },
+          select: { commissionRateBp: true },
+        });
+        const rateBp = profile?.commissionRateBp ?? 1000;
+
+        const subtotal = typeof invoice.subtotal === "number" ? invoice.subtotal : 0;
+        if (subtotal <= 0) break;
+
+        const commissionCents = Math.floor((subtotal * rateBp) / 10_000);
+        const transitions = (invoice as unknown as { status_transitions?: { paid_at?: number } }).status_transitions;
+        const paidAt = new Date((transitions?.paid_at ?? Math.floor(Date.now() / 1000)) * 1000);
+        const holdUntil = new Date(paidAt.getTime() + 90 * 86_400_000);
+
+        await prisma.commissionEntry.create({
+          data: {
+            salesRepId: org.salesRepId,
+            orgId: org.id,
+            stripeInvoiceId: invoice.id,
+            invoiceAmountCents: subtotal,
+            amountCents: commissionCents,
+            holdUntil,
+            status: "pending",
+            paidAt,
+          },
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: org.salesRepId,
+            title: `Provisjon registrert: ${(commissionCents / 100).toLocaleString("nb-NO")} kr`,
+            body: `Faktura betalt. Frigis ${holdUntil.toLocaleDateString("nb-NO")}.`,
+            url: `/selger/provisjon`,
+          },
+        });
+        break;
+      }
+
+      case "charge.refunded": {
+        const charge = event.data.object;
+        const invoiceRef = (charge as unknown as { invoice?: string | { id: string } }).invoice;
+        const invoiceId = typeof invoiceRef === "string" ? invoiceRef : invoiceRef?.id;
+        if (!invoiceId) break;
+
+        const entry = await prisma.commissionEntry.findUnique({ where: { stripeInvoiceId: invoiceId } });
+        if (!entry) break;
+
+        const refundedRatio = charge.amount > 0 ? (charge.amount_refunded ?? 0) / charge.amount : 0;
+        if (refundedRatio >= 0.99) {
+          await prisma.commissionEntry.update({
+            where: { id: entry.id },
+            data: { status: "clawback", notes: `Charge refunded ${charge.id}` },
+          });
+          await prisma.notification.create({
+            data: {
+              userId: entry.salesRepId,
+              title: `Clawback: ${(entry.amountCents / 100).toLocaleString("nb-NO")} kr`,
+              body: `Faktura refundert — provisjon trukket tilbake.`,
+              url: `/selger/provisjon`,
+            },
+          });
+        } else if (refundedRatio > 0) {
+          const remaining = Math.floor(entry.invoiceAmountCents * (1 - refundedRatio));
+          const newCommission = Math.floor((remaining * 1000) / 10_000);
+          await prisma.commissionEntry.update({
+            where: { id: entry.id },
+            data: {
+              amountCents: newCommission,
+              notes: `Partial refund ${(refundedRatio * 100).toFixed(0)}% (${charge.id})`,
+            },
+          });
+        }
         break;
       }
 
