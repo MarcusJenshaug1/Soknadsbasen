@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendMail } from "@/lib/email";
+import { assignLeadRoundRobin, attachContactToLead } from "@/lib/sales/assignment";
+import { notifySalesRep } from "@/lib/sales/notify";
 
 export async function POST(req: Request) {
   let body: { orgName: string; contactName: string; contactEmail: string; message?: string };
@@ -15,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
   }
 
-  await prisma.orgInquiry.create({
+  const inquiry = await prisma.orgInquiry.create({
     data: {
       orgName: orgName.trim(),
       contactName: contactName.trim(),
@@ -23,6 +25,33 @@ export async function POST(req: Request) {
       message: body.message?.trim() || null,
     },
   });
+
+  // Round-robin auto-tildeling. Hopper stille hvis ingen aktive selgere finnes.
+  try {
+    const assigned = await assignLeadRoundRobin({
+      source: "inquiry",
+      companyName: orgName.trim(),
+      title: `${orgName.trim()} \u2014 ${contactName.trim()}`,
+      notes: body.message?.trim() || null,
+      orgInquiryId: inquiry.id,
+    });
+    if (assigned) {
+      await attachContactToLead({
+        leadId: assigned.leadId,
+        name: contactName.trim(),
+        email: contactEmail.trim().toLowerCase(),
+        role: "Beslutningstaker",
+        isPrimary: true,
+      });
+      await notifySalesRep(assigned.salesRepId, {
+        title: `Ny lead: ${orgName.trim()}`,
+        body: `${contactName.trim()} \u00f8nsker kontakt.`,
+        url: `/selger/leads/${assigned.leadId}`,
+      });
+    }
+  } catch (err) {
+    console.error("[forespørsel] round-robin failed:", err);
+  }
 
   const adminEmail = process.env.ADMIN_EMAIL ?? "marcus@redi.as";
   await sendMail({
