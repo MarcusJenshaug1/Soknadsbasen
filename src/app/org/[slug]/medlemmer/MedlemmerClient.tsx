@@ -76,6 +76,12 @@ export function MedlemmerClient({
   const [toast, setToast] = useState<{ ok: boolean; text: string } | null>(null);
   const [poolFullDialog, setPoolFullDialog] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{
+    userId: string;
+    name: string;
+    email: string;
+    status: string;
+  } | null>(null);
 
   const isAdmin = callerRole === "admin";
   const seatsUsed = active + invited;
@@ -160,20 +166,27 @@ export function MedlemmerClient({
     }
   }
 
-  async function handleRemove(userId: string, status: string) {
-    if (!confirm("Fjern medlem?")) return;
+  async function handleConfirmRemove() {
+    if (!removeTarget) return;
+    const { userId, status } = removeTarget;
     setRemoving(userId);
     try {
       const res = await fetch(`/api/org/${slug}/members/${userId}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setMembers((prev) => prev.filter((m) => m.user.id !== userId));
-        if (status === "active") setActive((n) => Math.max(0, n - 1));
-        router.refresh();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        flash(false, data.error ?? "Kunne ikke fjerne medlem");
+        return;
       }
+      setMembers((prev) => prev.filter((m) => m.user.id !== userId));
+      if (status === "active") setActive((n) => Math.max(0, n - 1));
+      else if (status === "invited") setInvited((n) => Math.max(0, n - 1));
+      flash(true, "Medlem fjernet");
+      router.refresh();
     } finally {
       setRemoving(null);
+      setRemoveTarget(null);
     }
   }
 
@@ -377,7 +390,14 @@ export function MedlemmerClient({
               </span>
               {isAdmin && m.status !== "suspended" && (
                 <button
-                  onClick={() => handleRemove(m.user.id, m.status)}
+                  onClick={() =>
+                    setRemoveTarget({
+                      userId: m.user.id,
+                      name: m.user.name ?? m.user.email,
+                      email: m.user.email,
+                      status: m.status,
+                    })
+                  }
                   disabled={removing === m.user.id}
                   className="text-[11px] px-2 py-1 rounded border border-black/10 text-ink/40 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-40"
                 >
@@ -398,6 +418,44 @@ export function MedlemmerClient({
         >
           {loadingMore ? "Laster flere…" : "Last flere"}
         </button>
+      )}
+
+      {removeTarget && (
+        <div
+          className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
+          onClick={() => removing === null && setRemoveTarget(null)}
+        >
+          <div
+            className="bg-bg rounded-2xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-[16px] font-semibold mb-2">Fjern medlem</h3>
+            <p className="text-[13px] text-ink/60 mb-1">
+              <span className="font-medium text-ink">{removeTarget.name}</span> mister tilgang
+              til organisasjonen.
+            </p>
+            <p className="text-[12px] text-ink/40 mb-5">
+              Lisensen frigjøres tilbake til poolen, men antall kjøpte lisenser endres ikke.
+              Personlig data forblir tilgjengelig for brukeren selv.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setRemoveTarget(null)}
+                disabled={removing !== null}
+                className="px-4 py-2 rounded-full text-[13px] hover:bg-black/5 disabled:opacity-40"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleConfirmRemove}
+                disabled={removing !== null}
+                className="px-4 py-2 rounded-full bg-red-600 text-white text-[13px] hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {removing !== null ? "Fjerner…" : "Fjern medlem"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {poolFullDialog && (
