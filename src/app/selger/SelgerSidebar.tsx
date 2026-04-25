@@ -28,7 +28,13 @@ const NAV: readonly NavItem[] = [
   { href: "/selger/web-form-embed", label: "Web-skjema",  icon: FiCode },
 ];
 
-export function SelgerSidebar({ email }: { email: string }) {
+export function SelgerSidebar({
+  email,
+  viewerRole,
+}: {
+  email: string;
+  viewerRole: "selger" | "admin";
+}) {
   const pathname = usePathname();
 
   return (
@@ -38,6 +44,11 @@ export function SelgerSidebar({ email }: { email: string }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-mark.svg" alt="" className="w-6 h-6 shrink-0" />
           <span className="text-[13px] font-semibold">Selger</span>
+          {viewerRole === "admin" && (
+            <span className="ml-auto text-[9px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--sales-stage-kontaktet)]/15 text-[var(--sales-stage-kontaktet)]">
+              admin
+            </span>
+          )}
         </div>
       </div>
 

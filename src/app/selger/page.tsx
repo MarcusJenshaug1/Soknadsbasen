@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getSalesRepSession } from "@/lib/auth";
+import { getSelgerPanelAccess } from "@/lib/auth";
 import {
   getActiveCustomerCount,
   getCommissionSummary,
@@ -20,11 +20,11 @@ import { UpcomingTasks } from "./DashboardWidgets/UpcomingTasks";
 export const dynamic = "force-dynamic";
 
 export default async function SelgerDashboard() {
-  const session = await getSalesRepSession();
-  if (!session) redirect("/logg-inn?redirect=/selger");
-  const salesRepId = session.userId;
-  const quotaCents = session.salesRep.monthlyQuotaCents;
-  const firstName = session.name?.split(" ")[0] ?? "selger";
+  const access = await getSelgerPanelAccess();
+  if (!access) redirect("/logg-inn?redirect=/selger");
+  const salesRepId = access.userId;
+  const quotaCents = access.salesRep.monthlyQuotaCents;
+  const firstName = access.name?.split(" ")[0] ?? (access.viewerRole === "admin" ? "admin" : "selger");
 
   return (
     <div className="space-y-6">

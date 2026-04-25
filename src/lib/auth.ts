@@ -37,6 +37,19 @@ export interface SalesRepSession extends SessionPayload {
   };
 }
 
+export type SelgerPanelViewerRole = "selger" | "admin";
+
+export interface SelgerPanelAccess extends SessionPayload {
+  role: UserRole;
+  viewerRole: SelgerPanelViewerRole;
+  salesRep: {
+    id: string | null;
+    status: string;
+    commissionRateBp: number;
+    monthlyQuotaCents: number;
+  };
+}
+
 export interface UserRoles {
   isInternalAdmin: boolean;
   orgMemberships: Array<{
@@ -245,6 +258,63 @@ export const getSalesRepSession = cache(
         commissionRateBp: profile.salesRepProfile.commissionRateBp,
         monthlyQuotaCents: profile.salesRepProfile.monthlyQuotaCents,
       },
+    };
+  },
+);
+
+/// Adgang til /selger-panelet \u2014 \u00e5pen for b\u00e5de aktive selgere og interne admins.
+/// Admins som ikke har egen SalesRepProfile f\u00e5r tomme metrics (egen userId) men kan navigere alt.
+export const getSelgerPanelAccess = cache(
+  async (): Promise<SelgerPanelAccess | null> => {
+    const session = await getSession();
+    if (!session) return null;
+
+    const profile = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isAdmin: true,
+        salesRepProfile: {
+          select: {
+            id: true,
+            status: true,
+            commissionRateBp: true,
+            monthlyQuotaCents: true,
+          },
+        },
+      },
+    });
+    if (!profile) return null;
+
+    const isInternalAdmin =
+      profile.role === "admin" || profile.email === process.env.ADMIN_EMAIL || profile.isAdmin;
+    const isActiveSelger =
+      profile.role === "selger" && profile.salesRepProfile?.status === "active";
+
+    if (!isActiveSelger && !isInternalAdmin) return null;
+
+    return {
+      userId: profile.id,
+      email: profile.email,
+      name: profile.name,
+      role: profile.role,
+      viewerRole: isActiveSelger ? "selger" : "admin",
+      salesRep: profile.salesRepProfile
+        ? {
+            id: profile.salesRepProfile.id,
+            status: profile.salesRepProfile.status,
+            commissionRateBp: profile.salesRepProfile.commissionRateBp,
+            monthlyQuotaCents: profile.salesRepProfile.monthlyQuotaCents,
+          }
+        : {
+            id: null,
+            status: "admin-view",
+            commissionRateBp: 0,
+            monthlyQuotaCents: 0,
+          },
     };
   },
 );
