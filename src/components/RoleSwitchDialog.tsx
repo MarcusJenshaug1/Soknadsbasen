@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Building2, Briefcase, Zap } from "lucide-react";
+import { Building2, Briefcase, Zap, TrendingUp } from "lucide-react";
 
 interface DialogOption {
   label: string;
@@ -16,12 +16,14 @@ interface RoleSwitchDialogProps {
 
 function getIcon(label: string) {
   if (label.includes("admin")) return <Briefcase size={16} />;
+  if (label === "Selger") return <TrendingUp size={16} />;
   if (label.includes("App")) return <Zap size={16} />;
   return <Building2 size={16} />;
 }
 
-function getCategory(label: string): "admin" | "app" | "org" {
+function getCategory(label: string): "admin" | "app" | "selger" | "org" {
   if (label.includes("admin")) return "admin";
+  if (label === "Selger") return "selger";
   if (label.includes("App")) return "app";
   return "org";
 }
@@ -54,6 +56,7 @@ export function RoleSwitchDialog({
   // Group options by category
   const adminOptions = options.filter((o) => getCategory(o.label) === "admin");
   const appOptions = options.filter((o) => getCategory(o.label) === "app");
+  const selgerOptions = options.filter((o) => getCategory(o.label) === "selger");
   const orgOptions = options.filter((o) => getCategory(o.label) === "org");
 
   return (
@@ -133,6 +136,36 @@ export function RoleSwitchDialog({
                       </div>
                       <div className="text-[11px] text-ink/40">
                         Din personlige CV-base
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selger */}
+          {selgerOptions.length > 0 && (
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-ink/50 font-medium mb-2.5">
+                Salg
+              </p>
+              <div className="space-y-2">
+                {selgerOptions.map((option) => (
+                  <button
+                    key={option.href}
+                    onClick={() => handleOptionClick(option.href)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 hover:bg-panel hover:border-accent/50 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent/20 transition-colors">
+                      {getIcon(option.label)}
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-medium text-[14px] text-ink">
+                        {option.label}
+                      </div>
+                      <div className="text-[11px] text-ink/40">
+                        Selger-panel
                       </div>
                     </div>
                   </button>

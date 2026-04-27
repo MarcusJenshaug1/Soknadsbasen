@@ -52,6 +52,7 @@ export interface SelgerPanelAccess extends SessionPayload {
 
 export interface UserRoles {
   isInternalAdmin: boolean;
+  isSalesRep: boolean;
   orgMemberships: Array<{
     id: string;
     slug: string;
@@ -325,12 +326,18 @@ export const getUserRoles = cache(async (): Promise<UserRoles | null> => {
 
   const profile = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { role: true, isAdmin: true },
+    select: {
+      role: true,
+      isAdmin: true,
+      salesRepProfile: { select: { status: true } },
+    },
   });
   const isInternalAdmin =
     session.email === process.env.ADMIN_EMAIL ||
     profile?.role === "admin" ||
     profile?.isAdmin === true;
+  const isSalesRep =
+    profile?.role === "selger" && profile?.salesRepProfile?.status === "active";
 
   const orgMemberships = await prisma.orgMembership.findMany({
     where: {
@@ -352,6 +359,7 @@ export const getUserRoles = cache(async (): Promise<UserRoles | null> => {
 
   return {
     isInternalAdmin,
+    isSalesRep,
     orgMemberships: orgMemberships.map((m) => ({
       id: m.org.id,
       slug: m.org.slug,
