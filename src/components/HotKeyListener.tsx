@@ -63,7 +63,13 @@ export function HotKeyListener() {
     if (pathname.startsWith("/admin")) return "admin";
     if (pathname.startsWith("/org/")) return "org";
     if (pathname.startsWith("/app")) return "app";
+    if (pathname.startsWith("/selger")) return "selger";
     return null;
+  };
+
+  const getCurrentOrgSlug = () => {
+    const match = pathname.match(/^\/org\/([^\/]+)/);
+    return match ? match[1] : null;
   };
 
   const handleAdminHotkey = () => {
@@ -73,8 +79,12 @@ export function HotKeyListener() {
     const context = detectContext();
     const options: DialogOption[] = [];
 
-    // Only org owner with no admin access and no platform access = no action
-    if (!data.isInternalAdmin && data.orgMemberships.length === 0) {
+    // No accessible context = no action
+    if (
+      !data.isInternalAdmin &&
+      !data.isSalesRep &&
+      data.orgMemberships.length === 0
+    ) {
       return;
     }
 
@@ -91,9 +101,18 @@ export function HotKeyListener() {
       options.push({ label: "App", href: "/app" });
     }
 
+    // Add selger option if user is admin or active sales rep, and not currently on /selger
+    if (
+      context !== "selger" &&
+      (data.isInternalAdmin || data.isSalesRep)
+    ) {
+      options.push({ label: "Selger", href: "/selger" });
+    }
+
     // Add org options if user has any orgs
+    const currentOrgSlug = getCurrentOrgSlug();
     data.orgMemberships.forEach((org) => {
-      if (context !== `org/${org.slug}`) {
+      if (org.slug !== currentOrgSlug) {
         options.push({ label: org.displayName, href: `/org/${org.slug}` });
       }
     });

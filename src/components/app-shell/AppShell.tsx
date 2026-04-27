@@ -7,14 +7,23 @@ export function AppShell({
   children,
   hasAccess,
   org = null,
+  isInternalAdmin = false,
+  isSalesRep = false,
 }: {
   children: React.ReactNode;
   hasAccess: boolean;
   org?: OrgContext | null;
+  isInternalAdmin?: boolean;
+  isSalesRep?: boolean;
 }) {
   return (
     <div className="min-h-dvh bg-bg text-ink flex">
-      <Sidebar hasAccess={hasAccess} org={org} />
+      <Sidebar
+        hasAccess={hasAccess}
+        org={org}
+        isInternalAdmin={isInternalAdmin}
+        isSalesRep={isSalesRep}
+      />
       <main className="flex-1 min-w-0 pb-20 md:pb-0">
         {hasAccess && <MobileSessionBar />}
         {children}

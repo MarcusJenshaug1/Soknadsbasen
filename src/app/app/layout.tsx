@@ -14,5 +14,14 @@ export default async function AppLayout({
 }) {
   const session = await getSessionWithAccess();
   if (!session) redirect("/logg-inn?redirect=/app");
-  return <AppShell hasAccess={session.hasAccess} org={session.org ?? null}>{children}</AppShell>;
+  return (
+    <AppShell
+      hasAccess={session.hasAccess}
+      org={session.org ?? null}
+      isInternalAdmin={session.isInternalAdmin}
+      isSalesRep={session.isSalesRep}
+    >
+      {children}
+    </AppShell>
+  );
 }

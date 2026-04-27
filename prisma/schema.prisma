@@ -8,30 +8,47 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum UserRole {
+  user
+  selger
+  admin
+}
+
 /// App-level user profile. `id` matches the Supabase `auth.users.id` UUID.
 /// Authentication (email, password, sessions) lives in Supabase Auth.
 model User {
-  id           String   @id @db.Uuid
-  email        String   @unique
-  name         String?
+  id                   String             @id @db.Uuid
+  email                String             @unique
+  name                 String?
   /// Supabase Storage path for the avatar (inside the `avatars` bucket).
-  avatarUrl    String?
-  weeklyGoal   Int?
-  /// Grants free app access without a subscription (platform staff, beta testers)
-  isAdmin      Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  resumes           Resume[]
-  userData          UserData?
-  companies         Company[]
-  applications      JobApplication[]
-  subscription      Subscription?
-  sessions          JobSearchSession[]
-  pushSubscriptions PushSubscription[]
-  notifications     Notification[]
-  contacts          Contact[]
-  shareLinks        ShareLink[]
-  orgMemberships    OrgMembership[]
+  avatarUrl            String?
+  weeklyGoal           Int?
+  /// DEPRECATED — kept one release for fallback, drop in next migration. Use `role` instead.
+  isAdmin              Boolean            @default(false)
+  /// Plattform-rolle. Selger = full Pro-tilgang uten subscription + tilgang til /selger.
+  role                 UserRole           @default(user)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  resumes              Resume[]
+  userData             UserData?
+  companies            Company[]
+  applications         JobApplication[]
+  subscription         Subscription?
+  sessions             JobSearchSession[]
+  pushSubscriptions    PushSubscription[]
+  notifications        Notification[]
+  contacts             Contact[]
+  shareLinks           ShareLink[]
+  orgMemberships       OrgMembership[]
+  salesRepProfile      SalesRepProfile?
+  attributedOrgs       Organization[]     @relation("SalesRepAttribution")
+  commissionEntries    CommissionEntry[]  @relation("SalesRepCommission")
+  commissionPayouts    CommissionPayout[] @relation("SalesRepPayout")
+  payoutsCreated       CommissionPayout[] @relation("PayoutCreator")
+  leads                Lead[]
+  crmActivitiesCreated CrmActivity[]      @relation("CrmActivityCreator")
+
+  @@index([role])
 }
 
 model Subscription {
@@ -39,8 +56,8 @@ model Subscription {
   userId               String   @unique @db.Uuid
   stripeCustomerId     String
   stripeSubscriptionId String?  @unique
-  type                 String   // "monthly" | "one_time"
-  status               String   // "active" | "canceled" | "past_due" | "expired"
+  type                 String // "monthly" | "one_time"
+  status               String // "active" | "canceled" | "past_due" | "expired"
   currentPeriodEnd     DateTime
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -63,32 +80,32 @@ model UserData {
 }
 
 model Resume {
-  id          String   @id @default(uuid())
-  title       String
-  userId      String?  @db.Uuid
-  guestId     String? // For gjestemodus
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  title     String
+  userId    String?  @db.Uuid
+  guestId   String? // For gjestemodus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user        User?    @relation(fields: [userId], references: [id])
-  versions    ResumeVersion[]
-  sections    Section[]
+  user     User?           @relation(fields: [userId], references: [id])
+  versions ResumeVersion[]
+  sections Section[]
 }
 
 model Section {
-  id          String   @id @default(uuid())
-  resumeId    String
-  title       String
-  type        String   // f.eks. "EXPERIENCE", "EDUCATION", "SKILLS"
-  order       Int
-  isVisible   Boolean  @default(true)
-  
-  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  items       SectionItem[]
+  id        String  @id @default(uuid())
+  resumeId  String
+  title     String
+  type      String // f.eks. "EXPERIENCE", "EDUCATION", "SKILLS"
+  order     Int
+  isVisible Boolean @default(true)
+
+  resume Resume        @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  items  SectionItem[]
 }
 
 model SectionItem {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   sectionId   String
   title       String?
   subtitle    String?
@@ -96,28 +113,28 @@ model SectionItem {
   endDate     DateTime?
   description String?
   order       Int
-  isVisible   Boolean  @default(true)
+  isVisible   Boolean   @default(true)
 
-  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 }
 
 model ResumeVersion {
-  id          String   @id @default(uuid())
-  resumeId    String
-  versionNum  Int      @default(1)
-  content     Json     // Snapshot av CV innhold på publiseringstidspunktet
-  templateId  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  resumeId   String
+  versionNum Int      @default(1)
+  content    Json // Snapshot av CV innhold på publiseringstidspunktet
+  templateId String
+  createdAt  DateTime @default(now())
 
   resume       Resume           @relation(fields: [resumeId], references: [id], onDelete: Cascade)
   applications JobApplication[]
 }
 
 model Template {
-  id          String   @id @default(uuid())
-  name        String
-  htmlLayout  String?  // Layout for export engine
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  name       String
+  htmlLayout String? // Layout for export engine
+  createdAt  DateTime @default(now())
 }
 
 // ─── Job search sessions ───────────────────────────────────
@@ -183,14 +200,14 @@ model Contact {
 
 /// A company the user has applied to or is tracking.
 model Company {
-  id          String   @id @default(uuid())
-  userId      String   @db.Uuid
-  name        String
-  website     String?
-  industry    String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @db.Uuid
+  name      String
+  website   String?
+  industry  String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications JobApplication[]
@@ -207,7 +224,7 @@ model JobApplication {
   /// via favicon services and to link back to the company page.
   companyWebsite   String?
   title            String
-  source           String?   // "finn.no" | "linkedin" | "referral" | …
+  source           String? // "finn.no" | "linkedin" | "referral" | …
   jobUrl           String?
   status           String    @default("draft") // draft|applied|interview|offer|accepted|rejected|withdrawn
   statusNote       String?
@@ -232,16 +249,16 @@ model JobApplication {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company        Company?              @relation(fields: [companyId], references: [id])
-  session        JobSearchSession?     @relation(fields: [sessionId], references: [id])
-  resumeSnapshot ResumeVersion?        @relation(fields: [resumeSnapshotId], references: [id])
-  tasks            Task[]
-  attachments      Attachment[]
-  activities       ApplicationActivity[]
-  coverLetter      CoverLetter?
-  interviewStages  InterviewStage[]
-  contact          Contact?              @relation(fields: [contactId], references: [id])
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company         Company?              @relation(fields: [companyId], references: [id])
+  session         JobSearchSession?     @relation(fields: [sessionId], references: [id])
+  resumeSnapshot  ResumeVersion?        @relation(fields: [resumeSnapshotId], references: [id])
+  tasks           Task[]
+  attachments     Attachment[]
+  activities      ApplicationActivity[]
+  coverLetter     CoverLetter?
+  interviewStages InterviewStage[]
+  contact         Contact?              @relation(fields: [contactId], references: [id])
 }
 
 /// Checklist tasks tied to an application (follow-up, prep, documents …).
@@ -249,7 +266,7 @@ model Task {
   id            String    @id @default(uuid())
   applicationId String
   title         String
-  description   String?   // Optional detailed notes
+  description   String? // Optional detailed notes
   dueAt         DateTime?
   completedAt   DateTime?
   /// "followup" | "document" | "research" | "interview" | "other"
@@ -309,7 +326,7 @@ model CoverLetter {
   date           String?
   subject        String?
   greeting       String?
-  body           String?  // HTML from Lexical
+  body           String? // HTML from Lexical
   closing        String?
   /// Design
   fontFamily     String   @default("inter")
@@ -419,14 +436,21 @@ model Organization {
   orgNumber            String?
   /// Faktura-epost (brukes av Stripe Invoicing)
   invoiceEmail         String?
+  /// FK til User.id der role=selger. Null = ingen attribusjon.
+  salesRepId           String?  @db.Uuid
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  memberships OrgMembership[]
-  invites     OrgInvite[]
+  memberships       OrgMembership[]
+  invites           OrgInvite[]
+  salesRep          User?             @relation("SalesRepAttribution", fields: [salesRepId], references: [id], onDelete: SetNull)
+  lead              Lead?
+  commissionEntries CommissionEntry[]
+  crmContacts       CrmContact[]
 
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
+  @@index([salesRepId])
 }
 
 model OrgMembership {
@@ -477,6 +501,8 @@ model OrgInquiry {
   status       String   @default("pending")
   createdAt    DateTime @default(now())
 
+  lead Lead?
+
   @@index([status, createdAt])
 }
 
@@ -521,16 +547,16 @@ model InboundEmail {
 
 /// Emails sent from the admin inbox
 model SentEmail {
-  id          String    @id @default(uuid())
-  toAddress   String
-  subject     String
-  textBody    String?
-  htmlBody    String?
-  inReplyTo   String?
-  folderId    String?
-  archived    Boolean   @default(false)
-  deletedAt   DateTime?
-  sentAt      DateTime  @default(now())
+  id        String    @id @default(uuid())
+  toAddress String
+  subject   String
+  textBody  String?
+  htmlBody  String?
+  inReplyTo String?
+  folderId  String?
+  archived  Boolean   @default(false)
+  deletedAt DateTime?
+  sentAt    DateTime  @default(now())
 
   folder EmailFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
@@ -538,4 +564,169 @@ model SentEmail {
   @@index([folderId])
   @@index([archived])
   @@index([deletedAt])
+}
+
+// ─── Selger / CRM / Provisjon ─────────────────────────────
+
+/// Per-bruker data kun for users med role=selger.
+model SalesRepProfile {
+  id                String    @id @default(uuid())
+  userId            String    @unique @db.Uuid
+  /// Basispoint. 1000 = 10.00%. Per-selger overstyring.
+  commissionRateBp  Int       @default(1000)
+  /// Månedlig MRR-mål i øre. 5000000 = 50 000 NOK.
+  monthlyQuotaCents Int       @default(0)
+  /// "invited" | "active" | "suspended"
+  status            String    @default("invited")
+  inviteToken       String?   @unique
+  inviteExpiresAt   DateTime?
+  /// Round-robin pointer.
+  lastAssignedAt    DateTime?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, lastAssignedAt])
+}
+
+/// CRM lead — én modell for hele pipeline. "Vunnet"/"Tapt" er bare stage-verdier.
+model Lead {
+  id                  String    @id @default(uuid())
+  salesRepId          String    @db.Uuid
+  /// "Ny" | "Kontaktet" | "Demo booket" | "Tilbud sendt" | "Forhandling" | "Vunnet" | "Tapt"
+  stage               String    @default("Ny")
+  probability         Int       @default(10)
+  /// "manual" | "inquiry" | "web_form" | "referral"
+  source              String    @default("manual")
+  estimatedValueCents Int       @default(0)
+  expectedSeats       Int       @default(1)
+  title               String
+  companyName         String
+  companyWebsite      String?
+  notes               String?
+  orgInquiryId        String?   @unique
+  orgId               String?   @unique
+  lostReason          String?
+  closedAt            DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  salesRep   User              @relation(fields: [salesRepId], references: [id], onDelete: Cascade)
+  org        Organization?     @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  orgInquiry OrgInquiry?       @relation(fields: [orgInquiryId], references: [id], onDelete: SetNull)
+  contacts   LeadContactLink[]
+  activities CrmActivity[]
+
+  @@index([salesRepId, stage])
+  @@index([stage, closedAt])
+  @@index([source, createdAt])
+}
+
+/// CRM-kontakt — distinkt fra eksisterende `Contact` (network-modell for end-users).
+model CrmContact {
+  id          String   @id @default(uuid())
+  /// Optional org-binding — kobles direkte når Lead konverteres.
+  orgId       String?
+  name        String
+  title       String?
+  email       String?
+  phone       String?
+  linkedinUrl String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org   Organization?     @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  leads LeadContactLink[]
+
+  @@index([orgId])
+  @@index([email])
+}
+
+/// M2M: Lead ↔ CrmContact med rolle.
+model LeadContactLink {
+  id        String   @id @default(uuid())
+  leadId    String
+  contactId String
+  /// "Beslutningstaker" | "Bruker" | "Champion"
+  role      String   @default("Bruker")
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  lead    Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, contactId])
+  @@index([contactId])
+}
+
+/// Aktivitet på en lead: notat, oppgave, telefon, møte, e-post (manuelt loggført).
+model CrmActivity {
+  id          String    @id @default(uuid())
+  leadId      String
+  /// "note" | "task" | "call" | "meeting" | "email"
+  type        String
+  title       String?
+  content     String?
+  dueAt       DateTime?
+  completedAt DateTime?
+  durationMin Int?
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation("CrmActivityCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([createdById, dueAt])
+}
+
+/// Provisjon-entry per Stripe-faktura. 90-dagers clawback håndteres via holdUntil + status.
+model CommissionEntry {
+  id                 String   @id @default(uuid())
+  salesRepId         String   @db.Uuid
+  orgId              String
+  /// Stripe invoice id — unique = idempotente webhooks.
+  stripeInvoiceId    String   @unique
+  invoiceAmountCents Int
+  /// Provisjon-andel = invoiceAmountCents × commissionRateBp / 10_000.
+  amountCents        Int
+  /// paidAt + 90 dager. Cron flagger `eligible` når både holdUntil passert OG ≥3 paid invoices for orgen.
+  holdUntil          DateTime
+  /// "pending" | "eligible" | "paid" | "clawback" | "voided"
+  status             String   @default("pending")
+  paidAt             DateTime
+  payoutId           String?
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  salesRep User              @relation("SalesRepCommission", fields: [salesRepId], references: [id], onDelete: Cascade)
+  org      Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  payout   CommissionPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@index([salesRepId, status])
+  @@index([orgId, paidAt])
+  @@index([status, holdUntil])
+}
+
+/// En utbetaling fra admin til selger. Samler N entries.
+model CommissionPayout {
+  id          String   @id @default(uuid())
+  salesRepId  String   @db.Uuid
+  totalCents  Int
+  paidAt      DateTime
+  paymentRef  String?
+  notes       String?
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  salesRep  User              @relation("SalesRepPayout", fields: [salesRepId], references: [id], onDelete: Cascade)
+  createdBy User              @relation("PayoutCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  entries   CommissionEntry[]
+
+  @@index([salesRepId, paidAt])
 }

@@ -1,3 +1,9 @@
 {
-  "buildCommand": "rm -rf .next && prisma generate && prisma db push --accept-data-loss --skip-generate && next build"
+  "buildCommand": "rm -rf .next && prisma generate && prisma db push --accept-data-loss --skip-generate && next build",
+  "crons": [
+    {
+      "path": "/api/cron/release-commissions",
+      "schedule": "0 5 * * *"
+    }
+  ]
 }
