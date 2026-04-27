@@ -66,6 +66,11 @@ export function HotKeyListener() {
     return null;
   };
 
+  const getCurrentOrgSlug = () => {
+    const match = pathname.match(/^\/org\/([^\/]+)/);
+    return match ? match[1] : null;
+  };
+
   const handleAdminHotkey = () => {
     if (!rolesCache.current) return;
 
@@ -92,8 +97,9 @@ export function HotKeyListener() {
     }
 
     // Add org options if user has any orgs
+    const currentOrgSlug = getCurrentOrgSlug();
     data.orgMemberships.forEach((org) => {
-      if (context !== `org/${org.slug}`) {
+      if (org.slug !== currentOrgSlug) {
         options.push({ label: org.displayName, href: `/org/${org.slug}` });
       }
     });
