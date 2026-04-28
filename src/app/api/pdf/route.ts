@@ -29,9 +29,8 @@ export async function POST(req: Request) {
 
     const { buffer, filename } = await renderResumePdf(data, baseUrlFromRequest(req));
 
-    return new Response(buffer, {
+    return new Response(new Blob([buffer], { type: "application/pdf" }), {
       headers: {
-        "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
       },
     });

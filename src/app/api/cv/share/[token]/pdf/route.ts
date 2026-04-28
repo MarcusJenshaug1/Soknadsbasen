@@ -51,9 +51,8 @@ export async function GET(
   try {
     const { buffer, filename } = await renderResumePdf(data, baseUrlFromRequest(req));
     recordPdf(token);
-    return new Response(buffer, {
+    return new Response(new Blob([buffer], { type: "application/pdf" }), {
       headers: {
-        "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
       },
     });
