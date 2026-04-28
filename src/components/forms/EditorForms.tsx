@@ -3,8 +3,9 @@ import dynamic from "next/dynamic";
 import { useResumeStore, SECTION_LABELS, type ResumeData, type SectionKey } from "@/store/useResumeStore";
 import { TEMPLATES, COLOR_PALETTES, FONT_PAIRS, getTemplate } from "@/lib/design-tokens";
 import { analyzeAtsMatch } from "@/lib/ats";
-import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp, Share2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ShareCVModal } from "@/components/cv/ShareCVModal";
 
 const LexicalEditor = dynamic(
   () => import("./LexicalEditor").then((m) => m.LexicalEditor),
@@ -689,6 +690,7 @@ export function DesignExportForm() {
   const setSectionOrder = useResumeStore((s) => s.setSectionOrder);
   const replaceData = useResumeStore((s) => s.replaceData);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [jobAd, setJobAd] = useState("");
   const [jobUrl, setJobUrl] = useState("");
   const [jobUrlLoading, setJobUrlLoading] = useState(false);
@@ -1259,7 +1261,21 @@ export function DesignExportForm() {
             {pdfLoading ? "Genererer…" : "Last ned PDF (automatisk)"}
           </button>
         </div>
+
+        <div className="border-t border-indigo-200 pt-4 mt-2">
+          <p className="text-xs text-indigo-600/70 mb-2">
+            Del CV-en din via en lenke som rekrutterer kan åpne uten konto.
+          </p>
+          <button
+            onClick={() => setShareOpen(true)}
+            className="w-full py-3 bg-surface text-indigo-700 font-semibold rounded-xl border-2 border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+          >
+            <Share2 className="size-4" />
+            Del CV via lenke
+          </button>
+        </div>
       </div>
+      <ShareCVModal open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
 }

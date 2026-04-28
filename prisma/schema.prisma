@@ -39,6 +39,7 @@ model User {
   notifications        Notification[]
   contacts             Contact[]
   shareLinks           ShareLink[]
+  resumeShareLinks     ResumeShareLink[]
   orgMemberships       OrgMembership[]
   salesRepProfile      SalesRepProfile?
   attributedOrgs       Organization[]     @relation("SalesRepAttribution")
@@ -371,6 +372,28 @@ model ShareLink {
   revokedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+/// Public-facing CV share link. Live binding to UserData._resumeDataMap[resumeId].
+/// Recruiter opens /cv/delt/<token> without authentication.
+model ResumeShareLink {
+  id           String    @id @default(uuid())
+  userId       String    @db.Uuid
+  /// Key into UserData.resumeData JSON (_resumeDataMap entry). Not a FK.
+  resumeId     String
+  token        String    @unique
+  label        String?
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  viewCount    Int       @default(0)
+  lastViewedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
