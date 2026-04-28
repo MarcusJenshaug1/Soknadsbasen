@@ -3,7 +3,7 @@ import { storePdfData } from "@/lib/pdfTokenStore";
 import type { ResumeData } from "@/store/useResumeStore";
 
 interface RenderedPdf {
-  buffer: Buffer;
+  buffer: Uint8Array;
   filename: string;
 }
 
@@ -43,7 +43,7 @@ export async function renderResumePdf(
     const parts = ["CV", firstName, lastName, role].filter(Boolean);
     const filename = parts.join(" – ") + ".pdf";
 
-    return { buffer: Buffer.from(pdfBuffer), filename };
+    return { buffer: new Uint8Array(pdfBuffer), filename };
   } finally {
     await browser.close();
   }
