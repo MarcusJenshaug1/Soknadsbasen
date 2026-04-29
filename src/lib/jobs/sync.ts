@@ -242,40 +242,36 @@ async function processItems(
     }
   }
 
-  // ACTIVE: hent detail med begrenset parallellitet, så upsert sekvensielt
-  // 8s timeout per detail-call så en hengende request ikke blokkerer hele tikken
+  // ACTIVE: detail-fetch + upsert i parallell (slice for slice)
+  // 4s timeout per detail-call så hengende requests ikke blokkerer
   for (let i = 0; i < active.length; i += DETAIL_CONCURRENCY) {
     if (deadline && Date.now() > deadline) break;
     const slice = active.slice(i, i + DETAIL_CONCURRENCY);
-    const details = await Promise.all(
+    const sliceResults = await Promise.all(
       slice.map(async (item) => {
         try {
           const detail = await Promise.race([
             fetchFeedEntry(item.url, token),
             new Promise<null>((_, reject) =>
-              setTimeout(() => reject(new Error("detail timeout 8s")), 8000),
+              setTimeout(() => reject(new Error("detail timeout 4s")), 4000),
             ),
           ]);
-          return { item, detail, error: null as string | null };
+          if (!detail) return { action: "skipped" as const, error: null };
+          const action = await upsertJob(item, detail);
+          return { action, error: null };
         } catch (err) {
-          return { item, detail: null, error: errMsg(err) };
+          return {
+            action: "error" as const,
+            error: `${item._feed_entry.uuid}: ${errMsg(err)}`,
+          };
         }
       }),
     );
 
-    for (const { item, detail, error } of details) {
-      if (error) {
-        out.errors.push(`detail ${item._feed_entry.uuid}: ${error}`);
-        continue;
-      }
-      if (!detail) continue; // 404 → sletta hos NAV
-      try {
-        const action = await upsertJob(item, detail);
-        if (action === "created") out.inserted += 1;
-        else if (action === "updated") out.updated += 1;
-      } catch (err) {
-        out.errors.push(`upsert ${item._feed_entry.uuid}: ${errMsg(err)}`);
-      }
+    for (const r of sliceResults) {
+      if (r.action === "created") out.inserted += 1;
+      else if (r.action === "updated") out.updated += 1;
+      if (r.error) out.errors.push(r.error);
     }
   }
 
