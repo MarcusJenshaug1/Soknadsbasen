@@ -5,6 +5,10 @@ import { COMPETITORS } from "@/lib/sammenligning/competitors";
 import { INDUSTRIES } from "@/lib/cv-mal/industries";
 import { prisma } from "@/lib/prisma";
 
+// Revalidate sitemap hver 30 min slik at nye jobs surfacer i søkemotorer
+// uten å vente på neste deploy
+export const revalidate = 1800;
+
 const MAX_JOBS_IN_SITEMAP = 5000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
