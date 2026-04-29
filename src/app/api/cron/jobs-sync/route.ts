@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { syncNavJobs } from "@/lib/jobs/sync";
 
 export const runtime = "nodejs";
@@ -23,16 +24,28 @@ export async function GET(req: NextRequest) {
     Math.max(10_000, Number(url.searchParams.get("budgetMs") ?? 50_000)),
   );
 
+  // ?reset=1 nullstiller cursor slik at neste sync(-er) walker hele feeden
+  // på nytt og oppdaterer eksisterende rader med ny data. Brukes etter
+  // schema-endringer der nye felter må backfilles på gamle stillinger.
+  const reset = url.searchParams.get("reset") === "1";
+  let didReset = false;
+  if (reset) {
+    await prisma.navFeedCursor.deleteMany({ where: { id: "singleton" } });
+    didReset = true;
+  }
+
   try {
     const result = await syncNavJobs({ budgetMs });
-    return NextResponse.json(result, {
-      status: result.errors.length > 0 ? 207 : 200,
-    });
+    return NextResponse.json(
+      { ...result, didReset },
+      { status: result.errors.length > 0 ? 207 : 200 },
+    );
   } catch (err) {
     return NextResponse.json(
       {
         error: "Sync failed",
         message: err instanceof Error ? err.message : String(err),
+        didReset,
       },
       { status: 500 },
     );
