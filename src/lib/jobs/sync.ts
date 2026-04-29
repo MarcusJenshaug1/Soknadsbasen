@@ -115,16 +115,16 @@ export async function syncNavJobs(
     const items = body.items ?? [];
     result.itemsSeen += items.length;
 
-    // Fast-forward: hopp over hele siden hvis alle items er eldre enn cutoff
+    // Fast-forward: hopp over hele siden hvis Last-Modified-header er eldre
+    // enn cutoff. Header reflekterer sidens overordnede tid, mens enkelt-items
+    // kan ha bumpet date_modified pga. status-events.
     const cutoff = Date.now() - FAST_FORWARD_DAYS * 86400_000;
-    const newestItem = items.reduce((max, item) => {
-      const t = new Date(item.date_modified ?? item._feed_entry.sistEndret).getTime();
-      return t > max ? t : max;
-    }, 0);
+    const pageTime = lastModified ? new Date(lastModified).getTime() : NaN;
+    const skipPage = !Number.isNaN(pageTime) && pageTime < cutoff;
 
-    if (items.length > 0 && newestItem < cutoff) {
-      // Hele siden er gammel, ingen value i å prosessere. Bare advance cursor.
-    } else {
+    if (skipPage) {
+      // Sida er for gammel, advance cursor uten prosessering
+    } else if (items.length > 0) {
       const itemResults = await processItems(items, token, start + budget);
       result.inserted += itemResults.inserted;
       result.updated += itemResults.updated;
