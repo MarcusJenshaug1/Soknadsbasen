@@ -63,19 +63,26 @@ export interface UserRoles {
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
-// Deduped per request via React cache — flere layout/page-kall = 1 I/O.
-export const getSession = cache(async (): Promise<SessionPayload | null> => {
+type SupabaseAuthUser = Awaited<
+  ReturnType<Awaited<ReturnType<typeof supabaseServer>>["auth"]["getUser"]>
+>["data"]["user"];
+
+// Felles cache for supabase.auth.getUser(). Uten dette kjøres HTTP-kallet 2x
+// per gated render (én gang via getSession, én gang via getSessionWithAccess).
+const getSupabaseAuthUser = cache(async (): Promise<SupabaseAuthUser> => {
   const supabase = await supabaseServer();
-  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
   try {
     const res = await supabase.auth.getUser();
-    user = res.data.user;
+    return res.data.user;
   } catch (err) {
-    // Network blip / Supabase unreachable → treat as anonymous instead of
-    // crashing server-rendered pages (landing etc).
-    console.warn("[getSession] Supabase getUser failed:", err);
+    console.warn("[getSupabaseAuthUser] Supabase getUser failed:", err);
     return null;
   }
+});
+
+// Deduped per request via React cache — flere layout/page-kall = 1 I/O.
+export const getSession = cache(async (): Promise<SessionPayload | null> => {
+  const user = await getSupabaseAuthUser();
   if (!user) return null;
 
   // Ensure a matching app-level profile exists. First-time sign-ins (created
@@ -114,15 +121,7 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
 // Bruk denne i /app/layout og /app/(gated)/layout — sparer 1 DB-kall per nav.
 export const getSessionWithAccess = cache(
   async (): Promise<SessionWithAccess | null> => {
-    const supabase = await supabaseServer();
-    let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
-    try {
-      const res = await supabase.auth.getUser();
-      user = res.data.user;
-    } catch (err) {
-      console.warn("[getSessionWithAccess] Supabase getUser failed:", err);
-      return null;
-    }
+    const user = await getSupabaseAuthUser();
     if (!user) return null;
 
     let profile = await prisma.user.findUnique({
