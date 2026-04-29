@@ -39,6 +39,10 @@ const DEFAULT_BUDGET_MS = 50_000;
 // Maks parallelle detail-kall per side
 const DETAIL_CONCURRENCY = 6;
 
+// Fast-forward: hvis hele siden er eldre enn dette, hopp over item-prosessering
+// og advance kun cursor. Reduserer initial backfill fra timer til minutter.
+const FAST_FORWARD_DAYS = 60;
+
 /**
  * Walker pam-stilling-feed via cursor. Resumable og idempotent.
  * Stopper ved tail (next_url=null) eller når budsjett er brukt.
@@ -110,11 +114,23 @@ export async function syncNavJobs(
     // Behandle items: hent detalj for ACTIVE, deaktiver INACTIVE
     const items = body.items ?? [];
     result.itemsSeen += items.length;
-    const itemResults = await processItems(items, token, start + budget);
-    result.inserted += itemResults.inserted;
-    result.updated += itemResults.updated;
-    result.deactivated += itemResults.deactivated;
-    result.errors.push(...itemResults.errors);
+
+    // Fast-forward: hopp over hele siden hvis alle items er eldre enn cutoff
+    const cutoff = Date.now() - FAST_FORWARD_DAYS * 86400_000;
+    const newestItem = items.reduce((max, item) => {
+      const t = new Date(item.date_modified ?? item._feed_entry.sistEndret).getTime();
+      return t > max ? t : max;
+    }, 0);
+
+    if (items.length > 0 && newestItem < cutoff) {
+      // Hele siden er gammel, ingen value i å prosessere. Bare advance cursor.
+    } else {
+      const itemResults = await processItems(items, token, start + budget);
+      result.inserted += itemResults.inserted;
+      result.updated += itemResults.updated;
+      result.deactivated += itemResults.deactivated;
+      result.errors.push(...itemResults.errors);
+    }
 
     cursor = {
       feedUrl: body.feed_url ?? pagePath,
