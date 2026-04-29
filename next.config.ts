@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   trailingSlash: false,
+  env: {
+    NEXT_PUBLIC_BUILD_ID:
+      process.env.VERCEL_GIT_COMMIT_SHA ?? `dev-${Date.now()}`,
+  },
   serverExternalPackages: ["pdfjs-dist", "puppeteer", "puppeteer-core", "@sparticuz/chromium"],
   outputFileTracingIncludes: {
     "/api/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],

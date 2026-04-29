@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
 import { HotKeyListener } from "@/components/HotKeyListener";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { UpdateToast } from "@/components/UpdateToast";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { rootMetadata, rootViewport } from "@/lib/seo/metadata";
@@ -43,6 +44,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
           <ServiceWorkerRegistration />
+          <UpdateToast />
           <Analytics />
         </ThemeProvider>
       </body>
