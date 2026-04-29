@@ -771,6 +771,26 @@ model Job {
   @@index([externalId])
 }
 
+/// Cursor for NAV pam-stilling-feed walking. Singleton-rad (id = 'singleton').
+/// Lagrer siste sida vi nådde + ETag/Last-Modified for poll mot halen.
+model NavFeedCursor {
+  id           String   @id @default("singleton")
+  feedUrl      String
+  etag         String?
+  lastModified String?
+  nextUrl      String?
+  nextId       String?
+  updatedAt    DateTime @updatedAt
+}
+
+/// JWT public-token cache fra NAV pam-stilling-feed.
+model NavFeedToken {
+  id        String   @id @default("singleton")
+  token     String
+  expiresAt DateTime
+  fetchedAt DateTime @default(now())
+}
+
 /// En utbetaling fra admin til selger. Samler N entries.
 model CommissionPayout {
   id          String   @id @default(uuid())

@@ -18,11 +18,13 @@ export async function GET(req: NextRequest) {
   }
 
   const url = new URL(req.url);
-  const pages = Math.min(20, Number(url.searchParams.get("pages") ?? 5));
-  const pageSize = Math.min(100, Number(url.searchParams.get("size") ?? 100));
+  const budgetMs = Math.min(
+    290_000,
+    Math.max(10_000, Number(url.searchParams.get("budgetMs") ?? 270_000)),
+  );
 
   try {
-    const result = await syncNavJobs({ pages, pageSize });
+    const result = await syncNavJobs({ budgetMs });
     return NextResponse.json(result, {
       status: result.errors.length > 0 ? 207 : 200,
     });
