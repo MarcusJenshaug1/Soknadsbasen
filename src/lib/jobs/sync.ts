@@ -110,7 +110,7 @@ export async function syncNavJobs(
     // Behandle items: hent detalj for ACTIVE, deaktiver INACTIVE
     const items = body.items ?? [];
     result.itemsSeen += items.length;
-    const itemResults = await processItems(items, token);
+    const itemResults = await processItems(items, token, start + budget);
     result.inserted += itemResults.inserted;
     result.updated += itemResults.updated;
     result.deactivated += itemResults.deactivated;
@@ -199,7 +199,11 @@ type ItemBatchResult = {
   errors: string[];
 };
 
-async function processItems(items: FeedItem[], token: string): Promise<ItemBatchResult> {
+async function processItems(
+  items: FeedItem[],
+  token: string,
+  deadline?: number,
+): Promise<ItemBatchResult> {
   const out: ItemBatchResult = { inserted: 0, updated: 0, deactivated: 0, errors: [] };
 
   // Splitt på status først
@@ -225,6 +229,7 @@ async function processItems(items: FeedItem[], token: string): Promise<ItemBatch
   // ACTIVE: hent detail med begrenset parallellitet, så upsert sekvensielt
   // 8s timeout per detail-call så en hengende request ikke blokkerer hele tikken
   for (let i = 0; i < active.length; i += DETAIL_CONCURRENCY) {
+    if (deadline && Date.now() > deadline) break;
     const slice = active.slice(i, i + DETAIL_CONCURRENCY);
     const details = await Promise.all(
       slice.map(async (item) => {
