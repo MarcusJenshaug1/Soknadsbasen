@@ -7,6 +7,7 @@ import { SectionLabel } from "@/components/ui/Pill";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { PIPELINE_COLUMNS, PIPELINE_STATUSES } from "@/lib/pipeline";
 import { GoalWidget } from "./GoalWidget";
+import { CvModule } from "./CvModule";
 
 export const dynamic = "force-dynamic";
 
@@ -339,6 +340,9 @@ export default async function AppHomePage() {
           </div>
         </div>
       )}
+
+      {/* CV-modul */}
+      <CvModule userId={session.userId} />
 
       {/* Pipeline preview */}
       <div className="mt-10">
