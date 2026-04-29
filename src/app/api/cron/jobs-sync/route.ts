@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url);
   const budgetMs = Math.min(
-    290_000,
-    Math.max(10_000, Number(url.searchParams.get("budgetMs") ?? 270_000)),
+    60_000,
+    Math.max(10_000, Number(url.searchParams.get("budgetMs") ?? 50_000)),
   );
 
   try {

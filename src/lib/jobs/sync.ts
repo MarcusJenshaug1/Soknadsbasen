@@ -223,12 +223,18 @@ async function processItems(items: FeedItem[], token: string): Promise<ItemBatch
   }
 
   // ACTIVE: hent detail med begrenset parallellitet, så upsert sekvensielt
+  // 8s timeout per detail-call så en hengende request ikke blokkerer hele tikken
   for (let i = 0; i < active.length; i += DETAIL_CONCURRENCY) {
     const slice = active.slice(i, i + DETAIL_CONCURRENCY);
     const details = await Promise.all(
       slice.map(async (item) => {
         try {
-          const detail = await fetchFeedEntry(item.url, token);
+          const detail = await Promise.race([
+            fetchFeedEntry(item.url, token),
+            new Promise<null>((_, reject) =>
+              setTimeout(() => reject(new Error("detail timeout 8s")), 8000),
+            ),
+          ]);
           return { item, detail, error: null as string | null };
         } catch (err) {
           return { item, detail: null, error: errMsg(err) };
