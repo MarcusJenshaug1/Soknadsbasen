@@ -736,6 +736,41 @@ model CommissionEntry {
   @@index([status, holdUntil])
 }
 
+/// Offentlig jobbaggregator. Stillinger hentes fra NAV/Arbeidsplassen
+/// public feed via /api/cron/jobs-sync. URL-er bruker slug, ikke UUID.
+model Job {
+  id            String    @id @default(cuid())
+  externalId    String    @unique
+  source        String    @default("arbeidsplassen")
+
+  title         String
+  slug          String    @unique
+  employerName  String
+  employerSlug  String
+
+  description   String
+  location      String?
+  region        String?
+  category      String?
+  occupation    String?
+  employmentType String?
+
+  applyUrl      String?
+
+  publishedAt   DateTime
+  expiresAt     DateTime?
+
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([employerSlug])
+  @@index([region, category])
+  @@index([isActive, publishedAt])
+  @@index([externalId])
+}
+
 /// En utbetaling fra admin til selger. Samler N entries.
 model CommissionPayout {
   id          String   @id @default(uuid())
