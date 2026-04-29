@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { FiArrowLeft, FiMail, FiExternalLink } from "react-icons/fi";
 import { Logo } from "@/components/ui/Logo";
@@ -68,12 +69,12 @@ export default function OmPage() {
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-12 items-start">
             {/* Portrait */}
             <div className="shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://marcusjenshaug-web.vercel.app/_next/image?url=%2Fportrett.jpg&w=384&q=75"
-                alt="Marcus Jenshaug"
-                width={120}
-                height={120}
+              <Image
+                src="/portrett.jpg"
+                alt="Marcus Jenshaug, fullstack-utvikler og grunnlegger av Søknadsbasen"
+                width={240}
+                height={240}
+                priority
                 className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-full object-cover object-top"
               />
             </div>

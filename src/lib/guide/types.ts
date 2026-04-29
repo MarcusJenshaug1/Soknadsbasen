@@ -12,6 +12,8 @@ export type GuideCategory = (typeof GUIDE_CATEGORIES)[number];
 export type GuideAuthor = {
   name: string;
   url?: string;
+  role?: string;
+  bio?: string;
 };
 
 export type GuideCTA = {

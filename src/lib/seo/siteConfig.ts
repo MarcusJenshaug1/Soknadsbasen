@@ -18,6 +18,8 @@ export const siteConfig = {
   founder: {
     name: "Marcus Jenshaug",
     email: "marcus@jenshaug.no",
+    role: "Fullstack-utvikler · Bygger Søknadsbasen",
+    bio: "Marcus Jenshaug er fullstack-utvikler i Redi AS og driver Søknadsbasen som privatperson i Norge.",
   },
   address: {
     streetAddress: "Skallestadveien 22",
@@ -26,7 +28,11 @@ export const siteConfig = {
     addressRegion: "Vestfold",
     addressCountry: "NO",
   },
-  sameAs: [] as string[],
+  sameAs: ["https://marcusjenshaug.no"] as string[],
+  pricing: {
+    monthly: { amount: 79, currency: "NOK", trialDays: 7 },
+    sixMonth: { amount: 299, currency: "NOK", durationMonths: 6 },
+  },
   brandColors: {
     bg: "#faf8f5",
     ink: "#14110e",

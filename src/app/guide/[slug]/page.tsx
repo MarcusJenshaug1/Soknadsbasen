@@ -17,6 +17,7 @@ import {
   type JsonLd,
 } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { getAllGuideSlugs, getGuide } from "@/lib/guide/loader";
 
 export const revalidate = 86400;
@@ -76,7 +77,10 @@ export default async function GuidePage({ params }: Props) {
         path: `/guide/${fm.slug}`,
         datePublished: fm.publishedAt,
         dateModified: fm.updatedAt ?? fm.publishedAt,
-        author: fm.author,
+        author: {
+          name: fm.author.name,
+          url: fm.author.url ?? absoluteUrl("/om"),
+        },
         wordCount,
       }),
     );

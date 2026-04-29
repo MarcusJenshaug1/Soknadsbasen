@@ -4,7 +4,7 @@ import { SectionLabel } from "@/components/ui/Pill";
 import { PricingCards } from "@/components/pricing/PricingCards";
 import ProductDemo from "@/components/landing/ProductDemoLazy";
 import { JsonLdScript } from "@/components/seo/JsonLd";
-import { faqJsonLd } from "@/lib/seo/jsonld";
+import { faqJsonLd, webApplicationJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import {
   HeaderCTA,
@@ -56,7 +56,12 @@ export default function Home() {
 
   return (
     <div className="min-h-dvh bg-[#faf8f5] text-[#14110e]">
-      <JsonLdScript data={faqJsonLd(FAQ.map(({ q, a }) => ({ q, a })))} />
+      <JsonLdScript
+        data={[
+          webApplicationJsonLd(),
+          faqJsonLd(FAQ.map(({ q, a }) => ({ q, a }))),
+        ]}
+      />
 
       <header className="max-w-[1200px] mx-auto px-5 md:px-10 pt-6 md:pt-8 pb-4 flex items-center justify-between">
         <Logo href="/" />
@@ -67,13 +72,10 @@ export default function Home() {
           <Link href="#produkt" className="hover:text-[#14110e]">
             Produkt
           </Link>
-          <Link href="#filosofi" className="hover:text-[#14110e]">
-            Filosofi
-          </Link>
-          <Link href="#funksjoner" className="hover:text-[#14110e]">
+          <Link href="/funksjoner" className="hover:text-[#14110e]">
             Funksjoner
           </Link>
-          <Link href="#priser" className="hover:text-[#14110e]">
+          <Link href="/priser" className="hover:text-[#14110e]">
             Priser
           </Link>
           <Link href="/guide" className="hover:text-[#14110e]">
@@ -118,6 +120,50 @@ export default function Home() {
             >
               Se demo <span className="text-[#D5592E]">→</span>
             </Link>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="hva-er-heading"
+          className="max-w-[820px] mx-auto px-5 md:px-10 pb-20 md:pb-28"
+        >
+          <SectionLabel tone="accent" className="mb-3">
+            Om Søknadsbasen
+          </SectionLabel>
+          <h2
+            id="hva-er-heading"
+            className="text-[28px] md:text-[40px] leading-[1.1] tracking-[-0.025em] font-medium mb-6"
+          >
+            Hva er Søknadsbasen?
+          </h2>
+          <div className="space-y-4 text-[15px] md:text-[16px] leading-[1.7] text-[#14110e]/80">
+            <p>
+              Søknadsbasen er en norsk jobbsøker-plattform for deg som vil ha
+              orden på CV, søknadsbrev og jobbsøkingen din i ett tydelig
+              arbeidsrom. Verktøyet kombinerer en CV-bygger med åtte maler,
+              AI-assistert søknadsbrev og en pipeline for å holde styr på alle
+              stillingene du vurderer eller har søkt på.
+            </p>
+            <p>
+              Plattformen er bygget for det norske arbeidsmarkedet, med
+              ATS-vennlig PDF-eksport som leses korrekt av rekrutteringssystemer,
+              og et dataminimerende personvern, alle data lagres i EU. Marcus
+              Jenshaug driver Søknadsbasen som privatperson, uten investorer og
+              uten datasalg.
+            </p>
+            <p>
+              Du kan prøve Søknadsbasen gratis i syv dager, deretter koster det
+              79 kr i måneden eller 299 kr som engangsbetaling for seks måneders
+              tilgang.{" "}
+              <Link href="/guide" className="underline underline-offset-2 hover:text-[#D5592E]">
+                Les guidene våre om CV og søknadsbrev
+              </Link>
+              {" "}eller{" "}
+              <Link href="#priser" className="underline underline-offset-2 hover:text-[#D5592E]">
+                se prisene
+              </Link>
+              .
+            </p>
           </div>
         </section>
 

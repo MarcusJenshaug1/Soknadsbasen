@@ -77,10 +77,16 @@ export function rootViewport(): Viewport {
 }
 
 export function rootMetadata(): Metadata {
+  const googleVerify = process.env.GOOGLE_SITE_VERIFICATION;
+  const bingVerify = process.env.BING_SITE_VERIFICATION;
+  const verification: NonNullable<Metadata["verification"]> = {};
+  if (googleVerify) verification.google = googleVerify;
+  if (bingVerify) verification.other = { "msvalidate.01": bingVerify };
+
   return {
     metadataBase: siteUrl,
     applicationName: siteConfig.name,
-    authors: [{ name: siteConfig.founder.name }],
+    authors: [{ name: siteConfig.founder.name, url: absoluteUrl("/om") }],
     creator: siteConfig.founder.name,
     publisher: siteConfig.name,
     formatDetection: { email: false, telephone: false, address: false },
@@ -89,6 +95,7 @@ export function rootMetadata(): Metadata {
       title: siteConfig.name,
       statusBarStyle: "black-translucent",
     },
+    ...(Object.keys(verification).length > 0 ? { verification } : {}),
     ...buildMetadata({ path: "/" }),
   };
 }

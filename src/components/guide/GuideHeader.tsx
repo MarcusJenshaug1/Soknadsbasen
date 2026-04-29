@@ -1,9 +1,19 @@
+import Link from "next/link";
 import type { Guide } from "@/lib/guide/types";
 import { formatGuideDate } from "@/lib/guide/format";
+import { siteConfig } from "@/lib/seo/siteConfig";
 
 export function GuideHeader({ guide }: { guide: Guide }) {
   const { frontmatter: fm, readingMinutes } = guide;
   const tag = fm.tags?.[0];
+  const authorHref = fm.author.url ?? "/om";
+  const authorRole =
+    fm.author.role ??
+    (fm.author.name === siteConfig.founder.name
+      ? siteConfig.founder.role
+      : undefined);
+  const isExternalAuthor = fm.author.url?.startsWith("http") ?? false;
+
   return (
     <header className="mb-12">
       <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] mb-6">
@@ -20,7 +30,27 @@ export function GuideHeader({ guide }: { guide: Guide }) {
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
         <span>
           Av{" "}
-          <span className="text-[#14110e]/80 dark:text-[#f0ece6]/80">{fm.author.name}</span>
+          {isExternalAuthor ? (
+            <a
+              href={authorHref}
+              rel="author noopener"
+              target="_blank"
+              className="text-[#14110e]/80 dark:text-[#f0ece6]/80 hover:text-accent transition-colors"
+            >
+              {fm.author.name}
+            </a>
+          ) : (
+            <Link
+              href={authorHref}
+              rel="author"
+              className="text-[#14110e]/80 dark:text-[#f0ece6]/80 hover:text-accent transition-colors"
+            >
+              {fm.author.name}
+            </Link>
+          )}
+          {authorRole ? (
+            <span className="text-[#14110e]/55 dark:text-[#f0ece6]/55"> · {authorRole}</span>
+          ) : null}
         </span>
         <span className="w-1 h-1 rounded-full bg-[#14110e]/25 dark:bg-[#f0ece6]/25" />
         <span>
