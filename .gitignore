@@ -53,3 +53,8 @@ prisma/migrations.sqlite-archive/
 
 # local tooling (Claude Code, etc.)
 .claude/
+
+# Lokale ytelse-notater (skal ikke i repo)
+perf-baseline.md
+perf-plan.md
+perf-results.md
