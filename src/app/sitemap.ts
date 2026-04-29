@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { getAllGuides } from "@/lib/guide/loader";
+import { COMPETITORS } from "@/lib/sammenligning/competitors";
+import { INDUSTRIES } from "@/lib/cv-mal/industries";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -13,6 +15,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ),
     changeFrequency: "monthly",
     priority: 0.7,
+  }));
+
+  const competitorEntries: MetadataRoute.Sitemap = COMPETITORS.map((c) => ({
+    url: absoluteUrl(`/sammenligning/${c.slug}`),
+    lastModified: new Date(c.publishedAt),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  const industryEntries: MetadataRoute.Sitemap = INDUSTRIES.map((i) => ({
+    url: absoluteUrl(`/cv-mal/${i.slug}`),
+    lastModified: new Date(i.publishedAt),
+    changeFrequency: "monthly",
+    priority: 0.6,
   }));
 
   return [
@@ -41,6 +57,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     ...guideEntries,
+    {
+      url: absoluteUrl("/cv-mal"),
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    ...industryEntries,
+    {
+      url: absoluteUrl("/sammenligning"),
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    ...competitorEntries,
     {
       url: absoluteUrl("/om"),
       lastModified: now,
