@@ -231,14 +231,47 @@ export function pickEmployerName(detail: FeedEntryDetail, fallback: string): str
 export function pickLocation(detail: FeedEntryDetail, fallbackMunicipal?: string): {
   location: string | null;
   region: string | null;
+  postalCode: string | null;
+  country: string | null;
 } {
   const loc = detail.workLocations?.[0];
   if (!loc) {
-    return { location: fallbackMunicipal ?? null, region: fallbackMunicipal ?? null };
+    return {
+      location: fallbackMunicipal ?? null,
+      region: fallbackMunicipal ?? null,
+      postalCode: null,
+      country: null,
+    };
   }
   const city = (loc.city ?? loc.municipal ?? null)?.trim() ?? null;
   const county = loc.county?.trim() ?? null;
-  return { location: city ?? county ?? fallbackMunicipal ?? null, region: county ?? city ?? null };
+  return {
+    location: city ?? county ?? fallbackMunicipal ?? null,
+    region: county ?? city ?? null,
+    postalCode: loc.postalCode?.trim() ?? null,
+    country: loc.country?.trim() ?? null,
+  };
+}
+
+export type SerializedLocation = {
+  city: string | null;
+  county: string | null;
+  country: string | null;
+  postalCode: string | null;
+  municipal: string | null;
+};
+
+export function serializeLocations(detail: FeedEntryDetail): SerializedLocation[] {
+  const list = detail.workLocations ?? [];
+  return list
+    .map((loc) => ({
+      city: loc.city?.trim() ?? null,
+      county: loc.county?.trim() ?? null,
+      country: loc.country?.trim() ?? null,
+      postalCode: loc.postalCode?.trim() ?? null,
+      municipal: loc.municipal?.trim() ?? null,
+    }))
+    .filter((l) => l.city || l.county || l.country || l.postalCode || l.municipal);
 }
 
 export function pickCategory(detail: FeedEntryDetail): {
@@ -249,6 +282,24 @@ export function pickCategory(detail: FeedEntryDetail): {
     detail.categoryList?.[0]?.name ?? detail.occupationCategories?.[0]?.name ?? null;
   const occ = detail.occupationCategories?.[0]?.name ?? detail.jobtitle ?? null;
   return { category: cat, occupation: occ };
+}
+
+export type SerializedCategory = {
+  code: string | null;
+  categoryType: string | null;
+  name: string | null;
+};
+
+export function serializeCategories(
+  list: FeedEntryCategory[] | undefined,
+): SerializedCategory[] {
+  return (list ?? [])
+    .map((c) => ({
+      code: c.code?.trim() ?? null,
+      categoryType: c.categoryType?.trim() ?? null,
+      name: c.name?.trim() ?? null,
+    }))
+    .filter((c) => c.name || c.code);
 }
 
 export function cleanDescription(html: string): string {

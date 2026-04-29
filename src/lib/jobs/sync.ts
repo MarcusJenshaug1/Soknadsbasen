@@ -1,7 +1,9 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import {
   FEED_ROOT,
+  cleanDescription,
   fetchFeedEntry,
   fetchFeedPage,
   getNavToken,
@@ -10,10 +12,11 @@ import {
   pickCategory,
   pickEmployerName,
   pickLocation,
-  cleanDescription,
+  serializeCategories,
+  serializeLocations,
   slugify,
-  type FeedItem,
   type FeedEntryDetail,
+  type FeedItem,
 } from "./nav-feed";
 
 export type SyncResult = {
@@ -293,8 +296,15 @@ async function upsertJob(
     100,
   );
 
-  const { location, region } = pickLocation(detail, item._feed_entry.municipal);
+  const { location, region, postalCode, country } = pickLocation(
+    detail,
+    item._feed_entry.municipal,
+  );
   const { category, occupation } = pickCategory(detail);
+
+  const workLocations = serializeLocations(detail);
+  const categoryList = serializeCategories(detail.categoryList);
+  const occupationList = serializeCategories(detail.occupationCategories);
 
   const description = cleanDescription(detail.description ?? "");
   const publishedAt = detail.published
@@ -302,7 +312,28 @@ async function upsertJob(
     : new Date(item._feed_entry.sistEndret);
   const expiresRaw = detail.expires ?? detail.applicationDue;
   const expiresAt = expiresRaw ? new Date(expiresRaw) : null;
+  const applicationDueAt = detail.applicationDue ? new Date(detail.applicationDue) : null;
+  const sourceUpdatedAt = detail.updated ? new Date(detail.updated) : null;
   const isActive = isDetailActive(detail);
+
+  const engagementType = detail.engagementtype?.trim() || null;
+  const extent = detail.extent?.trim() || null;
+  const employmentType = engagementType ?? extent;
+  const sourceUrl = detail.sourceurl ?? detail.sourceUrl ?? null;
+  const applyUrl = detail.applicationUrl ?? sourceUrl ?? null;
+
+  const employerOrgnr = detail.employer?.orgnr?.trim() || null;
+  const employerHomepage = detail.employer?.homepage?.trim() || null;
+  const employerDescriptionRaw = detail.employer?.description ?? null;
+  const employerDescription = employerDescriptionRaw
+    ? cleanDescription(employerDescriptionRaw).slice(0, 10_000)
+    : null;
+
+  const positionCount =
+    typeof detail.positioncount === "number" && Number.isFinite(detail.positioncount)
+      ? detail.positioncount
+      : null;
+  const sector = detail.sector?.trim() || null;
 
   // Drop findUnique-precheck: én roundtrip i stedet for to. Returner "updated"
   // som default (kan ikke skille created/updated uten precheck), men det er
@@ -316,27 +347,58 @@ async function upsertJob(
       slug,
       employerName: employerName.slice(0, 200),
       employerSlug,
+      employerOrgnr,
+      employerDescription,
+      employerHomepage,
       description: description.slice(0, 50_000),
       location,
       region,
+      postalCode,
+      country,
+      workLocations: workLocations.length > 0 ? (workLocations as Prisma.InputJsonValue) : Prisma.DbNull,
       category,
       occupation,
-      employmentType: detail.engagementtype ?? detail.extent ?? null,
-      applyUrl: detail.applicationUrl ?? detail.sourceurl ?? detail.sourceUrl ?? null,
+      categoryList: categoryList.length > 0 ? (categoryList as Prisma.InputJsonValue) : Prisma.DbNull,
+      occupationList: occupationList.length > 0 ? (occupationList as Prisma.InputJsonValue) : Prisma.DbNull,
+      employmentType,
+      engagementType,
+      extent,
+      positionCount,
+      sector,
+      applyUrl,
+      sourceUrl,
+      applicationDueAt,
       publishedAt,
       expiresAt,
+      sourceUpdatedAt,
       isActive,
     },
     update: {
       title: title.slice(0, 250),
+      employerName: employerName.slice(0, 200),
+      employerOrgnr,
+      employerDescription,
+      employerHomepage,
       description: description.slice(0, 50_000),
       location,
       region,
+      postalCode,
+      country,
+      workLocations: workLocations.length > 0 ? (workLocations as Prisma.InputJsonValue) : Prisma.DbNull,
       category,
       occupation,
-      employmentType: detail.engagementtype ?? detail.extent ?? null,
-      applyUrl: detail.applicationUrl ?? detail.sourceurl ?? detail.sourceUrl ?? null,
+      categoryList: categoryList.length > 0 ? (categoryList as Prisma.InputJsonValue) : Prisma.DbNull,
+      occupationList: occupationList.length > 0 ? (occupationList as Prisma.InputJsonValue) : Prisma.DbNull,
+      employmentType,
+      engagementType,
+      extent,
+      positionCount,
+      sector,
+      applyUrl,
+      sourceUrl,
+      applicationDueAt,
       expiresAt,
+      sourceUpdatedAt,
       isActive,
     },
   });

@@ -72,6 +72,8 @@ export default async function JobsHubPage({
         category: true,
         publishedAt: true,
         expiresAt: true,
+        applicationDueAt: true,
+        positionCount: true,
       },
       orderBy: { publishedAt: "desc" },
       take: PAGE_SIZE,
@@ -178,6 +180,8 @@ export default async function JobsHubPage({
                     category={job.category}
                     publishedAt={job.publishedAt}
                     expiresAt={job.expiresAt}
+                    applicationDueAt={job.applicationDueAt}
+                    positionCount={job.positionCount}
                   />
                 </li>
               ))}
@@ -232,6 +236,8 @@ function JobCard({
   category,
   publishedAt,
   expiresAt,
+  applicationDueAt,
+  positionCount,
 }: {
   slug: string;
   title: string;
@@ -240,12 +246,15 @@ function JobCard({
   category: string | null;
   publishedAt: Date;
   expiresAt: Date | null;
+  applicationDueAt: Date | null;
+  positionCount: number | null;
 }) {
   const daysAgo = Math.floor(
     (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60 * 24),
   );
-  const daysToExpiry = expiresAt
-    ? Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const dueAt = applicationDueAt ?? expiresAt;
+  const daysToExpiry = dueAt
+    ? Math.floor((dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
   return (
@@ -281,6 +290,12 @@ function JobCard({
                   ? "Frist i morgen"
                   : `${daysToExpiry} dager til frist`}
             </span>
+          </>
+        )}
+        {typeof positionCount === "number" && positionCount > 1 && (
+          <>
+            <span className="text-[#14110e]/25">·</span>
+            <span>{positionCount} stillinger</span>
           </>
         )}
       </div>
