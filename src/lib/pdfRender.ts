@@ -1,9 +1,30 @@
-import puppeteer from "puppeteer";
 import type { ResumeData } from "@/store/useResumeStore";
+import type { Browser } from "puppeteer-core";
 
 interface RenderedPdf {
   buffer: Uint8Array<ArrayBuffer>;
   filename: string;
+}
+
+const isVercel = !!process.env.VERCEL;
+
+async function launchBrowser(): Promise<Browser> {
+  if (isVercel) {
+    const [{ default: chromium }, { default: puppeteerCore }] = await Promise.all([
+      import("@sparticuz/chromium"),
+      import("puppeteer-core"),
+    ]);
+    return puppeteerCore.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    }) as unknown as Browser;
+  }
+  const { default: puppeteer } = await import("puppeteer");
+  return puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+  }) as unknown as Browser;
 }
 
 /**
@@ -13,6 +34,9 @@ interface RenderedPdf {
  * Injects resume data directly into the Puppeteer page context (window.__PDF_DATA__)
  * before navigation, then loads /cv/print which reads it. Avoids any cross-process
  * token store, which is critical on Vercel where serverless invocations don't share memory.
+ *
+ * On Vercel, uses puppeteer-core + @sparticuz/chromium (lambda-compatible binary).
+ * Locally, uses the full puppeteer package which auto-downloads Chromium.
  */
 export async function renderResumePdf(
   data: ResumeData,
@@ -20,10 +44,7 @@ export async function renderResumePdf(
 ): Promise<RenderedPdf> {
   const printUrl = `${baseUrl}/cv/print`;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-  });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
     await page.evaluateOnNewDocument((injected) => {

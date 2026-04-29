@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   trailingSlash: false,
-  serverExternalPackages: ["pdfjs-dist", "puppeteer"],
+  serverExternalPackages: ["pdfjs-dist", "puppeteer", "puppeteer-core", "@sparticuz/chromium"],
   images: {
     remotePatterns: [
       {

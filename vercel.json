@@ -1,5 +1,15 @@
 {
   "buildCommand": "rm -rf .next && prisma generate && prisma db push --accept-data-loss --skip-generate && next build",
+  "functions": {
+    "src/app/api/pdf/route.ts": {
+      "maxDuration": 60,
+      "memory": 2048
+    },
+    "src/app/api/cv/share/[token]/pdf/route.ts": {
+      "maxDuration": 60,
+      "memory": 2048
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/release-commissions",
