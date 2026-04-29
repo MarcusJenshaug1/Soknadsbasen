@@ -85,7 +85,7 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
             className="fixed inset-0 z-40 md:hidden"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+60px)] left-2 right-2 z-50 bg-bg border border-black/8 dark:border-white/8 rounded-3xl shadow-lg overflow-hidden md:hidden">
+          <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+76px)] left-3 right-3 z-50 bg-bg border border-black/8 dark:border-white/8 rounded-3xl shadow-lg overflow-hidden md:hidden">
             {hasAccess && (
               <div className="px-4 pt-3 pb-2 border-b border-black/5 dark:border-white/5 flex items-center gap-2">
                 <NotificationBell />
@@ -118,10 +118,10 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
       )}
 
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-bg/95 backdrop-blur-md border-t border-black/8 dark:border-white/8 pb-[env(safe-area-inset-bottom)] px-2 pt-2 print:hidden"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-bg/95 backdrop-blur-md border-t border-black/8 dark:border-white/8 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] print:hidden"
         style={{
-          paddingLeft: `max(0.5rem, env(safe-area-inset-left))`,
-          paddingRight: `max(0.5rem, env(safe-area-inset-right))`,
+          paddingLeft: `max(1rem, env(safe-area-inset-left))`,
+          paddingRight: `max(1rem, env(safe-area-inset-right))`,
         }}
         aria-label="Hovednavigasjon"
       >
