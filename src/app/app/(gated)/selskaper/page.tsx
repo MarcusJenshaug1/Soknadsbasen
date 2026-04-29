@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import { SessionBanner } from "@/components/sessions/SessionBanner";
 
 export const dynamic = "force-dynamic";
@@ -161,7 +162,7 @@ export default async function SelskaperPage({
             <ul className="space-y-1.5 text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 border-t border-black/5 dark:border-white/5 pt-3 mt-auto">
               {c.apps.slice(0, 3).map((a) => (
                 <li key={a.id}>
-                  <Link
+                  <PrefetchLink
                     href={`/app/pipeline/${a.id}`}
                     className="flex items-center justify-between gap-2 hover:text-accent"
                   >
@@ -169,7 +170,7 @@ export default async function SelskaperPage({
                     <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-[#14110e]/45 dark:text-[#f0ece6]/45">
                       {STATUS_LABEL[a.status as StatusKey] ?? a.status}
                     </span>
-                  </Link>
+                  </PrefetchLink>
                 </li>
               ))}
               {c.apps.length > 3 && (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, type StatusKey } from "@/components/ui/StatusDot";
 import { IconCheck, IconClose } from "@/components/ui/Icons";
+import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import { cn } from "@/lib/cn";
 
 type Task = {
@@ -226,13 +227,13 @@ function TaskRow({
             {task.title}
           </div>
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            <Link
+            <PrefetchLink
               href={`/app/pipeline/${task.application.id}`}
               className="text-[11px] text-accent hover:text-ink truncate"
               onClick={(e) => e.stopPropagation()}
             >
               {task.application.title} · {task.application.companyName}
-            </Link>
+            </PrefetchLink>
             <StatusDot status={task.application.status as StatusKey} />
             {prio && task.priority !== "medium" && (
               <span

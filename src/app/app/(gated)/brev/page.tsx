@@ -4,6 +4,7 @@ import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
+import { PrefetchLink } from "@/components/ui/PrefetchLink";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +98,7 @@ function LetterRow({
   const updated = app.coverLetter?.updatedAt;
   return (
     <li>
-      <Link
+      <PrefetchLink
         href={`/app/brev/${app.id}`}
         className="flex items-center justify-between gap-4 p-4 hover:bg-panel/40 transition-colors"
       >
@@ -122,7 +123,7 @@ function LetterRow({
         <span className="shrink-0 text-[12px] text-accent">
           {hasLetter ? "Åpne →" : "Skriv →"}
         </span>
-      </Link>
+      </PrefetchLink>
     </li>
   );
 }

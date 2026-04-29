@@ -5,6 +5,7 @@ import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import { PIPELINE_COLUMNS, PIPELINE_STATUSES } from "@/lib/pipeline";
 import { GoalWidget } from "./GoalWidget";
 import { CvModule } from "./CvModule";
@@ -386,7 +387,7 @@ export default async function AppHomePage() {
                 </div>
                 <div className="p-2 space-y-2 min-h-[120px]">
                   {items.slice(0, 3).map((a) => (
-                    <Link
+                    <PrefetchLink
                       key={a.id}
                       href={`/app/pipeline/${a.id}`}
                       className="flex items-start gap-2.5 p-3 rounded-xl bg-bg hover:bg-panel transition-colors"
@@ -405,7 +406,7 @@ export default async function AppHomePage() {
                           {a.companyName}
                         </div>
                       </div>
-                    </Link>
+                    </PrefetchLink>
                   ))}
                   {items.length === 0 && (
                     <div className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40 text-center py-6">

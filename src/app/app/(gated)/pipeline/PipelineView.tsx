@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
+import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import { PIPELINE_COLUMNS, isPipelineStatus } from "@/lib/pipeline";
 
 const TERMINAL_STATUSES: StatusKey[] = ["accepted", "declined", "rejected"];
@@ -573,7 +574,7 @@ function ApplicationCard({
           <Pill variant="accent">Hast</Pill>
         ) : null}
       </div>
-      <Link
+      <PrefetchLink
         href={`/app/pipeline/${app.id}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
@@ -583,7 +584,7 @@ function ApplicationCard({
           {app.title}
         </div>
         <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55">{app.companyName}</div>
-      </Link>
+      </PrefetchLink>
       <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
         <span>{next.text}</span>
         {next.days !== null && <span>{next.days}d</span>}
@@ -712,7 +713,7 @@ function ListView({
                     aria-label={`Velg ${a.title}`}
                   />
                 )}
-                <Link
+                <PrefetchLink
                   href={`/app/pipeline/${a.id}`}
                   className="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4"
                 >
@@ -726,7 +727,7 @@ function ListView({
                   <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70">{formatDate(a.deadlineAt)}</div>
                   <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70">{formatDate(a.interviewAt)}</div>
                   <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 md:text-right">{formatDate(a.updatedAt)}</div>
-                </Link>
+                </PrefetchLink>
               </div>
             </li>
           );
@@ -914,7 +915,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
                     style={{ background: e.color }}
                     aria-hidden
                   />
-                  <Link
+                  <PrefetchLink
                     href={`/app/pipeline/${e.app.id}`}
                     className="block group"
                   >
@@ -940,7 +941,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
                         })}
                       </span>
                     </div>
-                  </Link>
+                  </PrefetchLink>
                 </li>
               );
             })}
