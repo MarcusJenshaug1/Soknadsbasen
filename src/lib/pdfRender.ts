@@ -1,5 +1,8 @@
-import type { ResumeData } from "@/store/useResumeStore";
+import { createElement } from "react";
 import type { Browser } from "puppeteer-core";
+import { TemplateRenderer } from "@/components/templates";
+import { getGoogleFontsUrl } from "@/lib/design-tokens";
+import type { ResumeData } from "@/store/useResumeStore";
 
 interface RenderedPdf {
   buffer: Uint8Array<ArrayBuffer>;
@@ -27,30 +30,43 @@ async function launchBrowser(): Promise<Browser> {
   }) as unknown as Browser;
 }
 
+async function buildPrintHtml(data: ResumeData): Promise<string> {
+  const fontsUrl = getGoogleFontsUrl(data.fontPair);
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const body = renderToStaticMarkup(createElement(TemplateRenderer, { data }));
+  return `<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=210mm" />
+    ${fontsUrl ? `<link rel="stylesheet" href="${fontsUrl}" />` : ""}
+    <style>
+      html, body { margin: 0; padding: 0; background: #ffffff; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    </style>
+  </head>
+  <body>${body}</body>
+</html>`;
+}
+
 /**
  * Render a CV to PDF via Puppeteer. Used by /api/pdf (authenticated owner)
  * and /api/cv/share/[token]/pdf (public via share link).
  *
- * Injects resume data directly into the Puppeteer page context (window.__PDF_DATA__)
- * before navigation, then loads /cv/print which reads it. Avoids any cross-process
- * token store, which is critical on Vercel where serverless invocations don't share memory.
+ * Server-renders the template to HTML, then feeds it to Puppeteer via setContent.
+ * Avoids any HTTP roundtrip back to the same deployment, which is critical on
+ * Vercel where a serverless function calling its own public URL is fragile
+ * (cold-start nesting, timeouts, missing cookies).
  *
  * On Vercel, uses puppeteer-core + @sparticuz/chromium (lambda-compatible binary).
  * Locally, uses the full puppeteer package which auto-downloads Chromium.
  */
-export async function renderResumePdf(
-  data: ResumeData,
-  baseUrl: string,
-): Promise<RenderedPdf> {
-  const printUrl = `${baseUrl}/cv/print`;
-
+export async function renderResumePdf(data: ResumeData): Promise<RenderedPdf> {
+  const html = await buildPrintHtml(data);
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.evaluateOnNewDocument((injected) => {
-      (window as unknown as { __PDF_DATA__?: unknown }).__PDF_DATA__ = injected;
-    }, data);
-    await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 30_000 });
+    await page.setContent(html, { waitUntil: "networkidle0", timeout: 30_000 });
     await page.evaluate(() => document.fonts.ready);
 
     const pdfBuffer = await page.pdf({
@@ -73,8 +89,3 @@ export async function renderResumePdf(
   }
 }
 
-export function baseUrlFromRequest(req: Request): string {
-  const host = req.headers.get("host") || "localhost:3000";
-  const proto = req.headers.get("x-forwarded-proto") || "http";
-  return `${proto}://${host}`;
-}

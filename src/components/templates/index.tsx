@@ -1,4 +1,3 @@
-"use client";
 
 import type { ResumeData } from "@/store/useResumeStore";
 import { getColorPalette, getFontPair } from "@/lib/design-tokens";

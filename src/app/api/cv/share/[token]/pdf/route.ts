@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseResumeById } from "@/lib/resume-server";
-import { renderResumePdf, baseUrlFromRequest } from "@/lib/pdfRender";
+import { renderResumePdf } from "@/lib/pdfRender";
 import { checkPdfRateLimit, recordPdf } from "@/lib/cvShareToken";
 
 /**
@@ -49,7 +49,7 @@ export async function GET(
   }
 
   try {
-    const { buffer, filename } = await renderResumePdf(data, baseUrlFromRequest(req));
+    const { buffer, filename } = await renderResumePdf(data);
     recordPdf(token);
     return new Response(new Blob([buffer], { type: "application/pdf" }), {
       headers: {
@@ -57,7 +57,11 @@ export async function GET(
       },
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("[CV share PDF] Generation failed:", err);
-    return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "PDF generation failed", detail: message },
+      { status: 500 },
+    );
   }
 }

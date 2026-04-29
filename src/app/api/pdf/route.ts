@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { hasActiveAccess } from "@/lib/access";
-import { renderResumePdf, baseUrlFromRequest } from "@/lib/pdfRender";
+import { renderResumePdf } from "@/lib/pdfRender";
 
 /**
  * POST /api/pdf
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing resume data" }, { status: 400 });
     }
 
-    const { buffer, filename } = await renderResumePdf(data, baseUrlFromRequest(req));
+    const { buffer, filename } = await renderResumePdf(data);
 
     return new Response(new Blob([buffer], { type: "application/pdf" }), {
       headers: {
@@ -35,7 +35,11 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("[PDF] Generation failed:", err);
-    return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "PDF generation failed", detail: message },
+      { status: 500 },
+    );
   }
 }

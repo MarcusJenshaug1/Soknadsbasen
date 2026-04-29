@@ -1,4 +1,3 @@
-"use client";
 
 import type { SectionKey } from "@/store/useResumeStore";
 import type { TemplateRenderProps } from "./shared";
