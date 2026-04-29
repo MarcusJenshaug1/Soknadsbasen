@@ -60,3 +60,52 @@ Sjekkliste:
 4. Tunge klient-komponenter (editor, charts, canvas) → `next/dynamic` med skeleton-fallback.
 5. Intern lenke → `<Link prefetch={true}>` i nav-komponenter.
 6. `select` kun feltene du bruker i Prisma-kall.
+
+## Sammenligning- og pris-sider er kontrakter (MÅ holdes i synk)
+
+Disse filene er SEO-kontrakter, hver gang du legger til, fjerner eller endrer en feature, en pris, eller et integrasjons-punkt, må de oppdateres parallelt. Ellers påstår sammenligning-sidene ting som ikke er sant, og vi taper troverdighet i SERP.
+
+**Kilder som må synkroniseres:**
+- [src/lib/sammenligning/competitors.ts](src/lib/sammenligning/competitors.ts) — `comparisonTable`, `soknadsbasenStrengths`, `whenToChooseSoknadsbasen` per konkurrent
+- [src/lib/cv-mal/industries.ts](src/lib/cv-mal/industries.ts) — bransje-tilpasninger
+- [src/app/funksjoner/page.tsx](src/app/funksjoner/page.tsx) — `FEATURES`-array
+- [src/app/priser/page.tsx](src/app/priser/page.tsx) — `PRICING_FAQ`
+- [src/components/pricing/PricingCards.tsx](src/components/pricing/PricingCards.tsx) — `monthlyFeatures`, `oneTimeFeatures`
+- [src/lib/seo/jsonld.ts](src/lib/seo/jsonld.ts) — `webApplicationJsonLd()` (featureList + offers)
+- [src/lib/seo/siteConfig.ts](src/lib/seo/siteConfig.ts) — `pricing` og `description`
+- [src/app/page.tsx](src/app/page.tsx) — landing FAQ + funksjons-grid (linje ~174-205)
+
+**Sjekkliste før commit ved feature/pris-endring:**
+
+1. **Ny feature lagt til?** Oppdater:
+   - `competitors.ts` `comparisonTable` for ALLE 6 konkurrenter (legg til row med "yes" for soknadsbasen, riktig verdi for hver konkurrent)
+   - `funksjoner/page.tsx` `FEATURES`-array (legg til ny seksjon eller utvid eksisterende)
+   - `jsonld.ts` `webApplicationJsonLd().featureList` (legg til norsk navn)
+   - `page.tsx` (landing) funksjons-grid hvis det er en hoved-feature
+
+2. **Feature fjernet?** Fjern fra alle 8 filene over. Glemmer du én fil, lyver siden.
+
+3. **Pris endret?** Oppdater:
+   - `siteConfig.ts` `pricing.monthly`/`pricing.sixMonth`
+   - `PricingCards.tsx` (tekst i kortene)
+   - `priser/page.tsx` `PRICING_FAQ` ("Hva koster Søknadsbasen?")
+   - `competitors.ts` "Pris (per måned)"-rader for ALLE konkurrenter
+   - `page.tsx` (landing) FAQ ("Hva koster det?")
+   - `jsonld.ts` `webApplicationJsonLd().offers` (price-felter)
+
+4. **Ny konkurrent oppdaget?** Legg til i `competitors.ts` med full struktur. Oppdater også `competitors.ts`-importen i sitemap auto-fanger den.
+
+5. **Konkurrent har ny feature vi ikke fanget?** Oppdater den konkurrentens `comparisonTable` (sett "yes"/"no"/"partial" på Søknadsbasen-kolonnen) og evt. `competitorStrengths`/`competitorWeaknesses`.
+
+**Verifiser etter endring:**
+```bash
+npx tsc --noEmit
+# Start dev-server, sjekk:
+# - /sammenligning/[hver-slug] — comparison-tabellen viser de nye verdiene
+# - /funksjoner — den nye feature-en vises
+# - /priser — prising er konsistent
+# - View Source på /, /priser, /funksjoner — webApplicationJsonLd inneholder oppdatert featureList og offers
+```
+
+**Hvorfor dette er kritisk:**
+Sammenligning-sider er SEO-magneter for "X vs Y"-søk. En søker som klikker på "Søknadsbasen vs Jobbe.ai" og ser at vi påstår "AI-søknadsbrev: ja" mens vi faktisk har skrudd det av, vil aldri stole på oss igjen. Verre enn å ikke ha siden er å ha en løgnaktig side.

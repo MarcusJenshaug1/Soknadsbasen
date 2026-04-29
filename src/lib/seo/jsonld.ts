@@ -114,6 +114,10 @@ export function articleJsonLd(a: ArticleInput): JsonLd {
   };
 }
 
+// SEO-KONTRAKT: featureList og offers her må holdes i synk med
+// competitors.ts (comparisonTable), funksjoner/page.tsx (FEATURES),
+// PricingCards.tsx, og siteConfig.pricing.
+// Se AGENTS.md "Sammenligning- og pris-sider er kontrakter".
 export function webApplicationJsonLd(): JsonLd {
   const monthly = siteConfig.pricing.monthly;
   const sixMonth = siteConfig.pricing.sixMonth;

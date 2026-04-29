@@ -29,6 +29,10 @@ export const siteConfig = {
     addressCountry: "NO",
   },
   sameAs: ["https://marcusjenshaug.no"] as string[],
+  // SEO-KONTRAKT: Pris-endring må synkroniseres med PricingCards.tsx,
+  // priser/page.tsx (PRICING_FAQ), competitors.ts (Pris-rader),
+  // page.tsx (landing FAQ), og jsonld.ts (webApplicationJsonLd offers).
+  // Se AGENTS.md "Sammenligning- og pris-sider er kontrakter".
   pricing: {
     monthly: { amount: 79, currency: "NOK", trialDays: 7 },
     sixMonth: { amount: 299, currency: "NOK", durationMonths: 6 },

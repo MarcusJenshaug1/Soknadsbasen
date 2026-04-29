@@ -7,6 +7,10 @@ type Props = {
   oneTimeCta: React.ReactNode;
 };
 
+// SEO-KONTRAKT: monthlyFeatures/oneTimeFeatures må synkroniseres med
+// competitors.ts (comparisonTable), funksjoner/page.tsx (FEATURES),
+// jsonld.ts (webApplicationJsonLd.featureList), og siteConfig.pricing.
+// Se AGENTS.md "Sammenligning- og pris-sider er kontrakter".
 const monthlyFeatures = [
   "Ubegrenset tilgang til CV-editor og maler",
   "Eksport til PDF",

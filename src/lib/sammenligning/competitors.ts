@@ -1,3 +1,13 @@
+// SEO-KONTRAKT: Endring her må synkroniseres med:
+// - src/lib/cv-mal/industries.ts
+// - src/app/funksjoner/page.tsx (FEATURES-array)
+// - src/app/priser/page.tsx (PRICING_FAQ)
+// - src/components/pricing/PricingCards.tsx
+// - src/lib/seo/jsonld.ts (webApplicationJsonLd)
+// - src/lib/seo/siteConfig.ts (pricing)
+// - src/app/page.tsx (landing FAQ + funksjons-grid)
+// Se AGENTS.md "Sammenligning- og pris-sider er kontrakter".
+
 export type ComparisonValue = "yes" | "no" | "partial" | string;
 
 export type ComparisonRow = {

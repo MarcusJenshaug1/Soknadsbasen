@@ -21,6 +21,10 @@ const BREADCRUMBS = [
   { name: "Funksjoner", path: "/funksjoner" },
 ];
 
+// SEO-KONTRAKT: Endring av FEATURES må synkroniseres med
+// competitors.ts (comparisonTable), jsonld.ts (webApplicationJsonLd.featureList),
+// page.tsx (landing funksjons-grid), og PricingCards.tsx.
+// Se AGENTS.md "Sammenligning- og pris-sider er kontrakter".
 const FEATURES = [
   {
     id: "cv-bygger",
