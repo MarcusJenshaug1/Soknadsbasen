@@ -1,70 +1,37 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const APP_PATH_PREFIX = "/app";
+
 /**
- * Refreshes the Supabase auth cookie on every matched request and gates /app/*.
- * Next 16 renamed Middleware → Proxy (same API, same runtime).
+ * Edge cookie-sniff. Redirecter ikke-innloggede /app/**-treff til /logg-inn uten
+ * å treffe Supabase eller Prisma. DB-validering av sesjonen ligger i layoutet
+ * (Prisma er ikke edge-kompatibel uten egen adapter, og auth.getUser() er et
+ * HTTP-kall vi vil unngå på edge for hver request).
+ *
+ * Når cookien finnes lar vi requesten passere; layoutet validerer og redirecter
+ * hvis tokenen er utløpt eller mangler bruker-rad.
  */
-export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(toSet) {
-          for (const { name, value } of toSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of toSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
-      },
-    },
-  );
-
-  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
-  try {
-    const res = await supabase.auth.getUser();
-    user = res.data.user;
-  } catch {
-    // Network blip → let the request through. Client-side auth hooks will
-    // re-check once Supabase is reachable again.
+  if (!pathname.startsWith(APP_PATH_PREFIX)) {
+    return NextResponse.next();
   }
 
-  const pathname = request.nextUrl.pathname;
-  const isAppArea = pathname.startsWith("/app");
-  const isAuthPage =
-    pathname === "/logg-inn" ||
-    pathname === "/registrer" ||
-    pathname === "/glemt-passord" ||
-    pathname === "/velkommen";
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
 
-  if (!user && isAppArea) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/logg-inn";
-    url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+  if (hasAuthCookie) {
+    return NextResponse.next();
   }
 
-  if (user && (pathname === "/logg-inn" || pathname === "/registrer")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/app";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  return response;
+  const url = request.nextUrl.clone();
+  url.pathname = "/logg-inn";
+  url.searchParams.set("redirect", pathname);
+  return NextResponse.redirect(url);
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/app/:path*"],
 };
