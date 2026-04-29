@@ -197,13 +197,20 @@ export default async function InnsiktPage({
 
   const apps = await prisma.jobApplication.findMany({
     where,
-    include: {
+    select: {
+      status: true,
+      statusUpdatedAt: true,
+      applicationDate: true,
+      source: true,
+      title: true,
+      createdAt: true,
       activities: {
         where: {
           type: { in: ["interview", "offer", "status"] },
         },
         orderBy: { occurredAt: "asc" },
         take: 1,
+        select: { occurredAt: true, type: true },
       },
     },
   });
