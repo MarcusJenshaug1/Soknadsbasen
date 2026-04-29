@@ -304,11 +304,9 @@ async function upsertJob(
   const expiresAt = expiresRaw ? new Date(expiresRaw) : null;
   const isActive = isDetailActive(detail);
 
-  const existing = await prisma.job.findUnique({
-    where: { externalId: item._feed_entry.uuid },
-    select: { id: true },
-  });
-
+  // Drop findUnique-precheck: én roundtrip i stedet for to. Returner "updated"
+  // som default (kan ikke skille created/updated uten precheck), men det er
+  // bare metrics, ingen funksjonell forskjell.
   await prisma.job.upsert({
     where: { externalId: item._feed_entry.uuid },
     create: {
@@ -343,7 +341,7 @@ async function upsertJob(
     },
   });
 
-  return existing ? "updated" : "created";
+  return "updated";
 }
 
 function errMsg(err: unknown): string {
