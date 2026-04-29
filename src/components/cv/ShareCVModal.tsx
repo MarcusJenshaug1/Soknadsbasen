@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Copy, Check, Trash2, Eye, X, Plus } from "lucide-react";
 import { useResumeStore } from "@/store/useResumeStore";
+import { buildShareUrl } from "@/lib/shareUrl";
 
 interface ShareLink {
   id: string;
@@ -96,7 +97,7 @@ export function ShareCVModal({ open, onClose }: Props) {
         throw new Error(json?.error ?? "Kunne ikke opprette lenke");
       }
       const token = json.link.token as string;
-      const url = `${window.location.origin}/cv/delt/${token}`;
+      const url = buildShareUrl(token);
       setCreatedUrl(url);
       void loadLinks();
     } catch (err) {
@@ -350,7 +351,7 @@ function ListPane({
     <ul className="space-y-3">
       {links.map((l) => {
         const active = isActive(l);
-        const url = `${window.location.origin}/cv/delt/${l.token}`;
+        const url = buildShareUrl(l.token);
         return (
           <li
             key={l.id}

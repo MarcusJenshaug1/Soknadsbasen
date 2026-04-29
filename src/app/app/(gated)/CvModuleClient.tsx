@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { SectionLabel } from "@/components/ui/Pill";
 import { ShareCVModal } from "@/components/cv/ShareCVModal";
+import { buildShareUrl } from "@/lib/shareUrl";
 
 interface ShareLink {
   id: string;
@@ -255,10 +256,7 @@ export function CvModuleClient({
             <>
               <ul className="space-y-2">
                 {previewLinks.map((l) => {
-                  const url =
-                    typeof window !== "undefined"
-                      ? `${window.location.origin}/cv/delt/${l.token}`
-                      : `/cv/delt/${l.token}`;
+                  const url = buildShareUrl(l.token);
                   const title = l.label || l.resumeName || "CV";
                   return (
                     <li

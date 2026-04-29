@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { prettyOrigin } from "@/lib/shareUrl";
 
 type LinkData = {
   token: string;
@@ -50,7 +51,7 @@ export function ShareLinkWidget() {
 
   async function copy() {
     if (!link) return;
-    const url = `${window.location.origin}/delt/${link.token}`;
+    const url = `${prettyOrigin(window.location.origin)}/delt/${link.token}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -83,7 +84,7 @@ export function ShareLinkWidget() {
           <div className="flex items-center gap-2">
             <input
               readOnly
-              value={`${typeof window !== "undefined" ? window.location.origin : ""}/delt/${link.token}`}
+              value={`${typeof window !== "undefined" ? prettyOrigin(window.location.origin) : ""}/delt/${link.token}`}
               className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-black/10 dark:border-white/10 text-[12px] bg-bg text-[#14110e]/70 dark:text-[#f0ece6]/70 truncate"
             />
             <button
