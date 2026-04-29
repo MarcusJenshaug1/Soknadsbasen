@@ -32,8 +32,9 @@ export type SyncResult = {
 // 200 dager dekker NAVs maks aktive periode (~6 mnd) med margin.
 const INITIAL_LOOKBACK_DAYS = 200;
 
-// Bruker dette som default tidsbudsjett. Caller kan overstyre.
-const DEFAULT_BUDGET_MS = 270_000;
+// Default tidsbudsjett. Caller kan overstyre. Holdes godt under Vercel
+// maxDuration (300 s) slik at responsen rekker tilbake til pg_net.
+const DEFAULT_BUDGET_MS = 50_000;
 
 // Maks parallelle detail-kall per side
 const DETAIL_CONCURRENCY = 6;
@@ -205,13 +206,19 @@ async function processItems(items: FeedItem[], token: string): Promise<ItemBatch
   const active = items.filter((i) => i._feed_entry.status === "ACTIVE");
   const inactive = items.filter((i) => i._feed_entry.status !== "ACTIVE");
 
-  // INACTIVE: bare merk i db, ingen detail-kall
-  for (const item of inactive) {
+  // INACTIVE: bulk-deactivate (én updateMany for hele siden)
+  if (inactive.length > 0) {
     try {
-      const r = await deactivateLocal(item._feed_entry.uuid);
-      if (r) out.deactivated += 1;
+      const r = await prisma.job.updateMany({
+        where: {
+          externalId: { in: inactive.map((i) => i._feed_entry.uuid) },
+          isActive: true,
+        },
+        data: { isActive: false },
+      });
+      out.deactivated += r.count;
     } catch (err) {
-      out.errors.push(`deactivate ${item._feed_entry.uuid}: ${errMsg(err)}`);
+      out.errors.push(`bulk deactivate: ${errMsg(err)}`);
     }
   }
 
@@ -246,14 +253,6 @@ async function processItems(items: FeedItem[], token: string): Promise<ItemBatch
   }
 
   return out;
-}
-
-async function deactivateLocal(uuid: string): Promise<boolean> {
-  const r = await prisma.job.updateMany({
-    where: { externalId: uuid, isActive: true },
-    data: { isActive: false },
-  });
-  return r.count > 0;
 }
 
 async function upsertJob(
