@@ -745,20 +745,45 @@ model Job {
 
   title         String
   slug          String    @unique
-  employerName  String
-  employerSlug  String
+
+  employerName        String
+  employerSlug        String
+  employerOrgnr       String?
+  employerDescription String?
+  employerHomepage    String?
 
   description   String
+
+  // Primær arbeidsplass (første element i workLocations) for filtrering/visning.
   location      String?
   region        String?
+  postalCode    String?
+  country       String?
+  // Hele workLocations-array fra feed (kan inneholde flere lokasjoner).
+  workLocations Json?
+
+  // Primær kategori for filtrering/indeksering.
   category      String?
   occupation    String?
-  employmentType String?
+  // Hele category- og occupation-arrayene (inkl. STYRK/ESCO-koder).
+  categoryList   Json?
+  occupationList Json?
 
-  applyUrl      String?
+  // Stillingsdetaljer
+  employmentType String?  // bakoverkomp.: engagementType ?? extent
+  engagementType String?  // f.eks. "Fast", "Vikariat", "Sesong"
+  extent         String?  // "Heltid"/"Deltid" + prosent
+  positionCount  Int?
+  sector         String?  // "Privat", "Offentlig"
 
-  publishedAt   DateTime
-  expiresAt     DateTime?
+  // Søknad
+  applyUrl         String?
+  sourceUrl        String?
+  applicationDueAt DateTime?
+
+  publishedAt     DateTime
+  expiresAt       DateTime?
+  sourceUpdatedAt DateTime?
 
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Logo } from "@/components/ui/Logo";
@@ -38,41 +39,135 @@ export async function generateMetadata({ params }: Props) {
   });
 }
 
+type WorkLocation = {
+  city: string | null;
+  county: string | null;
+  country: string | null;
+  postalCode: string | null;
+  municipal: string | null;
+};
+
+type CategoryEntry = {
+  code: string | null;
+  categoryType: string | null;
+  name: string | null;
+};
+
+function asWorkLocations(value: unknown): WorkLocation[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (v): v is WorkLocation => typeof v === "object" && v !== null,
+  );
+}
+
+function asCategoryList(value: unknown): CategoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (v): v is CategoryEntry => typeof v === "object" && v !== null,
+  );
+}
+
+function formatLocationLine(loc: WorkLocation): string {
+  const parts = [
+    loc.postalCode,
+    loc.city ?? loc.municipal,
+    loc.county,
+    loc.country && loc.country.toUpperCase() !== "NORGE" ? loc.country : null,
+  ].filter((p): p is string => Boolean(p));
+  return parts.join(", ");
+}
+
 function jobPostingJsonLd(job: {
   title: string;
   description: string;
   publishedAt: Date;
   expiresAt: Date | null;
+  applicationDueAt: Date | null;
   employerName: string;
+  employerOrgnr: string | null;
+  employerHomepage: string | null;
+  employerDescription: string | null;
   location: string | null;
   region: string | null;
+  postalCode: string | null;
+  country: string | null;
+  workLocations: WorkLocation[];
   applyUrl: string | null;
+  sourceUrl: string | null;
   employmentType: string | null;
+  engagementType: string | null;
+  extent: string | null;
+  positionCount: number | null;
+  sector: string | null;
   category: string | null;
+  categoryList: CategoryEntry[];
   slug: string;
 }): JsonLd {
+  const validThrough = job.applicationDueAt ?? job.expiresAt;
+  const occupationalCategory = job.categoryList
+    .map((c) => c.name)
+    .filter((n): n is string => Boolean(n))
+    .join(", ");
+
+  const buildAddress = (loc: WorkLocation | null) => ({
+    "@type": "PostalAddress" as const,
+    addressLocality: loc?.city ?? loc?.municipal ?? job.location ?? "Norge",
+    addressRegion: loc?.county ?? job.region ?? undefined,
+    postalCode: loc?.postalCode ?? job.postalCode ?? undefined,
+    addressCountry:
+      (loc?.country && loc.country.length === 2
+        ? loc.country.toUpperCase()
+        : null) ?? "NO",
+  });
+
+  const jobLocation =
+    job.workLocations.length > 0
+      ? job.workLocations.map((loc) => ({
+          "@type": "Place" as const,
+          address: buildAddress(loc),
+        }))
+      : [
+          {
+            "@type": "Place" as const,
+            address: buildAddress(null),
+          },
+        ];
+
   return {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
     description: job.description.slice(0, 5000),
     datePosted: job.publishedAt.toISOString(),
-    ...(job.expiresAt ? { validThrough: job.expiresAt.toISOString() } : {}),
+    ...(validThrough ? { validThrough: validThrough.toISOString() } : {}),
     employmentType: job.employmentType ?? "FULL_TIME",
     hiringOrganization: {
       "@type": "Organization",
       name: job.employerName,
+      ...(job.employerHomepage ? { sameAs: job.employerHomepage } : {}),
+      ...(job.employerOrgnr
+        ? {
+            identifier: {
+              "@type": "PropertyValue",
+              name: "orgnr",
+              value: job.employerOrgnr,
+            },
+          }
+        : {}),
+      ...(job.employerDescription
+        ? { description: job.employerDescription.slice(0, 2000) }
+        : {}),
     },
-    jobLocation: {
-      "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: job.location ?? job.region ?? "Norge",
-        addressRegion: job.region ?? undefined,
-        addressCountry: "NO",
-      },
-    },
-    ...(job.category ? { occupationalCategory: job.category } : {}),
+    jobLocation: jobLocation.length === 1 ? jobLocation[0] : jobLocation,
+    ...(occupationalCategory
+      ? { occupationalCategory }
+      : job.category
+        ? { occupationalCategory: job.category }
+        : {}),
+    ...(typeof job.positionCount === "number" && job.positionCount > 0
+      ? { totalJobOpenings: job.positionCount }
+      : {}),
+    ...(job.sector ? { industry: job.sector } : {}),
     url: absoluteUrl(`/jobb/${job.slug}`),
     ...(job.applyUrl
       ? {
@@ -97,14 +192,57 @@ export default async function JobDetailPage({ params }: Props) {
     { name: job.title, path: `/jobb/${job.slug}` },
   ];
 
+  const workLocations = asWorkLocations(job.workLocations);
+  const categoryList = asCategoryList(job.categoryList);
+  const occupationList = asCategoryList(job.occupationList);
+
   const jsonLd: JsonLd[] = [
     breadcrumbJsonLd(breadcrumbs),
-    jobPostingJsonLd(job),
+    jobPostingJsonLd({
+      title: job.title,
+      description: job.description,
+      publishedAt: job.publishedAt,
+      expiresAt: job.expiresAt,
+      applicationDueAt: job.applicationDueAt,
+      employerName: job.employerName,
+      employerOrgnr: job.employerOrgnr,
+      employerHomepage: job.employerHomepage,
+      employerDescription: job.employerDescription,
+      location: job.location,
+      region: job.region,
+      postalCode: job.postalCode,
+      country: job.country,
+      workLocations,
+      applyUrl: job.applyUrl,
+      sourceUrl: job.sourceUrl,
+      employmentType: job.employmentType,
+      engagementType: job.engagementType,
+      extent: job.extent,
+      positionCount: job.positionCount,
+      sector: job.sector,
+      category: job.category,
+      categoryList,
+      slug: job.slug,
+    }),
   ];
 
-  const daysToExpiry = job.expiresAt
-    ? Math.floor((job.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  // applicationDueAt er den autoritative søknadsfristen. expiresAt brukes som
+  // fallback når NAV ikke har eksplisitt frist (f.eks. løpende rekruttering).
+  const dueAt = job.applicationDueAt ?? job.expiresAt;
+  const daysToExpiry = dueAt
+    ? Math.floor((dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
+
+  const tagSet = new Set<string>();
+  if (job.category) tagSet.add(job.category);
+  if (job.occupation && job.occupation !== job.category) tagSet.add(job.occupation);
+  for (const c of categoryList) {
+    if (c.name) tagSet.add(c.name);
+  }
+  for (const o of occupationList) {
+    if (o.name) tagSet.add(o.name);
+  }
+  const tags = Array.from(tagSet);
 
   // Related: same category, latest 4
   const related = job.category
@@ -172,19 +310,29 @@ export default async function JobDetailPage({ params }: Props) {
                   <span>{job.employmentType}</span>
                 </>
               )}
+              {typeof job.positionCount === "number" && job.positionCount > 1 && (
+                <>
+                  <span className="text-[#14110e]/30">·</span>
+                  <span>{job.positionCount} stillinger</span>
+                </>
+              )}
+              {job.sector && (
+                <>
+                  <span className="text-[#14110e]/30">·</span>
+                  <span>{job.sector}</span>
+                </>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mb-6">
-              {job.category && (
-                <span className="inline-flex px-3 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
-                  {job.category}
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex px-3 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70"
+                >
+                  {tag}
                 </span>
-              )}
-              {job.occupation && job.occupation !== job.category && (
-                <span className="inline-flex px-3 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
-                  {job.occupation}
-                </span>
-              )}
+              ))}
               {daysToExpiry !== null && daysToExpiry >= 0 && (
                 <span
                   className={`inline-flex px-3 py-1 rounded-full text-[11px] ${daysToExpiry <= 3 ? "bg-[#D5592E]/10 text-[#D5592E]" : "bg-emerald-50 text-emerald-800"}`}
@@ -223,6 +371,24 @@ export default async function JobDetailPage({ params }: Props) {
             </div>
           </header>
 
+          <FactsPanel
+            engagementType={job.engagementType}
+            extent={job.extent}
+            employmentType={job.employmentType}
+            sector={job.sector}
+            positionCount={job.positionCount}
+            workLocations={workLocations}
+            location={job.location}
+            region={job.region}
+            postalCode={job.postalCode}
+            applicationDueAt={job.applicationDueAt}
+            expiresAt={job.expiresAt}
+            publishedAt={job.publishedAt}
+            sourceUpdatedAt={job.sourceUpdatedAt}
+            sourceUrl={job.sourceUrl}
+            applyUrl={job.applyUrl}
+          />
+
           <section
             aria-label="Stillingsbeskrivelse"
             className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85"
@@ -233,6 +399,15 @@ export default async function JobDetailPage({ params }: Props) {
               </p>
             ))}
           </section>
+
+          {(job.employerDescription || job.employerHomepage || job.employerOrgnr) && (
+            <EmployerPanel
+              name={job.employerName}
+              description={job.employerDescription}
+              homepage={job.employerHomepage}
+              orgnr={job.employerOrgnr}
+            />
+          )}
 
           <aside className="rounded-2xl border border-black/10 bg-white p-6 mb-8">
             <h2 className="text-[16px] font-medium mb-3">
@@ -328,5 +503,184 @@ export default async function JobDetailPage({ params }: Props) {
         </div>
       </footer>
     </div>
+  );
+}
+
+const DATE_FORMAT = new Intl.DateTimeFormat("nb-NO", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+function formatDate(d: Date | null): string | null {
+  if (!d) return null;
+  return DATE_FORMAT.format(d);
+}
+
+function FactsPanel({
+  engagementType,
+  extent,
+  employmentType,
+  sector,
+  positionCount,
+  workLocations,
+  location,
+  region,
+  postalCode,
+  applicationDueAt,
+  expiresAt,
+  publishedAt,
+  sourceUpdatedAt,
+  sourceUrl,
+  applyUrl,
+}: {
+  engagementType: string | null;
+  extent: string | null;
+  employmentType: string | null;
+  sector: string | null;
+  positionCount: number | null;
+  workLocations: WorkLocation[];
+  location: string | null;
+  region: string | null;
+  postalCode: string | null;
+  applicationDueAt: Date | null;
+  expiresAt: Date | null;
+  publishedAt: Date;
+  sourceUpdatedAt: Date | null;
+  sourceUrl: string | null;
+  applyUrl: string | null;
+}) {
+  const facts: Array<{ label: string; value: ReactNode }> = [];
+
+  if (engagementType || extent || employmentType) {
+    const parts = [engagementType, extent].filter((p): p is string => Boolean(p));
+    facts.push({
+      label: "Ansettelsesform",
+      value: parts.length > 0 ? parts.join(" · ") : employmentType,
+    });
+  }
+  if (sector) {
+    facts.push({ label: "Sektor", value: sector });
+  }
+  if (typeof positionCount === "number" && positionCount > 0) {
+    facts.push({
+      label: "Antall stillinger",
+      value: positionCount.toString(),
+    });
+  }
+
+  const locationLines =
+    workLocations.length > 0
+      ? workLocations.map(formatLocationLine).filter((l) => l.length > 0)
+      : [
+          [postalCode, location ?? region]
+            .filter((p): p is string => Boolean(p))
+            .join(", "),
+        ].filter((l) => l.length > 0);
+  if (locationLines.length > 0) {
+    facts.push({
+      label: locationLines.length > 1 ? "Arbeidssteder" : "Arbeidssted",
+      value: (
+        <ul className="space-y-0.5">
+          {locationLines.map((l, i) => (
+            <li key={i}>{l}</li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+
+  if (applicationDueAt) {
+    facts.push({ label: "Søknadsfrist", value: formatDate(applicationDueAt) });
+  } else if (expiresAt) {
+    facts.push({ label: "Søknadsfrist", value: formatDate(expiresAt) });
+  }
+  facts.push({ label: "Publisert", value: formatDate(publishedAt) });
+  if (
+    sourceUpdatedAt &&
+    Math.abs(sourceUpdatedAt.getTime() - publishedAt.getTime()) > 24 * 60 * 60 * 1000
+  ) {
+    facts.push({ label: "Sist oppdatert", value: formatDate(sourceUpdatedAt) });
+  }
+
+  const externalLink = sourceUrl && sourceUrl !== applyUrl ? sourceUrl : null;
+
+  if (facts.length === 0 && !externalLink) return null;
+
+  return (
+    <section
+      aria-label="Stillingsfakta"
+      className="mt-8 rounded-2xl border border-black/10 bg-white p-6"
+    >
+      <h2 className="text-[14px] font-medium tracking-tight mb-4 text-[#14110e]/55 uppercase">
+        Om stillingen
+      </h2>
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-[14px]">
+        {facts.map((f) => (
+          <div key={f.label}>
+            <dt className="text-[12px] text-[#14110e]/55 mb-1">{f.label}</dt>
+            <dd className="text-[#14110e]">{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {externalLink && (
+        <div className="mt-5 pt-4 border-t border-black/5 text-[13px]">
+          <a
+            href={externalLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
+          >
+            Se annonsen hos arbeidsgiver →
+          </a>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function EmployerPanel({
+  name,
+  description,
+  homepage,
+  orgnr,
+}: {
+  name: string;
+  description: string | null;
+  homepage: string | null;
+  orgnr: string | null;
+}) {
+  return (
+    <section
+      aria-label={`Om ${name}`}
+      className="mt-2 mb-8 rounded-2xl border border-black/10 bg-white p-6"
+    >
+      <h2 className="text-[14px] font-medium tracking-tight mb-4 text-[#14110e]/55 uppercase">
+        Om arbeidsgiver
+      </h2>
+      <h3 className="text-[18px] font-medium mb-2">{name}</h3>
+      {description && (
+        <div className="text-[14px] leading-[1.65] text-[#14110e]/80 mb-4">
+          {description.split("\n\n").map((p, i) => (
+            <p key={i} className="mb-2 last:mb-0">
+              {p}
+            </p>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-[#14110e]/60">
+        {homepage && (
+          <a
+            href={homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#D5592E] transition-colors"
+          >
+            {homepage.replace(/^https?:\/\//, "").replace(/\/$/, "")} →
+          </a>
+        )}
+        {orgnr && <span>Org.nr {orgnr}</span>}
+      </div>
+    </section>
   );
 }
