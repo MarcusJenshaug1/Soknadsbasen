@@ -69,15 +69,27 @@ type SupabaseAuthUser = Awaited<
 
 // Felles cache for supabase.auth.getUser(). Uten dette kjøres HTTP-kallet 2x
 // per gated render (én gang via getSession, én gang via getSessionWithAccess).
-const getSupabaseAuthUser = cache(async (): Promise<SupabaseAuthUser> => {
-  const supabase = await supabaseServer();
-  try {
-    const res = await supabase.auth.getUser();
-    return res.data.user;
-  } catch (err) {
-    console.warn("[getSupabaseAuthUser] Supabase getUser failed:", err);
-    return null;
-  }
+export const getSupabaseAuthUser = cache(
+  async (): Promise<SupabaseAuthUser> => {
+    const supabase = await supabaseServer();
+    try {
+      const res = await supabase.auth.getUser();
+      return res.data.user;
+    } catch (err) {
+      console.warn("[getSupabaseAuthUser] Supabase getUser failed:", err);
+      return null;
+    }
+  },
+);
+
+/**
+ * Lightweight: returner kun userId fra Supabase auth, uten Prisma-rundtur.
+ * Bruk i hjelpere som `getActiveSession` der layoutet allerede har kalt
+ * `getSessionWithAccess()` (som garanterer at user-raden finnes i Prisma).
+ */
+export const getSessionUserId = cache(async (): Promise<string | null> => {
+  const user = await getSupabaseAuthUser();
+  return user?.id ?? null;
 });
 
 // Deduped per request via React cache — flere layout/page-kall = 1 I/O.

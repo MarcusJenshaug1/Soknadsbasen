@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 
 export interface ActiveSessionPayload {
   id: string;
@@ -21,13 +21,15 @@ export interface SessionSummary {
 }
 
 // Deduped per request — kalles fra layout + page uten ekstra DB-rundtur.
+// Bruker getSessionUserId (lett) for å unngå dobbel prisma.user.findUnique
+// i samme request — getSessionWithAccess har allerede sikret user-raden.
 export const getActiveSession = cache(
   async (): Promise<ActiveSessionPayload | null> => {
-    const auth = await getSession();
-    if (!auth) return null;
+    const userId = await getSessionUserId();
+    if (!userId) return null;
 
     return prisma.jobSearchSession.findFirst({
-      where: { userId: auth.userId, status: "ACTIVE" },
+      where: { userId, status: "ACTIVE" },
       select: { id: true, name: true, status: true, startedAt: true },
       orderBy: { startedAt: "desc" },
     });
@@ -36,11 +38,11 @@ export const getActiveSession = cache(
 
 // Alle sesjoner for brukeren, nyeste først.
 export const getAllSessions = cache(async (): Promise<SessionSummary[]> => {
-  const auth = await getSession();
-  if (!auth) return [];
+  const userId = await getSessionUserId();
+  if (!userId) return [];
 
   return prisma.jobSearchSession.findMany({
-    where: { userId: auth.userId },
+    where: { userId },
     select: {
       id: true,
       name: true,
