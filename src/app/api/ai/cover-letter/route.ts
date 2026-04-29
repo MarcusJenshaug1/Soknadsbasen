@@ -3,6 +3,11 @@ import { marked } from "marked";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { geminiStream } from "@/lib/gemini";
+import {
+  buildSystemPrompt,
+  validateCoverLetter,
+  type Tone,
+} from "@/lib/ai/cover-letter-prompt";
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -159,11 +164,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Søknad ikke funnet" }, { status: 404 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { email: true, name: true },
-  });
-
   const userData = await prisma.userData.findUnique({
     where: { userId: session.userId },
     select: { resumeData: true },
@@ -171,35 +171,8 @@ export async function POST(req: Request) {
 
   const resumeContext = buildResumeContext(userData?.resumeData);
 
-  const tone = body.tone ?? "varm";
-  const toneHint: Record<string, string> = {
-    formell: "Profesjonell og nøktern tone. Unngå slang.",
-    varm: "Varm, personlig, men profesjonell.",
-    konsis: "Kort og rett på sak. Maks tre korte avsnitt.",
-  };
-
-  const system = `Du skriver søknadsbrev på norsk bokmål for en jobbsøker-plattform.
-
-Tone: ${toneHint[tone]}
-
-Format: Markdown. Du KAN bruke:
-- **fet skrift** for å fremheve nøkkelord og prestasjoner
-- *kursiv* sparsomt, for tittelen på stillingen ved første nevnelse
-- ## Underoverskrifter hvis brevet er langt nok til at det hjelper lesbarheten (f.eks. "Hvorfor ${app.companyName}", "Min erfaring", "Neste steg")
-- - Punktlister når du lister konkrete prestasjoner, teknologier eller koblinger mellom krav og erfaring (maks 5 punkter per liste)
-- > Sitater kun hvis kandidaten har en kjent publikasjon/uttalelse — ellers ikke
-
-IKKE inkluder:
-- H1 (overordnet tittel) — brevet har allerede emne-felt utenfor brødteksten
-- Hilsen ("Hei X,") eller avslutning ("Med vennlig hilsen") — de ligger i egne felter
-- Signatur med navn — allerede i feltet avsender
-- Klisjéer som "dynamisk", "lidenskapelig", "teamplayer", "tenker utenfor boksen"
-- Erfaring som ikke står i kandidatens CV — ikke finn opp noe
-
-Struktur (tilpass lengde til tone):
-1. Åpning: 1-2 setninger om hvorfor rollen og selskapet appellerer
-2. Midt: konkrete koblinger mellom stillingens krav og kandidatens erfaring
-3. Avslutning: kort, nøktern invitasjon til samtale`;
+  const tone: Tone = body.tone ?? "varm";
+  const system = buildSystemPrompt(tone, app.companyName);
 
   const senderBlock = [
     body.letter?.senderName && `Navn: ${body.letter.senderName}`,
@@ -266,7 +239,12 @@ Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved n
           .replace(/```\s*$/i, "")
           .trim();
         const html = marked.parse(cleaned, { async: false }) as string;
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, html, markdown: cleaned })}\n\n`));
+        const warnings = validateCoverLetter(cleaned, app.companyName);
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ done: true, html, markdown: cleaned, warnings })}\n\n`,
+          ),
+        );
       } catch (err) {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : "AI-feil" })}\n\n`),

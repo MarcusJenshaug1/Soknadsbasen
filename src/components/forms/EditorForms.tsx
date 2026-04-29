@@ -6,6 +6,7 @@ import { analyzeAtsMatch } from "@/lib/ats";
 import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp, Share2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ShareCVModal } from "@/components/cv/ShareCVModal";
+import { AtsCertifiedBadge } from "@/components/cv/AtsCertifiedBadge";
 
 const LexicalEditor = dynamic(
   () => import("./LexicalEditor").then((m) => m.LexicalEditor),
@@ -690,6 +691,7 @@ export function DesignExportForm() {
   const setSectionOrder = useResumeStore((s) => s.setSectionOrder);
   const replaceData = useResumeStore((s) => s.replaceData);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [jobAd, setJobAd] = useState("");
   const [jobUrl, setJobUrl] = useState("");
@@ -1248,6 +1250,7 @@ export function DesignExportForm() {
                 a.href = url;
                 a.click();
                 URL.revokeObjectURL(url);
+                setPdfDownloaded(true);
               } catch (err) {
                 console.error(err);
                 alert("Kunne ikke generere PDF. Prøv igjen.");
@@ -1260,6 +1263,11 @@ export function DesignExportForm() {
             <Download className="size-4" />
             {pdfLoading ? "Genererer…" : "Last ned PDF (automatisk)"}
           </button>
+          {pdfDownloaded && (
+            <div className="mt-3">
+              <AtsCertifiedBadge variant="post-export" />
+            </div>
+          )}
         </div>
 
         <div className="border-t border-indigo-200 pt-4 mt-2">

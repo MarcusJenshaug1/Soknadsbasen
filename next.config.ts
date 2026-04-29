@@ -43,6 +43,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/sammenligning/jobbe-ai",
+        destination: "/sammenligning/lonna",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

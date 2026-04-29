@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { breadcrumbJsonLd, webApplicationJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { AtsCertifiedBadge } from "@/components/cv/AtsCertifiedBadge";
 import { HeaderCTA, ClosingCTA } from "../LandingCTAs";
 
 export const revalidate = 86400;
@@ -148,6 +149,9 @@ export default function FunksjonerPage() {
             arbeidsmarkedet, CV-bygger, AI-assistert søknadsbrev, pipeline og
             innsikt på ett sted. Her er hva som er inkludert i begge planer.
           </p>
+          <div className="max-w-[640px] mx-auto mt-8">
+            <AtsCertifiedBadge variant="full" />
+          </div>
         </section>
 
         <div className="space-y-16 md:space-y-24">

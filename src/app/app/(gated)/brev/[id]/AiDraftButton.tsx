@@ -5,6 +5,11 @@ import { cn } from "@/lib/cn";
 
 type Tone = "varm" | "formell" | "konsis";
 
+type Warning = {
+  type: "forbidden_phrase" | "too_long" | "too_short" | "missing_company";
+  detail: string;
+};
+
 const TONES: { id: Tone; label: string }[] = [
   { id: "varm", label: "Varm" },
   { id: "formell", label: "Formell" },
@@ -36,10 +41,12 @@ export function AiDraftButton({
   const [tone, setTone] = useState<Tone>("varm");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<Warning[]>([]);
 
   async function generate() {
     setLoading(true);
     setError(null);
+    setWarnings([]);
     onStream?.("");
     try {
       const res = await fetch("/api/ai/cover-letter", {
@@ -72,6 +79,7 @@ export function AiDraftButton({
               done?: boolean;
               html?: string;
               markdown?: string;
+              warnings?: Warning[];
               error?: string;
             };
             if (evt.error) throw new Error(evt.error);
@@ -82,7 +90,11 @@ export function AiDraftButton({
             if (evt.done && evt.html) {
               onStream?.(null);
               onDraft(evt.html);
-              setOpen(false);
+              if (evt.warnings && evt.warnings.length > 0) {
+                setWarnings(evt.warnings);
+              } else {
+                setOpen(false);
+              }
             }
           } catch (parseErr) {
             if (parseErr instanceof SyntaxError) continue;
@@ -112,44 +124,72 @@ export function AiDraftButton({
   }
 
   return (
-    <div className="inline-flex items-center gap-2 flex-wrap">
-      <div className="inline-flex bg-[#eee9df] dark:bg-panel rounded-full p-1">
-        {TONES.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTone(t.id)}
-            className={cn(
-              "px-3 py-1 rounded-full text-[11px] transition-colors",
-              tone === t.id
-                ? "bg-bg text-ink font-medium"
-                : "text-ink/60 hover:text-ink",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
+    <div className="flex flex-col gap-2">
+      <div className="inline-flex items-center gap-2 flex-wrap">
+        <div className="inline-flex bg-[#eee9df] dark:bg-panel rounded-full p-1">
+          {TONES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTone(t.id)}
+              className={cn(
+                "px-3 py-1 rounded-full text-[11px] transition-colors",
+                tone === t.id
+                  ? "bg-bg text-ink font-medium"
+                  : "text-ink/60 hover:text-ink",
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={generate}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] disabled:opacity-50"
+        >
+          {loading ? <><SpinnerDots /> Skriver</> : "Generer"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+            setWarnings([]);
+          }}
+          className="text-[11px] text-ink/55 hover:text-ink"
+        >
+          Avbryt
+        </button>
+        {error && (
+          <span className="text-[11px] text-[#D5592E]">{error}</span>
+        )}
       </div>
-      <button
-        type="button"
-        onClick={generate}
-        disabled={loading}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] disabled:opacity-50"
-      >
-        {loading ? <><SpinnerDots /> Skriver</> : "Generer"}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(false);
-          setError(null);
-        }}
-        className="text-[11px] text-ink/55 hover:text-ink"
-      >
-        Avbryt
-      </button>
-      {error && (
-        <span className="text-[11px] text-[#D5592E]">{error}</span>
+      {warnings.length > 0 && (
+        <div className="rounded-lg border border-amber-300/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:text-amber-200 max-w-md">
+          <div className="font-medium mb-1">
+            Norsk-modus: AI-utkastet kan forbedres
+          </div>
+          <ul className="space-y-0.5">
+            {warnings.map((w, i) => (
+              <li key={i}>
+                {w.type === "forbidden_phrase" && (
+                  <>Klisjé brukt: <span className="italic">«{w.detail}»</span></>
+                )}
+                {w.type === "too_long" && (
+                  <>For langt: {w.detail}</>
+                )}
+                {w.type === "too_short" && (
+                  <>For kort: {w.detail}</>
+                )}
+                {w.type === "missing_company" && (
+                  <>{w.detail}</>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
