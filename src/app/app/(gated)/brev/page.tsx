@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
@@ -8,11 +8,11 @@ import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusD
 export const dynamic = "force-dynamic";
 
 export default async function BrevPage() {
-  const session = await getSession();
-  if (!session) redirect("/logg-inn");
+  const userId = await getSessionUserId();
+  if (!userId) redirect("/logg-inn");
 
   const apps = await prisma.jobApplication.findMany({
-    where: { userId: session.userId },
+    where: { userId },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BrevEditor } from "./BrevEditor";
 
@@ -10,17 +10,16 @@ export default async function BrevDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const session = await getSession();
-  if (!session) redirect("/logg-inn");
+  const [{ id }, userId] = await Promise.all([params, getSessionUserId()]);
+  if (!userId) redirect("/logg-inn");
 
   const [app, user] = await Promise.all([
     prisma.jobApplication.findFirst({
-      where: { id, userId: session.userId },
+      where: { id, userId },
       include: { coverLetter: true },
     }),
     prisma.user.findUnique({
-      where: { id: session.userId },
+      where: { id: userId },
       select: { email: true, name: true },
     }),
   ]);

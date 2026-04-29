@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
@@ -24,12 +24,12 @@ export default async function SelskaperPage({
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
-  const [session, sp, activeJobSession] = await Promise.all([
-    getSession(),
+  const [userId, sp, activeJobSession] = await Promise.all([
+    getSessionUserId(),
     searchParams,
     getActiveSession(),
   ]);
-  if (!session) redirect("/logg-inn");
+  if (!userId) redirect("/logg-inn");
 
   const requestedSessionId = sp.session ?? undefined;
   const isHistorical =
@@ -38,7 +38,7 @@ export default async function SelskaperPage({
 
   const apps = await prisma.jobApplication.findMany({
     where: {
-      userId: session.userId,
+      userId,
       ...(scopedSessionId ? { sessionId: scopedSessionId } : {}),
     },
     orderBy: { updatedAt: "desc" },

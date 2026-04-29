@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApplicationDetail } from "./ApplicationDetail";
 
@@ -10,12 +10,11 @@ export default async function ApplicationDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const session = await getSession();
-  if (!session) redirect("/logg-inn");
+  const [{ id }, userId] = await Promise.all([params, getSessionUserId()]);
+  if (!userId) redirect("/logg-inn");
 
   const app = await prisma.jobApplication.findFirst({
-    where: { id, userId: session.userId },
+    where: { id, userId },
     include: {
       tasks: { orderBy: [{ completedAt: "asc" }, { dueAt: "asc" }] },
       activities: { orderBy: { occurredAt: "desc" } },

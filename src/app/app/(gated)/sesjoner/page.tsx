@@ -15,10 +15,13 @@ const OUTCOME_LABELS: Record<string, string> = {
 };
 
 export default async function SesjonerPage() {
-  const session = await getSessionWithAccess();
+  // getSessionWithAccess + getAllSessions kan kjøres parallelt — begge er
+  // cached og getAllSessions trenger bare userId via getSessionUserId.
+  const [session, sessions] = await Promise.all([
+    getSessionWithAccess(),
+    getAllSessions(),
+  ]);
   if (!session) redirect("/logg-inn");
-
-  const sessions = await getAllSessions();
 
   return (
     <div className="px-4 md:px-10 py-6 md:py-10 font-sans max-w-3xl">

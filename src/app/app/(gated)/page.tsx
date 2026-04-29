@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionWithAccess } from "@/lib/auth";
 import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
@@ -133,10 +133,13 @@ function computeCvPercent(userDataResume: string | null | undefined): number {
 }
 
 export default async function AppHomePage() {
-  const session = await getSession();
+  // Layoutet har allerede kjørt getSessionWithAccess + redirect — vi treffer
+  // cache her. Henter aktiv sesjon parallelt (også cached fra layout).
+  const [session, activeJobSession] = await Promise.all([
+    getSessionWithAccess(),
+    getActiveSession(),
+  ]);
   if (!session) redirect("/logg-inn");
-
-  const activeJobSession = await getActiveSession();
 
   const weekStart = new Date(Date.now() - 7 * 86_400_000);
 

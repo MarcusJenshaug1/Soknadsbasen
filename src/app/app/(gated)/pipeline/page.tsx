@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { PipelineView } from "./PipelineView";
@@ -13,12 +13,12 @@ export default async function PipelinePage({
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
-  const [session, sp, activeJobSession] = await Promise.all([
-    getSession(),
+  const [userId, sp, activeJobSession] = await Promise.all([
+    getSessionUserId(),
     searchParams,
     getActiveSession(),
   ]);
-  if (!session) redirect("/logg-inn");
+  if (!userId) redirect("/logg-inn");
 
   const requestedSessionId = sp.session ?? undefined;
   const isHistorical =
@@ -29,7 +29,7 @@ export default async function PipelinePage({
 
   const applications = await prisma.jobApplication.findMany({
     where: {
-      userId: session.userId,
+      userId,
       status: { in: PIPELINE_STATUSES as unknown as string[] },
       ...(scopedSessionId ? { sessionId: scopedSessionId } : {}),
     },

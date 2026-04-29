@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NetworkView } from "./NetworkView";
 
 export const dynamic = "force-dynamic";
 
 export default async function NettverkPage() {
-  const session = await getSession();
-  if (!session) redirect("/logg-inn");
+  const userId = await getSessionUserId();
+  if (!userId) redirect("/logg-inn");
 
   const contacts = await prisma.contact.findMany({
-    where: { userId: session.userId },
+    where: { userId },
     orderBy: { name: "asc" },
     select: {
       id: true,

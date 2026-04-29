@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
-import { getAllSessions } from "@/lib/session-context";
+import { getSessionUserId } from "@/lib/auth";
+import { getActiveSession, getAllSessions } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { InnsiktFilters } from "./InnsiktFilters";
@@ -61,38 +61,95 @@ function buildSparkline(points: number[]): string {
     .join(" ");
 }
 
+function formatRelative(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const min = Math.round(diffMs / 60_000);
+  if (min < 1) return "nå nettopp";
+  if (min < 60) return `${min} min siden`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} t siden`;
+  const days = Math.round(hr / 24);
+  if (days < 7) return `${days} d siden`;
+  return date.toLocaleDateString("nb-NO", { day: "numeric", month: "short" });
+}
+
 export default async function InnsiktPage({
   searchParams,
 }: {
   searchParams: Promise<{ period?: Period; session?: string }>;
 }) {
-  const [session, sp] = await Promise.all([getSession(), searchParams]);
-  if (!session) redirect("/logg-inn");
+  const [userId, sp, sessions, activeSession] = await Promise.all([
+    getSessionUserId(),
+    searchParams,
+    getAllSessions(),
+    getActiveSession(),
+  ]);
+  if (!userId) redirect("/logg-inn");
 
   const period: Period = sp.period ?? "90d";
-  const sessionId = sp.session ?? undefined;
+  const rawScope = sp.session ?? "period";
+
+  // Resolve scope → effective sessionId | "all" | "period"
+  let scope: "period" | "all" | "session" = "period";
+  let effectiveSessionId: string | null = null;
+  if (rawScope === "all") {
+    scope = "all";
+  } else if (rawScope === "active") {
+    if (activeSession) {
+      scope = "session";
+      effectiveSessionId = activeSession.id;
+    } else {
+      scope = "period";
+    }
+  } else if (rawScope !== "period") {
+    // Verify provided id belongs to user
+    const match = sessions.find((s) => s.id === rawScope);
+    if (match) {
+      scope = "session";
+      effectiveSessionId = match.id;
+    }
+  }
+
+  // Behold rawScope-verdien til filter-UI så valg ikke hopper tilbake
+  const filterScope =
+    rawScope === "all" || rawScope === "active" || rawScope === "period"
+      ? rawScope
+      : effectiveSessionId ?? "period";
 
   const now = new Date();
   const last7Start = new Date(now.getTime() - 7 * 86_400_000);
   const prev7Start = new Date(now.getTime() - 14 * 86_400_000);
 
-  // Hent sesjoner for filter-widgeten + ukesdata parallelt
-  const [sessions, weekApps, prevWeekApps, weekTasks] = await Promise.all([
-    getAllSessions(),
+  // Hent ukesdata + CV-lenker parallelt
+  const [weekApps, prevWeekApps, weekTasks, cvLinks] = await Promise.all([
     prisma.jobApplication.findMany({
-      where: { userId: session.userId, archivedAt: null, createdAt: { gte: last7Start } },
+      where: { userId: userId, archivedAt: null, createdAt: { gte: last7Start } },
       select: { status: true, statusUpdatedAt: true, interviewAt: true },
     }),
     prisma.jobApplication.findMany({
-      where: { userId: session.userId, archivedAt: null, createdAt: { gte: prev7Start, lt: last7Start } },
+      where: { userId: userId, archivedAt: null, createdAt: { gte: prev7Start, lt: last7Start } },
       select: { status: true },
     }),
     prisma.task.findMany({
       where: {
         completedAt: { gte: last7Start },
-        application: { userId: session.userId },
+        application: { userId: userId },
       },
       select: { id: true },
+    }),
+    prisma.resumeShareLink.findMany({
+      where: { userId: userId },
+      select: {
+        id: true,
+        label: true,
+        token: true,
+        viewCount: true,
+        lastViewedAt: true,
+        revokedAt: true,
+        expiresAt: true,
+        createdAt: true,
+      },
+      orderBy: { viewCount: "desc" },
     }),
   ]);
 
@@ -112,15 +169,34 @@ export default async function InnsiktPage({
   ).length;
   const weekTasksDone = weekTasks.length;
 
-  // Når sesjon er valgt, filtrer på sessionId; ellers bruk dato-cutoff
-  const dateFilter = sessionId ? {} : { createdAt: { gte: periodCutoff(period) } };
+  // CV-link aggregater
+  const activeLinks = cvLinks.filter(
+    (l) => !l.revokedAt && (!l.expiresAt || l.expiresAt > now),
+  );
+  const totalViews = cvLinks.reduce((s, l) => s + l.viewCount, 0);
+  const lastViewedAt = cvLinks.reduce<Date | null>((latest, l) => {
+    if (!l.lastViewedAt) return latest;
+    if (!latest || l.lastViewedAt > latest) return l.lastViewedAt;
+    return latest;
+  }, null);
+  const viewsLast7d = cvLinks.filter(
+    (l) => l.lastViewedAt && l.lastViewedAt >= last7Start,
+  ).length;
+  const topLinks = cvLinks
+    .filter((l) => l.viewCount > 0)
+    .slice(0, 5);
+
+  // Bygg where-clause for hovedaggregater basert på scope
+  const whereBase = { userId: userId, archivedAt: null };
+  const where =
+    scope === "session" && effectiveSessionId
+      ? { ...whereBase, sessionId: effectiveSessionId }
+      : scope === "all"
+      ? whereBase
+      : { ...whereBase, createdAt: { gte: periodCutoff(period) } };
 
   const apps = await prisma.jobApplication.findMany({
-    where: {
-      userId: session.userId,
-      archivedAt: null,
-      ...(sessionId ? { sessionId } : dateFilter),
-    },
+    where,
     include: {
       activities: {
         where: {
@@ -132,12 +208,85 @@ export default async function InnsiktPage({
     },
   });
 
+  const filters = (
+    <InnsiktFilters
+      currentPeriod={period}
+      currentScope={filterScope}
+      sessions={sessions.map((s) => ({ id: s.id, name: s.name, status: s.status }))}
+      hasActive={!!activeSession}
+    />
+  );
+
+  const cvWidget =
+    cvLinks.length > 0 ? (
+      <CvLinksWidget
+        activeLinks={activeLinks.length}
+        totalLinks={cvLinks.length}
+        totalViews={totalViews}
+        viewsLast7d={viewsLast7d}
+        lastViewedAt={lastViewedAt}
+        topLinks={topLinks.map((l) => ({
+          id: l.id,
+          label: l.label ?? "Uten navn",
+          views: l.viewCount,
+          lastViewedAt: l.lastViewedAt,
+        }))}
+      />
+    ) : null;
+
   const sent = apps.filter((a) => a.status !== "draft");
   const responded = sent.filter((a) =>
     ["interview", "offer", "accepted", "declined", "rejected"].includes(a.status),
   );
   const responseRate =
     sent.length > 0 ? Math.round((responded.length / sent.length) * 1000) / 10 : 0;
+
+  if (apps.length === 0) {
+    const scopeLabel =
+      scope === "session"
+        ? "denne sesjonen"
+        : scope === "all"
+        ? "noen sesjoner"
+        : "perioden";
+    return (
+      <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+          <div>
+            <SectionLabel className="mb-3">Innsikt</SectionLabel>
+            <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
+              Ingen data for {scopeLabel} ennå.
+            </h1>
+            <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-2">
+              Bytt scope eller velg en annen sesjon over.
+            </p>
+          </div>
+          {filters}
+        </div>
+
+        {weekSent > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <WeekStat label="Søknader sendt" value={weekSent} prev={prevSent} />
+            <WeekStat label="Intervjuer" value={weekInterviews} prev={null} />
+            <WeekStat label="Svar mottatt" value={weekResponses} prev={prevResponses} />
+            <WeekStat label="Oppgaver fullført" value={weekTasksDone} prev={null} />
+          </div>
+        )}
+
+        {cvWidget}
+
+        <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 max-w-md mt-6">
+          Når du har noen søknader over litt tid, dukker mønstre og trender opp
+          her.
+        </p>
+        <Link
+          href="/app/pipeline"
+          className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
+        >
+          Åpne pipeline
+        </Link>
+      </div>
+    );
+  }
 
   // Svar-fordeling: hva slags svar er det egentlig?
   const breakdown = {
@@ -227,35 +376,6 @@ export default async function InnsiktPage({
     Math.max(1, points.length - midIdx);
   const changePp = Math.round((lateAvg - earlyAvg) * 10) / 10;
 
-  if (apps.length === 0) {
-    return (
-      <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
-        <SectionLabel className="mb-3">Innsikt</SectionLabel>
-        <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-4">
-          Ingen data for perioden ennå.
-        </h1>
-        {weekSent > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 max-w-2xl">
-            <WeekStat label="Søknader sendt" value={weekSent} prev={prevSent} />
-            <WeekStat label="Intervjuer" value={weekInterviews} prev={null} />
-            <WeekStat label="Svar mottatt" value={weekResponses} prev={prevResponses} />
-            <WeekStat label="Oppgaver fullført" value={weekTasksDone} prev={null} />
-          </div>
-        )}
-        <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 max-w-md">
-          Når du har noen søknader over litt tid, dukker mønstre og trender opp
-          her.
-        </p>
-        <Link
-          href="/app/pipeline"
-          className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
-        >
-          Åpne pipeline
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
@@ -268,11 +388,7 @@ export default async function InnsiktPage({
             Hva fungerer, hva fungerer ikke.
           </p>
         </div>
-        <InnsiktFilters
-          currentPeriod={period}
-          currentSession={sessionId ?? null}
-          sessions={sessions.map((s) => ({ id: s.id, name: s.name, status: s.status }))}
-        />
+        {filters}
       </div>
 
       {/* Siste 7 dager */}
@@ -330,9 +446,11 @@ export default async function InnsiktPage({
         </div>
       </div>
 
+      {cvWidget}
+
       {/* Svar-fordeling */}
       {responded.length > 0 && (
-        <div className="bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 mb-4">
+        <div className="bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 mb-4 mt-4">
           <SectionLabel className="mb-5">Hva slags svar</SectionLabel>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <BreakdownCell
@@ -538,6 +656,111 @@ function BreakdownCell({
       <div className="text-[28px] md:text-[32px] leading-none tracking-[-0.03em] font-medium">
         {value}
       </div>
+    </div>
+  );
+}
+
+function CvLinksWidget({
+  activeLinks,
+  totalLinks,
+  totalViews,
+  viewsLast7d,
+  lastViewedAt,
+  topLinks,
+}: {
+  activeLinks: number;
+  totalLinks: number;
+  totalViews: number;
+  viewsLast7d: number;
+  lastViewedAt: Date | null;
+  topLinks: Array<{ id: string; label: string; views: number; lastViewedAt: Date | null }>;
+}) {
+  return (
+    <div className="bg-surface rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 mb-4">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-5">
+        <div>
+          <SectionLabel className="mb-2">CV-lenker</SectionLabel>
+          <p className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
+            Hvem ser CV-en din. Tall gjelder alle lenker uavhengig av sesjon.
+          </p>
+        </div>
+        <Link
+          href="/app#cv"
+          className="text-[12px] text-accent hover:underline shrink-0"
+        >
+          Administrer lenker →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <CvStat label="Visninger totalt" value={totalViews} />
+        <CvStat
+          label="Siste 7 dager"
+          value={viewsLast7d}
+          subtitle="lenker åpnet"
+        />
+        <CvStat
+          label="Aktive lenker"
+          value={activeLinks}
+          subtitle={`${totalLinks} totalt`}
+        />
+        <CvStat
+          label="Sist sett"
+          value={lastViewedAt ? formatRelative(lastViewedAt) : "—"}
+        />
+      </div>
+
+      {topLinks.length > 0 && (
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-3">
+            Mest sette lenker
+          </div>
+          <div className="space-y-1">
+            {topLinks.map((l) => (
+              <div
+                key={l.id}
+                className="flex items-center gap-3 py-2.5 border-b border-black/5 dark:border-white/5 last:border-0 text-[13px]"
+              >
+                <span className="flex-1 font-medium truncate">{l.label}</span>
+                {l.lastViewedAt && (
+                  <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45 shrink-0">
+                    {formatRelative(l.lastViewedAt)}
+                  </span>
+                )}
+                <span className="text-[18px] tracking-tight font-medium tabular-nums w-12 text-right">
+                  {l.views}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CvStat({
+  label,
+  value,
+  subtitle,
+}: {
+  label: string;
+  value: number | string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-panel/50 p-4 border border-black/5 dark:border-white/5">
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/50 dark:text-[#f0ece6]/50 mb-2">
+        {label}
+      </div>
+      <div className="text-[24px] md:text-[28px] leading-none tracking-[-0.03em] font-medium">
+        {value}
+      </div>
+      {subtitle && (
+        <div className="text-[10px] text-[#14110e]/40 dark:text-[#f0ece6]/40 mt-1.5">
+          {subtitle}
+        </div>
+      )}
     </div>
   );
 }

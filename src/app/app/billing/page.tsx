@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Card } from "@/components/ui/Card";
-import { getSession } from "@/lib/auth";
+import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PricingCards } from "@/components/pricing/PricingCards";
 import { PricingCardButton } from "@/components/pricing/PricingCardButton";
@@ -24,11 +24,11 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default async function BillingPage() {
-  const session = await getSession();
-  if (!session) redirect("/logg-inn?redirect=/app/billing");
+  const userId = await getSessionUserId();
+  if (!userId) redirect("/logg-inn?redirect=/app/billing");
 
   const sub = await prisma.subscription.findUnique({
-    where: { userId: session.userId },
+    where: { userId },
   });
 
   const active =
