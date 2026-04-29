@@ -7,11 +7,13 @@ import { getGoogleFontsUrl } from "@/lib/design-tokens";
 import type { ResumeData } from "@/store/useResumeStore";
 
 /**
- * /cv/print?token=xxx
+ * /cv/print
  *
- * A bare-bones page that fetches resume data from the server token store
- * and renders just the CV template — used by Puppeteer to generate PDFs.
- * No sidebar, no editor, no auth required.
+ * Bare-bones page rendered by Puppeteer for PDF generation.
+ * Reads resume data from window.__PDF_DATA__ (injected by the renderer
+ * via evaluateOnNewDocument) so we don't need a cross-process token store.
+ * Falls back to /api/pdf/data?token=xxx for backwards compatibility with
+ * any in-flight legacy callers.
  */
 export default function PrintPage() {
   return (
@@ -28,8 +30,13 @@ function PrintContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const injected = (window as unknown as { __PDF_DATA__?: ResumeData }).__PDF_DATA__;
+    if (injected) {
+      setData(injected);
+      return;
+    }
     if (!token) {
-      setError("Mangler token");
+      setError("Mangler data");
       return;
     }
     fetch(`/api/pdf/data?token=${token}`)
