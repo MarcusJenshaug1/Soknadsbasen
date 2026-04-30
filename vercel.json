@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/jobs-sync",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/linkedin-jobs",
+      "schedule": "0 8 * * 1-5"
     }
   ]
 }
