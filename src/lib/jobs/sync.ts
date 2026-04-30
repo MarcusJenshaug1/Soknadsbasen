@@ -309,13 +309,10 @@ async function upsertJob(
   const occupationList = serializeCategories(detail.occupationCategories);
 
   const description = cleanDescription(detail.description ?? "");
-  const publishedAt = detail.published
-    ? new Date(detail.published)
-    : new Date(item._feed_entry.sistEndret);
-  const expiresRaw = detail.expires ?? detail.applicationDue;
-  const expiresAt = expiresRaw ? new Date(expiresRaw) : null;
-  const applicationDueAt = detail.applicationDue ? new Date(detail.applicationDue) : null;
-  const sourceUpdatedAt = detail.updated ? new Date(detail.updated) : null;
+  const publishedAt = parseDate(detail.published) ?? parseDate(item._feed_entry.sistEndret) ?? new Date();
+  const expiresAt = parseDate(detail.expires) ?? parseDate(detail.applicationDue);
+  const applicationDueAt = parseDate(detail.applicationDue);
+  const sourceUpdatedAt = parseDate(detail.updated);
   const isActive = isDetailActive(detail);
 
   const engagementType = detail.engagementtype?.trim() || null;
@@ -443,4 +440,14 @@ async function upsertJob(
 
 function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * NAV-felter som applicationDue kan inneholde fritekst som "Snarest" eller
+ * relative datoer som ikke parser. Returnerer null heller enn å kaste Invalid Date.
+ */
+function parseDate(input: string | null | undefined): Date | null {
+  if (!input) return null;
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
