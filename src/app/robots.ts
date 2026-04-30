@@ -31,6 +31,20 @@ const ALLOWED_BOTS = [
   "Applebot",
   "Applebot-Extended",
   "CCBot",
+  // Social-link previews (Messenger/FB, LinkedIn, X/Twitter, Slack, iMessage,
+  // WhatsApp, Telegram). Eksplisitt allowlist hjelper noen scrapers som
+  // tolker fravær av matchende regel som disallow.
+  "facebookexternalhit",
+  "Facebot",
+  "LinkedInBot",
+  "Twitterbot",
+  "Slackbot",
+  "Slackbot-LinkExpanding",
+  "WhatsApp",
+  "TelegramBot",
+  "Discordbot",
+  "SkypeUriPreview",
+  "Pinterestbot",
 ];
 
 export default function robots(): MetadataRoute.Robots {
