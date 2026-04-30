@@ -806,6 +806,9 @@ model Job {
   @@index([employerSlug])
   @@index([region, category])
   @@index([isActive, publishedAt])
+  @@index([isActive, region])
+  @@index([isActive, category])
+  @@index([isActive, employerSlug])
   @@index([externalId])
 }
 

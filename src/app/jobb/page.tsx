@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Briefcase, Building2, Calendar, MapPin, Users } from "lucide-react";
-import { Logo } from "@/components/ui/Logo";
 import { SectionLabel } from "@/components/ui/Pill";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
@@ -10,12 +9,10 @@ import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { displayPlace, isValidFacet } from "@/lib/jobs/format";
-import { HeaderCTA } from "../LandingCTAs";
 import { JobsFilterBar } from "./JobsFilterBar";
 import { SaveButton } from "./SaveButton";
 
 export const revalidate = 1800;
-export const dynamic = "force-dynamic";
 
 export const metadata = buildMetadata({
   path: "/jobb",
@@ -65,7 +62,10 @@ export default async function JobsHubPage({
       : {}),
   };
 
-  const session = await getSession();
+  // Start session i parallell med jobs-spørringene istedenfor å vente på
+  // den først. getSession() = 1 Supabase HTTP + 1 Prisma user-lookup, så
+  // vi sparer ~50-150 ms per render ved å overlappe med findMany/groupBy.
+  const sessionPromise = getSession();
 
   const [jobs, total, regionsRaw, categoriesRaw] = await Promise.all([
     prisma.job.findMany({
@@ -106,6 +106,8 @@ export default async function JobsHubPage({
     }),
   ]);
 
+  const session = await sessionPromise;
+
   const regions = regionsRaw
     .map((r) => r.region)
     .filter(isValidFacet);
@@ -137,32 +139,8 @@ export default async function JobsHubPage({
   const isLoggedIn = Boolean(session);
 
   return (
-    <div className="min-h-dvh bg-[#faf8f5] text-[#14110e]">
+    <>
       <JsonLdScript data={breadcrumbJsonLd(breadcrumbs)} />
-
-      <header className="max-w-[1200px] mx-auto px-5 md:px-10 pt-6 md:pt-8 pb-4 flex items-center justify-between">
-        <Logo href="/" />
-        <nav
-          aria-label="Hovedmeny"
-          className="hidden md:flex items-center gap-9 text-[13px] text-[#14110e]/70"
-        >
-          <Link href="/funksjoner" className="hover:text-[#14110e]">
-            Funksjoner
-          </Link>
-          <Link href="/priser" className="hover:text-[#14110e]">
-            Priser
-          </Link>
-          <Link href="/jobb" className="text-[#14110e]">
-            Stillinger
-          </Link>
-          <Link href="/guide" className="hover:text-[#14110e]">
-            Guide
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <HeaderCTA />
-        </div>
-      </header>
 
       <main className="max-w-[1100px] mx-auto px-5 md:px-10 pb-24">
         <div className="pt-10 mb-10">
@@ -233,34 +211,7 @@ export default async function JobsHubPage({
           />
         )}
       </main>
-
-      <footer className="border-t border-black/10 mt-12">
-        <div className="max-w-[1200px] mx-auto px-5 md:px-10 py-8 flex flex-wrap items-center justify-between text-[12px] text-[#14110e]/55 gap-4">
-          <span>© 2026 Søknadsbasen</span>
-          <a
-            href="https://marcusjenshaug.no"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[#14110e]"
-          >
-            laget av Marcus Jenshaug
-          </a>
-          <span className="flex items-center gap-3">
-            <Link href="/om" className="hover:text-[#14110e]">
-              Om
-            </Link>
-            <span className="text-[#14110e]/25">·</span>
-            <Link href="/personvern-og-data" className="hover:text-[#14110e]">
-              Personvern
-            </Link>
-            <span className="text-[#14110e]/25">·</span>
-            <Link href="/vilkar" className="hover:text-[#14110e]">
-              Vilkår
-            </Link>
-          </span>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 
@@ -313,6 +264,7 @@ function JobCard({
   return (
     <div className="relative group">
       <Link
+        prefetch
         href={`/jobb/${slug}`}
         className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 hover:shadow-[0_2px_12px_rgba(20,17,14,0.04)] transition-all px-5 py-4 md:py-5 pr-16"
       >
@@ -411,6 +363,7 @@ function NoResults({ q }: { q: string }) {
       </p>
       {q && (
         <Link
+          prefetch
           href="/jobb"
           className="inline-flex px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] hover:bg-[#a94424] transition-colors"
         >
@@ -446,6 +399,7 @@ function Pagination({
       className="mt-10 flex items-center justify-between gap-3 text-[13px]"
     >
       <Link
+        prefetch
         href={buildUrl(current - 1)}
         aria-disabled={current === 1}
         className={
@@ -460,6 +414,7 @@ function Pagination({
         Side {current} av {total}
       </span>
       <Link
+        prefetch
         href={buildUrl(current + 1)}
         aria-disabled={current === total}
         className={

@@ -20,7 +20,6 @@ import {
   User2,
   Users,
 } from "lucide-react";
-import { Logo } from "@/components/ui/Logo";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { breadcrumbJsonLd, type JsonLd } from "@/lib/seo/jsonld";
@@ -28,8 +27,8 @@ import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getJobBySlug } from "@/lib/jobs/get-job";
 import { displayPlace } from "@/lib/jobs/format";
-import { HeaderCTA } from "../../LandingCTAs";
 import { JobActions } from "./JobActions";
 
 export const revalidate = 1800;
@@ -40,16 +39,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const job = await prisma.job.findUnique({
-    where: { slug },
-    select: {
-      title: true,
-      employerName: true,
-      location: true,
-      description: true,
-      isActive: true,
-    },
-  });
+  const job = await getJobBySlug(slug);
   if (!job) return buildMetadata({ path: `/jobb/${slug}`, noindex: true });
 
   const description = job.description.slice(0, 155).replace(/\s+/g, " ");
@@ -212,12 +202,55 @@ function jobPostingJsonLd(job: {
 
 export default async function JobDetailPage({ params }: Props) {
   const { slug } = await params;
-  const [job, session] = await Promise.all([
-    prisma.job.findUnique({ where: { slug } }),
-    getSession(),
-  ]);
+
+  // Cachet helper: generateMetadata og denne page-bodyen deler én rundtur.
+  const job = await getJobBySlug(slug);
   if (!job) notFound();
 
+  // Bygg OR-filter for relaterte før Promise.all så vi kan starte spørringen
+  // i parallell med session/saved.
+  const orFilters: Array<Record<string, string>> = [];
+  if (job.category) orFilters.push({ category: job.category });
+  if (job.employerSlug) orFilters.push({ employerSlug: job.employerSlug });
+  if (job.region) orFilters.push({ region: job.region });
+
+  const [session, candidates] = await Promise.all([
+    getSession(),
+    orFilters.length === 0
+      ? Promise.resolve(
+          [] as Array<{
+            slug: string;
+            title: string;
+            employerName: string;
+            location: string | null;
+            category: string | null;
+            employerSlug: string;
+            region: string | null;
+            publishedAt: Date;
+          }>,
+        )
+      : prisma.job.findMany({
+          where: {
+            isActive: true,
+            slug: { not: job.slug },
+            OR: orFilters,
+          },
+          select: {
+            slug: true,
+            title: true,
+            employerName: true,
+            location: true,
+            category: true,
+            employerSlug: true,
+            region: true,
+            publishedAt: true,
+          },
+          orderBy: { publishedAt: "desc" },
+          take: 12,
+        }),
+  ]);
+
+  // Saved-state krever userId og kan ikke parallelliseres med session selv.
   const savedApplication = session
     ? await prisma.jobApplication.findFirst({
         where: {
@@ -230,6 +263,26 @@ export default async function JobDetailPage({ params }: Props) {
         select: { id: true },
       })
     : null;
+
+  // Rangér relaterte: kategori-match veier mest, deretter arbeidsgiver, så region.
+  const related = candidates
+    .map((r) => ({
+      slug: r.slug,
+      title: r.title,
+      employerName: r.employerName,
+      location: r.location,
+      score:
+        (r.category === job.category ? 4 : 0) +
+        (r.employerSlug === job.employerSlug ? 2 : 0) +
+        (r.region === job.region ? 1 : 0),
+      publishedAt: r.publishedAt,
+    }))
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.publishedAt.getTime() - a.publishedAt.getTime(),
+    )
+    .slice(0, 4);
 
   const breadcrumbs = [
     { name: "Søknadsbasen", path: "/" },
@@ -289,62 +342,9 @@ export default async function JobDetailPage({ params }: Props) {
   }
   const tags = Array.from(tagSet);
 
-  // Related: prøv kategori → arbeidsgiver → region. Faller tilbake slik at
-  // vi alltid har 4 relaterte selv om kategori-dataen mangler.
-  const relatedWhereChain: Array<Record<string, unknown>> = [];
-  if (job.category) relatedWhereChain.push({ category: job.category });
-  if (job.employerSlug) relatedWhereChain.push({ employerSlug: job.employerSlug });
-  if (job.region) relatedWhereChain.push({ region: job.region });
-
-  let related: Array<{
-    slug: string;
-    title: string;
-    employerName: string;
-    location: string | null;
-  }> = [];
-  for (const filter of relatedWhereChain) {
-    if (related.length >= 4) break;
-    const existingSlugs = new Set(related.map((r) => r.slug));
-    const more = await prisma.job.findMany({
-      where: {
-        isActive: true,
-        ...filter,
-        slug: { not: job.slug, notIn: Array.from(existingSlugs) },
-      },
-      select: { slug: true, title: true, employerName: true, location: true },
-      orderBy: { publishedAt: "desc" },
-      take: 4 - related.length,
-    });
-    related = [...related, ...more];
-  }
-
   return (
-    <div className="min-h-dvh bg-[#faf8f5] text-[#14110e]">
+    <>
       <JsonLdScript data={jsonLd} />
-
-      <header className="max-w-[1200px] mx-auto px-5 md:px-10 pt-6 md:pt-8 pb-4 flex items-center justify-between">
-        <Logo href="/" />
-        <nav
-          aria-label="Hovedmeny"
-          className="hidden md:flex items-center gap-9 text-[13px] text-[#14110e]/70"
-        >
-          <Link href="/funksjoner" className="hover:text-[#14110e]">
-            Funksjoner
-          </Link>
-          <Link href="/priser" className="hover:text-[#14110e]">
-            Priser
-          </Link>
-          <Link href="/jobb" className="text-[#14110e]">
-            Stillinger
-          </Link>
-          <Link href="/guide" className="hover:text-[#14110e]">
-            Guide
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <HeaderCTA />
-        </div>
-      </header>
 
       <main className="max-w-[820px] mx-auto px-5 md:px-10 pb-24">
         <div className="pt-10 mb-8">
@@ -544,6 +544,7 @@ export default async function JobDetailPage({ params }: Props) {
               {related.map((r) => (
                 <li key={r.slug}>
                   <Link
+                    prefetch
                     href={`/jobb/${r.slug}`}
                     className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 transition-colors px-5 py-4"
                   >
@@ -561,34 +562,7 @@ export default async function JobDetailPage({ params }: Props) {
           </section>
         )}
       </main>
-
-      <footer className="border-t border-black/10 mt-12">
-        <div className="max-w-[1200px] mx-auto px-5 md:px-10 py-8 flex flex-wrap items-center justify-between text-[12px] text-[#14110e]/55 gap-4">
-          <span>© 2026 Søknadsbasen</span>
-          <a
-            href="https://marcusjenshaug.no"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[#14110e]"
-          >
-            laget av Marcus Jenshaug
-          </a>
-          <span className="flex items-center gap-3">
-            <Link href="/om" className="hover:text-[#14110e]">
-              Om
-            </Link>
-            <span className="text-[#14110e]/25">·</span>
-            <Link href="/personvern-og-data" className="hover:text-[#14110e]">
-              Personvern
-            </Link>
-            <span className="text-[#14110e]/25">·</span>
-            <Link href="/vilkar" className="hover:text-[#14110e]">
-              Vilkår
-            </Link>
-          </span>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 
