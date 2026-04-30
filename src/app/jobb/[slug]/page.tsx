@@ -467,7 +467,7 @@ export default async function JobDetailPage({ params }: Props) {
           {job.description.trim().length > 0 ? (
             <section
               aria-label="Stillingsbeskrivelse"
-              className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85 prose-headings:text-ink prose-strong:text-ink prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-li:my-1"
+              className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85 prose-p:my-4 prose-p:leading-[1.7] prose-headings:text-ink prose-headings:font-semibold prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-[18px] md:prose-h3:text-[20px] prose-strong:text-ink prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-ul:my-4 prose-li:my-1.5"
               dangerouslySetInnerHTML={{ __html: renderDescription(job.description) }}
             />
           ) : (
@@ -602,10 +602,17 @@ const DATE_FORMAT = new Intl.DateTimeFormat("nb-NO", {
  * NAV leverer description som HTML (sanitized i sync). Eldre rader fra før
  * sanitizer-fixen ligger lagret som plain text med \n\n-paragrafer. Detect
  * HTML og rendre rett gjennom, ellers wrap plain text i <p>-tags.
+ *
+ * Konvensjon i NAV-annonser: section-headers er <p><strong>Tittel</strong></p>
+ * (ikke <h3>). Vi promoter mønsteret til <h3> så prose-styling gir riktig
+ * vekt og spacing rundt det.
  */
 function renderDescription(input: string): string {
   if (/<(p|h[1-6]|ul|ol|li|strong|em|br|a)\b/i.test(input)) {
-    return input;
+    return input.replace(
+      /<p>\s*<strong>([^<>]{1,80})<\/strong>\s*<\/p>/g,
+      "<h3>$1</h3>",
+    );
   }
   const escaped = input
     .replace(/&/g, "&amp;")
