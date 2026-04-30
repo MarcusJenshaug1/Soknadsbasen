@@ -28,6 +28,7 @@
     "@stripe/stripe-js": "^9.3.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
