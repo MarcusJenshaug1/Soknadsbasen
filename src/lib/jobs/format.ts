@@ -40,6 +40,86 @@ export function formatCategory(value: string | null | undefined): string {
 }
 
 /**
+ * Norske telefonnumre fra NAV kommer i alle slags formater:
+ * "+47 90629198", "9062 9198", "+4790629198 90629198" (duplikat med
+ * mellomrom). Splitter input i kandidater, normaliserer hver til
+ * "+47 XXX XX XXX", og dedup'er. Utenlandske numre får +<landkode>.
+ *
+ * Returnerer tom array hvis ingen gyldige numre.
+ */
+export function formatPhones(input: string | null | undefined): string[] {
+  if (!input) return [];
+
+  // Splitt først på åpenbare separatorer (komma, semikolon, slash). Hver bit
+  // kan fortsatt inneholde flere numre limt sammen med mellomrom.
+  const segments = input.split(/\s*[,;/]\s*/);
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const segment of segments) {
+    for (const formatted of extractNumbersFromSegment(segment)) {
+      const key = formatted.replace(/\s+/g, "");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(formatted);
+    }
+  }
+  return out;
+}
+
+/**
+ * Tar et tekstsegment som kan inneholde 0, 1 eller flere numre limt sammen
+ * (med eller uten mellomrom). Trekker ut hver nummerkandidat og formaterer.
+ */
+function extractNumbersFromSegment(segment: string): string[] {
+  // Behold + og sifre, fjern alt annet (inkl. mellomrom). Slik håndterer vi
+  // "+47 90 62 91 98" som ett nummer.
+  const cleaned = segment.replace(/[^\d+]/g, "");
+  if (cleaned.length < 8) return [];
+
+  const out: string[] = [];
+  // Splitt på + (hver + starter et nytt nummer). Første del kan være uten +.
+  const parts = cleaned.split("+").filter(Boolean);
+
+  for (const part of parts) {
+    // Hver part er ren sifferstreng, som kan være ett eller flere numre
+    // sittende etter hverandre.
+    let digits = part;
+    while (digits.length >= 8) {
+      const chunk = takeOneNumber(digits);
+      if (!chunk) break;
+      out.push(formatSingleNumber(chunk));
+      digits = digits.slice(chunk.length);
+    }
+  }
+  return out;
+}
+
+/**
+ * Kutter ut ett enkelt nummer fra starten av en sifferstreng. Returnerer
+ * den delen som hører til nummeret. Norske mønstre prioriteres (8 sifre
+ * eller 47 + 8 sifre).
+ */
+function takeOneNumber(digits: string): string | null {
+  if (digits.length < 8) return null;
+  if (digits.startsWith("47") && digits.length >= 10) return digits.slice(0, 10);
+  // Standard norsk mobil/fastnett
+  if (digits.length >= 8) return digits.slice(0, 8);
+  return null;
+}
+
+function formatSingleNumber(digits: string): string {
+  if (digits.startsWith("47") && digits.length === 10) {
+    const local = digits.slice(2);
+    return `+47 ${local.slice(0, 3)} ${local.slice(3, 5)} ${local.slice(5)}`;
+  }
+  if (digits.length === 8) {
+    return `+47 ${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`;
+  }
+  return `+${digits}`;
+}
+
+/**
  * Filtrer ut åpenbart ugyldige region/kategori-verdier som har sneket seg
  * inn fra feeden ("?", tomme, single-char støy).
  */

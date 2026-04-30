@@ -29,7 +29,7 @@ import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getJobBySlug } from "@/lib/jobs/get-job";
-import { displayPlace, formatCategory } from "@/lib/jobs/format";
+import { displayPlace, formatCategory, formatPhones } from "@/lib/jobs/format";
 import { JobActions } from "./JobActions";
 
 export const revalidate = 1800;
@@ -875,15 +875,16 @@ function ContactPanel({
                 {email}
               </a>
             )}
-            {phone && (
+            {formatPhones(phone).map((p) => (
               <a
-                href={`tel:${phone.replace(/\s+/g, "")}`}
+                key={p}
+                href={`tel:${p.replace(/\s+/g, "")}`}
                 className="inline-flex items-center gap-1.5 text-[#14110e]/75 hover:text-[#D5592E]"
               >
                 <Phone className="size-3.5" aria-hidden />
-                {phone}
+                {p}
               </a>
-            )}
+            ))}
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { getSessionFromRequest } from "@/lib/auth-request";
 import { prisma } from "@/lib/prisma";
 import { createDefaultSession } from "@/lib/session-context";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
+import { formatPhones } from "@/lib/jobs/format";
 
 type Params = Promise<{ slug: string }>;
 
@@ -55,6 +56,17 @@ export async function POST(req: Request, ctx: { params: Params }) {
       applicationDueAt: true,
       expiresAt: true,
       location: true,
+      region: true,
+      address: true,
+      contactName: true,
+      contactEmail: true,
+      contactPhone: true,
+      contactTitle: true,
+      engagementType: true,
+      extent: true,
+      sector: true,
+      remote: true,
+      positionCount: true,
     },
   });
   if (!job) {
@@ -70,6 +82,29 @@ export async function POST(req: Request, ctx: { params: Params }) {
   }
 
   const deadline = job.applicationDueAt ?? job.expiresAt ?? null;
+  const phones = formatPhones(job.contactPhone);
+  // contactPhone er én streng — hvis flere numre, slå sammen med " / "
+  const contactPhoneStr = phones.length > 0 ? phones.join(" / ") : null;
+
+  // Notes-blokk: sted, ansettelse, sektor — info som ellers blir borte
+  // siden JobApplication ikke har egne felter for det.
+  const noteLines: string[] = [];
+  const stedLine = [job.address, job.location, job.region]
+    .filter((v): v is string => Boolean(v && v.trim()))
+    .join(", ");
+  if (stedLine) noteLines.push(`Sted: ${stedLine}`);
+  if (job.remote) noteLines.push(`Hjemmekontor: ${job.remote}`);
+  const ansettelse = [job.engagementType, job.extent]
+    .filter((v): v is string => Boolean(v && v.trim()))
+    .join(" · ");
+  if (ansettelse) noteLines.push(`Ansettelse: ${ansettelse}`);
+  if (job.sector) noteLines.push(`Sektor: ${job.sector}`);
+  if (job.positionCount && job.positionCount > 1) {
+    noteLines.push(`Antall stillinger: ${job.positionCount}`);
+  }
+  if (job.contactTitle && job.contactName) {
+    noteLines.push(`Kontaktperson: ${job.contactName} (${job.contactTitle})`);
+  }
 
   const created = await prisma.jobApplication.create({
     data: {
@@ -82,7 +117,10 @@ export async function POST(req: Request, ctx: { params: Params }) {
       jobUrl,
       jobDescription: job.description?.slice(0, 50_000) || null,
       deadlineAt: deadline,
-      notes: job.location ? `Sted: ${job.location}` : null,
+      contactName: job.contactName,
+      contactEmail: job.contactEmail,
+      contactPhone: contactPhoneStr,
+      notes: noteLines.length > 0 ? noteLines.join("\n") : null,
       status: "draft",
     },
     select: { id: true, status: true },
