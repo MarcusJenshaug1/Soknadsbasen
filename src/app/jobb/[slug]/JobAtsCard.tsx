@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
 import { cn } from "@/lib/cn";
+import { CvTipsPanel } from "./CvTipsPanel";
 
 type Props = {
   slug: string;
@@ -33,6 +34,7 @@ export function JobAtsCard({ slug, navKeywords }: Props) {
 
   const [result, setResult] = useState<MatchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [tipsOpen, setTipsOpen] = useState(false);
 
   useEffect(() => {
     if (!hasResume) {
@@ -187,7 +189,42 @@ export function JobAtsCard({ slug, navKeywords }: Props) {
           )}
         </div>
       )}
+
+      <div className="mt-5 pt-4 border-t border-black/5 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-[11px] text-[#14110e]/55">
+          Vil du forbedre matchen mot denne stillingen?
+        </span>
+        <button
+          type="button"
+          onClick={() => setTipsOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-ink text-bg text-[12px] font-medium hover:bg-[#2a2520] transition-colors"
+        >
+          <SparkleIcon />
+          Få hjelp med CV
+        </button>
+      </div>
+
+      {tipsOpen && (
+        <CvTipsPanel slug={slug} onClose={() => setTipsOpen(false)} />
+      )}
     </div>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+    </svg>
   );
 }
 
