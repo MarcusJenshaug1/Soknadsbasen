@@ -3,6 +3,7 @@ import { Briefcase, Building2, Calendar, MapPin, Users } from "lucide-react";
 import { SectionLabel } from "@/components/ui/Pill";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
@@ -74,6 +75,7 @@ export default async function JobsHubPage({
         slug: true,
         title: true,
         employerName: true,
+        employerHomepage: true,
         location: true,
         region: true,
         category: true,
@@ -185,6 +187,7 @@ export default async function JobsHubPage({
                     slug={job.slug}
                     title={job.title}
                     employerName={job.employerName}
+                    employerHomepage={job.employerHomepage}
                     location={job.location}
                     category={job.category}
                     publishedAt={job.publishedAt}
@@ -219,6 +222,7 @@ function JobCard({
   slug,
   title,
   employerName,
+  employerHomepage,
   location,
   category,
   publishedAt,
@@ -234,6 +238,7 @@ function JobCard({
   slug: string;
   title: string;
   employerName: string;
+  employerHomepage: string | null;
   location: string | null;
   category: string | null;
   publishedAt: Date;
@@ -268,7 +273,8 @@ function JobCard({
         href={`/jobb/${slug}`}
         className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 hover:shadow-[0_2px_12px_rgba(20,17,14,0.04)] transition-all px-5 py-4 md:py-5 pr-16"
       >
-        <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex items-start gap-4 mb-3">
+          <CompanyLogo website={employerHomepage} name={employerName} size="md" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
               {isFresh && (

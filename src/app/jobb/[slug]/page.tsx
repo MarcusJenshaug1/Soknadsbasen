@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
+import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { breadcrumbJsonLd, type JsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
@@ -590,10 +591,22 @@ const DATE_FORMAT = new Intl.DateTimeFormat("nb-NO", {
  */
 function renderDescription(input: string): string {
   if (/<(p|h[1-6]|ul|ol|li|strong|em|br|a)\b/i.test(input)) {
-    return input.replace(
-      /<p>\s*<strong>([^<>]{1,80})<\/strong>\s*<\/p>/g,
-      "<h3>$1</h3>",
+    let out = input
+      // Promoter <p><strong>Tittel</strong></p> til <h3> for riktig spacing
+      .replace(/<p>\s*<strong>([^<>]{1,80})<\/strong>\s*<\/p>/g, "<h3>$1</h3>")
+      // Fjern tomme paragrafer brukt som luft mellom seksjoner
+      .replace(/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, "");
+    // Wrap orphan tekst (NAVs trailing employer-blurb etter <br>) i <p>
+    out = out.replace(
+      /(<\/(?:p|ul|ol|li|h[2-6])>|<br\s*\/?>)\s*([^<\s][^<]*?)(?=<|$)/gi,
+      (match, before, text) => {
+        const trimmed = text.trim();
+        if (!trimmed) return match;
+        const isBr = /^<br/i.test(before);
+        return `${isBr ? "" : before}<p>${trimmed}</p>`;
+      },
     );
+    return out;
   }
   const escaped = input
     .replace(/&/g, "&amp;")
@@ -820,9 +833,7 @@ function EmployerPanel({
         Om arbeidsgiver
       </h2>
       <div className="flex items-start gap-4 mb-4">
-        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eee9df]">
-          <Building2 className="size-6 text-[#14110e]/65" aria-hidden />
-        </span>
+        <CompanyLogo website={homepage} name={name} size="lg" />
         <div className="min-w-0">
           <h3 className="text-[18px] md:text-[20px] font-medium tracking-tight mb-1">
             {name}
