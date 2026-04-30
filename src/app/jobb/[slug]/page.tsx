@@ -31,6 +31,7 @@ import { getSession } from "@/lib/auth";
 import { getJobBySlug } from "@/lib/jobs/get-job";
 import { displayPlace, formatCategory, formatPhones } from "@/lib/jobs/format";
 import { JobActions } from "./JobActions";
+import { JobAtsCard } from "./JobAtsCard";
 
 export const revalidate = 1800;
 
@@ -435,6 +436,15 @@ export default async function JobDetailPage({ params }: Props) {
               applyUrl={job.applyUrl}
               employerName={job.employerName}
             />
+
+            {session && (
+              <div className="mt-6">
+                <JobAtsCard
+                  applicationId={savedApplication?.id ?? null}
+                  jobDescription={job.description}
+                />
+              </div>
+            )}
           </header>
 
           <FactsPanel
