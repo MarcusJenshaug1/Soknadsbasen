@@ -120,6 +120,37 @@ function formatSingleNumber(digits: string): string {
 }
 
 /**
+ * Trekker ut ATS-keywords fra en stilling. Bruker NAV's strukturerte
+ * klassifisering (categoryList + occupationList) i stedet for tekst-extract,
+ * som er kanonisk vokabular og mye mer relevant enn ord-bag-of-words fra
+ * annonseteksten.
+ */
+export function extractJobKeywords(job: {
+  category: string | null;
+  occupation: string | null;
+  categoryList: unknown;
+  occupationList: unknown;
+}): string[] {
+  const set = new Set<string>();
+  if (job.category) set.add(job.category);
+  if (job.occupation && job.occupation !== job.category) set.add(job.occupation);
+  for (const c of asNamedList(job.categoryList)) if (c) set.add(c);
+  for (const c of asNamedList(job.occupationList)) if (c) set.add(c);
+  return Array.from(set);
+}
+
+function asNamedList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((v) =>
+      typeof v === "object" && v !== null && "name" in v && typeof (v as { name?: unknown }).name === "string"
+        ? ((v as { name: string }).name)
+        : null,
+    )
+    .filter((s): s is string => Boolean(s));
+}
+
+/**
  * Filtrer ut åpenbart ugyldige region/kategori-verdier som har sneket seg
  * inn fra feeden ("?", tomme, single-char støy).
  */

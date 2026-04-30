@@ -9,7 +9,14 @@ import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { displayPlace, formatCategory, isValidFacet } from "@/lib/jobs/format";
+import {
+  displayPlace,
+  extractJobKeywords,
+  formatCategory,
+  isValidFacet,
+} from "@/lib/jobs/format";
+import { parseActiveResume } from "@/lib/resume-server";
+import { analyzeAtsWithKeywords } from "@/lib/ats";
 import { JobsFilterBar } from "./JobsFilterBar";
 import { SaveButton } from "./SaveButton";
 
@@ -32,7 +39,15 @@ type SearchParams = Promise<{
   region?: string;
   kategori?: string;
   side?: string;
+  sort?: string;
 }>;
+
+type SortMode = "recent" | "match";
+
+// Når sort=match henter vi inntil dette antall kandidater, scorer dem mot
+// brukerens CV, og paginerer top 20. Dekker realistisk de fleste filtrerte
+// søk uten å laste 11k jobber inn i minnet.
+const MATCH_CANDIDATE_LIMIT = 200;
 
 const PAGE_SIZE = 20;
 
@@ -46,6 +61,7 @@ export default async function JobsHubPage({
   const region = (params.region ?? "").trim();
   const kategori = (params.kategori ?? "").trim();
   const side = Math.max(1, Number(params.side) || 1);
+  const requestedSort: SortMode = params.sort === "match" ? "match" : "recent";
 
   const where = {
     isActive: true,
@@ -63,34 +79,59 @@ export default async function JobsHubPage({
       : {}),
   };
 
-  // Start session i parallell med jobs-spørringene istedenfor å vente på
-  // den først. getSession() = 1 Supabase HTTP + 1 Prisma user-lookup, så
-  // vi sparer ~50-150 ms per render ved å overlappe med findMany/groupBy.
-  const sessionPromise = getSession();
+  const session = await getSession();
 
-  const [jobs, total, regionsRaw, categoriesRaw] = await Promise.all([
-    prisma.job.findMany({
-      where,
-      select: {
-        slug: true,
-        title: true,
-        employerName: true,
-        employerHomepage: true,
-        location: true,
-        region: true,
-        category: true,
-        publishedAt: true,
-        expiresAt: true,
-        applicationDueAt: true,
-        positionCount: true,
-        engagementType: true,
-        extent: true,
-        sector: true,
-      },
-      orderBy: { publishedAt: "desc" },
-      take: PAGE_SIZE,
-      skip: (side - 1) * PAGE_SIZE,
-    }),
+  // sort=match krever logget-inn bruker med CV. Falle tilbake til "recent"
+  // for anonyme eller hvis CV mangler.
+  const useMatchSort = requestedSort === "match" && Boolean(session);
+
+  const userResume = useMatchSort && session
+    ? await prisma.userData
+        .findUnique({
+          where: { userId: session.userId },
+          select: { resumeData: true },
+        })
+        .then((d) => parseActiveResume(d?.resumeData))
+    : null;
+
+  const effectiveSort: SortMode =
+    useMatchSort && userResume ? "match" : "recent";
+
+  const jobSelect = {
+    slug: true,
+    title: true,
+    employerName: true,
+    employerHomepage: true,
+    location: true,
+    region: true,
+    category: true,
+    occupation: true,
+    categoryList: true,
+    occupationList: true,
+    publishedAt: true,
+    expiresAt: true,
+    applicationDueAt: true,
+    positionCount: true,
+    engagementType: true,
+    extent: true,
+    sector: true,
+  } as const;
+
+  const [recentJobs, total, regionsRaw, categoriesRaw] = await Promise.all([
+    effectiveSort === "match"
+      ? prisma.job.findMany({
+          where,
+          select: jobSelect,
+          orderBy: { publishedAt: "desc" },
+          take: MATCH_CANDIDATE_LIMIT,
+        })
+      : prisma.job.findMany({
+          where,
+          select: jobSelect,
+          orderBy: { publishedAt: "desc" },
+          take: PAGE_SIZE,
+          skip: (side - 1) * PAGE_SIZE,
+        }),
     prisma.job.count({ where }),
     prisma.job.groupBy({
       by: ["region"],
@@ -108,7 +149,21 @@ export default async function JobsHubPage({
     }),
   ]);
 
-  const session = await sessionPromise;
+  // Skår + paginer hvis match-sort
+  const jobs =
+    effectiveSort === "match" && userResume
+      ? recentJobs
+          .map((job) => {
+            const keywords = extractJobKeywords(job);
+            const score =
+              keywords.length > 0
+                ? analyzeAtsWithKeywords(userResume, keywords).score
+                : 0;
+            return { ...job, matchScore: score };
+          })
+          .sort((a, b) => b.matchScore - a.matchScore)
+          .slice((side - 1) * PAGE_SIZE, side * PAGE_SIZE)
+      : recentJobs.map((job) => ({ ...job, matchScore: null as number | null }));
 
   const regions = regionsRaw
     .map((r) => r.region)
@@ -117,7 +172,11 @@ export default async function JobsHubPage({
     .map((c) => c.category)
     .filter(isValidFacet);
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  // Match-sort kan bare paginere innen kandidat-poolen
+  const totalPages =
+    effectiveSort === "match"
+      ? Math.ceil(Math.min(total, MATCH_CANDIDATE_LIMIT) / PAGE_SIZE)
+      : Math.ceil(total / PAGE_SIZE);
 
   // Resolve which of the visible jobs are already saved by the user. Cheap
   // single query: filter on jobUrl matching any of the visible slugs.
@@ -171,6 +230,8 @@ export default async function JobsHubPage({
           kategori={kategori}
           regions={regions}
           categories={categories}
+          sort={effectiveSort}
+          isLoggedIn={isLoggedIn}
         />
 
         <section
@@ -197,6 +258,7 @@ export default async function JobsHubPage({
                     engagementType={job.engagementType}
                     extent={job.extent}
                     sector={job.sector}
+                    matchScore={job.matchScore}
                     isLoggedIn={isLoggedIn}
                     saved={savedSlugSet.has(job.slug)}
                   />
@@ -210,7 +272,12 @@ export default async function JobsHubPage({
           <Pagination
             current={side}
             total={totalPages}
-            params={{ q, region, kategori }}
+            params={{
+              q,
+              region,
+              kategori,
+              ...(effectiveSort === "match" ? { sort: "match" } : {}),
+            }}
           />
         )}
       </main>
@@ -232,6 +299,7 @@ function JobCard({
   engagementType,
   extent,
   sector,
+  matchScore,
   isLoggedIn,
   saved,
 }: {
@@ -248,6 +316,7 @@ function JobCard({
   engagementType: string | null;
   extent: string | null;
   sector: string | null;
+  matchScore: number | null;
   isLoggedIn: boolean;
   saved: boolean;
 }) {
@@ -299,7 +368,47 @@ function JobCard({
               {employerName}
             </div>
           </div>
-          {category && (
+          {matchScore !== null && (
+            <span
+              className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
+              style={{
+                background:
+                  matchScore >= 80
+                    ? "rgba(22, 163, 74, 0.10)"
+                    : matchScore >= 60
+                      ? "rgba(213, 89, 46, 0.10)"
+                      : matchScore >= 40
+                        ? "rgba(245, 158, 11, 0.10)"
+                        : "rgba(148, 163, 184, 0.15)",
+                color:
+                  matchScore >= 80
+                    ? "#16a34a"
+                    : matchScore >= 60
+                      ? "#D5592E"
+                      : matchScore >= 40
+                        ? "#b45309"
+                        : "#475569",
+              }}
+              title={`${matchScore}% match mot CV-en din`}
+            >
+              <span
+                className="size-1.5 rounded-full"
+                style={{
+                  background:
+                    matchScore >= 80
+                      ? "#16a34a"
+                      : matchScore >= 60
+                        ? "#D5592E"
+                        : matchScore >= 40
+                          ? "#f59e0b"
+                          : "#94a3b8",
+                }}
+                aria-hidden
+              />
+              {matchScore}% match
+            </span>
+          )}
+          {matchScore === null && category && (
             <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
               {formatCategory(category)}
             </span>

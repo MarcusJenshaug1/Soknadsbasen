@@ -10,21 +10,38 @@ type Props = {
   kategori: string;
   regions: string[];
   categories: string[];
+  sort: "recent" | "match";
+  isLoggedIn: boolean;
 };
 
-export function JobsFilterBar({ q, region, kategori, regions, categories }: Props) {
+export function JobsFilterBar({
+  q,
+  region,
+  kategori,
+  regions,
+  categories,
+  sort,
+  isLoggedIn,
+}: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState(q);
 
-  function update(next: { q?: string; region?: string; kategori?: string }) {
+  function update(next: {
+    q?: string;
+    region?: string;
+    kategori?: string;
+    sort?: "recent" | "match";
+  }) {
     const sp = new URLSearchParams();
     const qVal = next.q !== undefined ? next.q : search;
     const rVal = next.region !== undefined ? next.region : region;
     const kVal = next.kategori !== undefined ? next.kategori : kategori;
+    const sVal = next.sort !== undefined ? next.sort : sort;
     if (qVal) sp.set("q", qVal);
     if (rVal) sp.set("region", rVal);
     if (kVal) sp.set("kategori", kVal);
+    if (sVal === "match") sp.set("sort", "match");
     const qs = sp.toString();
     startTransition(() => {
       router.push(`/jobb${qs ? `?${qs}` : ""}`);
@@ -110,8 +127,8 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
           Søk
         </button>
       </form>
-      {(q || region || kategori) && (
-        <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
           {q && (
             <FilterChip
               label={`"${q}"`}
@@ -134,8 +151,48 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
             />
           )}
         </div>
-      )}
+        {isLoggedIn && (
+          <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-white border border-black/10">
+            <SortPill
+              active={sort === "recent"}
+              onClick={() => update({ sort: "recent" })}
+            >
+              Nyeste
+            </SortPill>
+            <SortPill
+              active={sort === "match"}
+              onClick={() => update({ sort: "match" })}
+            >
+              Best match
+            </SortPill>
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function SortPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "px-3 py-1 rounded-full text-[12px] font-medium bg-[#14110e] text-[#faf8f5]"
+          : "px-3 py-1 rounded-full text-[12px] text-[#14110e]/65 hover:text-[#14110e]"
+      }
+    >
+      {children}
+    </button>
   );
 }
 
