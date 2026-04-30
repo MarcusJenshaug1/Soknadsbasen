@@ -437,11 +437,11 @@ export default async function JobDetailPage({ params }: Props) {
               employerName={job.employerName}
             />
 
-            {session && (
+            {session && tags.length > 0 && (
               <div className="mt-6">
                 <JobAtsCard
-                  applicationId={savedApplication?.id ?? null}
                   jobDescription={job.description}
+                  keywords={tags}
                 />
               </div>
             )}

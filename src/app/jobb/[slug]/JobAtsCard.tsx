@@ -3,15 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
-import { analyzeAtsMatch, analyzeAtsWithKeywords, type AtsAnalysis } from "@/lib/ats";
+import { analyzeAtsWithKeywords, type AtsAnalysis } from "@/lib/ats";
 import { cn } from "@/lib/cn";
 
 type Props = {
-  applicationId: string | null;
   jobDescription: string;
+  /** NAV-klassifisering: ESCO/JANZZ/STYRK navn fra categoryList/occupationList. */
+  keywords: string[];
 };
 
-export function JobAtsCard({ applicationId, jobDescription }: Props) {
+export function JobAtsCard({ jobDescription, keywords }: Props) {
   const data = useResumeStore((s) => s.data);
   const activeResumeId = useResumeStore((s) => s.activeResumeId);
 
@@ -25,44 +26,16 @@ export function JobAtsCard({ applicationId, jobDescription }: Props) {
   }, [activeResumeId, data]);
 
   const [result, setResult] = useState<AtsAnalysis | null>(null);
-  const [aiKeywords, setAiKeywords] = useState<string[] | null>(null);
 
-  // Lokal score umiddelbart ved mount (raskt, ingen nettverk)
   useEffect(() => {
-    if (!hasResume || !jobDescription) {
+    if (!hasResume || keywords.length === 0) {
       setResult(null);
       return;
     }
-    setResult(analyzeAtsMatch(data, jobDescription));
-  }, [hasResume, jobDescription, data]);
-
-  // Hvis vi har applicationId, hent AI-keywords i bakgrunnen og oppgrader
-  useEffect(() => {
-    if (!hasResume || !applicationId) return;
-    let cancelled = false;
-    fetch("/api/ai/ats-keywords", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ applicationId }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((payload: { keywords?: string[] } | null) => {
-        if (cancelled || !payload?.keywords?.length) return;
-        setAiKeywords(payload.keywords);
-        setResult(
-          analyzeAtsWithKeywords(data, payload.keywords, {
-            jobAd: jobDescription,
-          }),
-        );
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-    // applicationId er det som skal trigge re-fetch; data brukes inni handler
-    // og må ikke regenerere fetch ved hver tastetrykk i resume.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasResume, applicationId]);
+    setResult(
+      analyzeAtsWithKeywords(data, keywords, { jobAd: jobDescription }),
+    );
+  }, [hasResume, keywords, data, jobDescription]);
 
   if (!hasResume) {
     return (
@@ -85,6 +58,9 @@ export function JobAtsCard({ applicationId, jobDescription }: Props) {
   }
 
   if (!result) {
+    // Ingen NAV-keywords (gammel pre-backfill-rad). Skjul kortet, alternativet
+    // ville være å vise loading evig.
+    if (keywords.length === 0) return null;
     return (
       <div className="rounded-2xl border border-black/10 bg-white p-5 mb-6 flex items-center gap-3">
         <span className="inline-flex gap-[3px]">
@@ -118,7 +94,7 @@ export function JobAtsCard({ applicationId, jobDescription }: Props) {
               {tone.label}
             </span>
             <span className="text-[10px] uppercase tracking-[0.18em] text-[#14110e]/45">
-              {aiKeywords ? "AI-nøkkelord" : "Lokal match"}
+              NAV-klassifisering
             </span>
           </div>
           <h3 className="text-[15px] font-medium tracking-tight mb-1">
