@@ -54,7 +54,19 @@ export interface AtsAnalysis {
 }
 
 export function analyzeAtsMatch(data: ResumeData, jobAd: string): AtsAnalysis {
-  const normalizedJobAd = normalize(jobAd);
+  const keywords = extractKeywords(normalize(jobAd));
+  return analyzeAtsWithKeywords(data, keywords, {
+    jobAd,
+    suggestedRole: extractSuggestedRole(jobAd),
+  });
+}
+
+export function analyzeAtsWithKeywords(
+  data: ResumeData,
+  keywords: string[],
+  opts: { jobAd?: string; suggestedRole?: string | null } = {},
+): AtsAnalysis {
+  const normalizedJobAd = opts.jobAd ? normalize(opts.jobAd) : "";
   const resumeText = normalize([
     data.role,
     data.summary,
@@ -65,38 +77,59 @@ export function analyzeAtsMatch(data: ResumeData, jobAd: string): AtsAnalysis {
     data.certifications.map((item) => [item.name, item.issuer].join(" ")).join(" "),
   ].join(" "));
 
-  const keywords = extractKeywords(normalizedJobAd);
-  const matchedKeywords = keywords.filter((keyword) => resumeText.includes(keyword));
-  const missingKeywords = keywords.filter((keyword) => !resumeText.includes(keyword));
+  const normalizedKeywords = keywords
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
+  const matchedKeywords = normalizedKeywords.filter((keyword) =>
+    resumeText.includes(normalize(keyword)),
+  );
+  const missingKeywords = normalizedKeywords.filter(
+    (keyword) => !resumeText.includes(normalize(keyword)),
+  );
 
-  const keywordCoverage = keywords.length > 0 ? matchedKeywords.length / keywords.length : 0;
-  const roleBonus = data.role && normalizedJobAd.includes(normalize(data.role)) ? 0.12 : 0;
+  const keywordCoverage =
+    normalizedKeywords.length > 0
+      ? matchedKeywords.length / normalizedKeywords.length
+      : 0;
+  const roleBonus =
+    data.role && normalizedJobAd && normalizedJobAd.includes(normalize(data.role))
+      ? 0.12
+      : 0;
   const summaryBonus = data.summary.trim().length > 120 ? 0.08 : 0;
-  const completenessBonus = [data.summary, data.role, data.experience.length, data.skills.length]
-    .filter(Boolean)
-    .length / 4 * 0.12;
+  const completenessBonus =
+    ([data.summary, data.role, data.experience.length, data.skills.length].filter(Boolean)
+      .length /
+      4) *
+    0.12;
 
-  const rawScore = Math.min(1, keywordCoverage * 0.68 + roleBonus + summaryBonus + completenessBonus);
+  const rawScore = Math.min(
+    1,
+    keywordCoverage * 0.68 + roleBonus + summaryBonus + completenessBonus,
+  );
   const score = Math.round(rawScore * 100);
 
-  const suggestedRole = extractSuggestedRole(jobAd);
   const summary: string[] = [];
-
   if (matchedKeywords.length > 0) {
-    summary.push(`CV-en matcher ${matchedKeywords.length} av ${keywords.length || 1} viktige nøkkelord fra annonsen.`);
+    summary.push(
+      `CV-en matcher ${matchedKeywords.length} av ${normalizedKeywords.length || 1} viktige nøkkelord fra annonsen.`,
+    );
   }
   if (missingKeywords.length > 0) {
-    summary.push(`Vurder å få inn ${missingKeywords.slice(0, 4).join(", ")} i rolle, profil eller erfaring hvis det er relevant.`);
+    summary.push(
+      `Vurder å få inn ${missingKeywords.slice(0, 4).join(", ")} i rolle, profil eller erfaring hvis det er relevant.`,
+    );
   }
   if (!data.templateId.startsWith("ats-")) {
-    summary.push("For denne jobben kan en ATS-mal gjøre CV-en enklere å lese for rekrutteringssystemer.");
+    summary.push(
+      "For denne jobben kan en ATS-mal gjøre CV-en enklere å lese for rekrutteringssystemer.",
+    );
   }
 
   return {
     score,
     matchedKeywords,
     missingKeywords,
-    suggestedRole,
+    suggestedRole: opts.suggestedRole ?? null,
     recommendedTemplateId: data.templateId.startsWith("ats-") ? null : "ats-clean",
     summary,
   };

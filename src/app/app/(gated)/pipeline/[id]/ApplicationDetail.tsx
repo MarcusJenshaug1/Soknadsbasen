@@ -10,6 +10,7 @@ import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { PIPELINE_COLUMNS } from "@/lib/pipeline";
 import { cn } from "@/lib/cn";
 import { AiTools } from "./AiTools";
+import { AtsCheck } from "./AtsCheck";
 import { InterviewStages, type Stage } from "./InterviewStages";
 
 type Task = {
@@ -468,6 +469,15 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               />
             </div>
           </Card>
+
+          <AtsCheck
+            applicationId={app.id}
+            jobUrl={app.jobUrl}
+            jobDescription={app.jobDescription}
+            onJobDescriptionUpdate={(next) =>
+              setApp((a) => ({ ...a, jobDescription: next }))
+            }
+          />
 
           <Card>
             <SectionLabel className="mb-4">Kontakt</SectionLabel>
