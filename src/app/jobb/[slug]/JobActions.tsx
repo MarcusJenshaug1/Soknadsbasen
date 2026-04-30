@@ -121,9 +121,10 @@ export function JobActions({
             href={applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-black/15 text-[14px] hover:border-[#14110e]/30 hover:bg-black/5 transition-colors"
+            title={`Søk hos ${employerName}`}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-black/15 text-[14px] whitespace-nowrap hover:border-[#14110e]/30 hover:bg-black/5 transition-colors"
           >
-            Søk via {employerName}
+            Søk hos arbeidsgiver
             <ExternalLink className="size-4" aria-hidden />
           </a>
         )}

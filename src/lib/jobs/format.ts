@@ -26,6 +26,20 @@ export function displayPlace(value: string | null | undefined): string {
 }
 
 /**
+ * NAV-kategorier kommer både med og uten stor forbokstav ("sykepleier" vs
+ * "Butikkmedarbeider"). Sikrer konsistent visning ved å sette stor
+ * forbokstav på første tegn og la resten være.
+ */
+export function formatCategory(value: string | null | undefined): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return (
+    trimmed.charAt(0).toLocaleUpperCase("nb-NO") + trimmed.slice(1)
+  );
+}
+
+/**
  * Filtrer ut åpenbart ugyldige region/kategori-verdier som har sneket seg
  * inn fra feeden ("?", tomme, single-char støy).
  */

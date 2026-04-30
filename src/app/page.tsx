@@ -78,6 +78,14 @@ export default function Home() {
           <Link href="/priser" className="hover:text-[#14110e]">
             Priser
           </Link>
+          <Link
+            href="/jobb"
+            prefetch
+            className="inline-flex items-center gap-1.5 text-[#14110e] hover:text-[#D5592E] transition-colors"
+          >
+            <span className="size-1.5 rounded-full bg-[#D5592E]" aria-hidden />
+            Stillinger
+          </Link>
           <Link href="/guide" className="hover:text-[#14110e]">
             Guide
           </Link>
@@ -115,10 +123,11 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <HeroCTA />
             <Link
-              href="#produkt"
+              href="/jobb"
+              prefetch
               className="px-6 py-3.5 rounded-full text-[14px] text-[#14110e]/70 hover:text-[#14110e] hover:bg-black/5 transition-colors inline-flex items-center gap-1.5"
             >
-              Se demo <span className="text-[#D5592E]">→</span>
+              Se ledige stillinger <span className="text-[#D5592E]">→</span>
             </Link>
           </div>
         </section>

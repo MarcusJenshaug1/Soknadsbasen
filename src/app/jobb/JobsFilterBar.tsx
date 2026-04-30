@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { displayPlace } from "@/lib/jobs/format";
+import { displayPlace, formatCategory } from "@/lib/jobs/format";
 
 type Props = {
   q: string;
@@ -31,65 +31,84 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
     });
   }
 
+  const inputClass =
+    "w-full h-11 px-4 rounded-xl border border-black/10 bg-white text-[14px] outline-none focus:border-[#14110e]/40 focus:bg-white transition-colors";
+  const selectClass =
+    "w-full h-11 px-3.5 pr-9 rounded-xl border border-black/10 bg-white text-[13px] outline-none focus:border-[#14110e]/40 cursor-pointer appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:14px_14px] disabled:opacity-50 disabled:cursor-not-allowed";
+  const chevron = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2314110e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E")`;
+
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-4 md:p-5">
+    <div className="rounded-2xl border border-black/10 bg-[#eee9df]/40 p-3 md:p-4">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           update({ q: search });
         }}
-        className="flex flex-col md:flex-row gap-3 md:items-center"
+        className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 md:gap-2"
       >
-        <div className="flex-1">
+        <div className="relative">
           <label htmlFor="job-search" className="sr-only">
             Søk etter stilling eller arbeidsgiver
           </label>
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 size-[16px] text-[#14110e]/45 pointer-events-none"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
           <input
             id="job-search"
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Søk på tittel eller arbeidsgiver..."
-            className="w-full px-4 py-2.5 rounded-full border border-black/10 bg-[#faf8f5] text-[14px] outline-none focus:border-[#D5592E] focus:ring-2 focus:ring-[#D5592E]/20 transition-colors"
+            placeholder="Tittel eller arbeidsgiver"
+            className={`${inputClass} pl-10`}
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <select
-            value={region}
-            onChange={(e) => update({ region: e.target.value })}
-            aria-label="Region"
-            className="px-4 py-2.5 rounded-full border border-black/10 bg-[#faf8f5] text-[13px] outline-none focus:border-[#D5592E] cursor-pointer min-w-[140px]"
-          >
-            <option value="">Hele Norge</option>
-            {regions.map((r) => (
-              <option key={r} value={r}>
-                {displayPlace(r)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={kategori}
-            onChange={(e) => update({ kategori: e.target.value })}
-            aria-label="Kategori"
-            disabled={categories.length === 0}
-            className="px-4 py-2.5 rounded-full border border-black/10 bg-[#faf8f5] text-[13px] outline-none focus:border-[#D5592E] cursor-pointer min-w-[140px] disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <option value="">
-              {categories.length === 0 ? "Kategorier kommer" : "Alle kategorier"}
+        <select
+          value={region}
+          onChange={(e) => update({ region: e.target.value })}
+          aria-label="Region"
+          className={`${selectClass} md:min-w-[160px]`}
+          style={{ backgroundImage: chevron }}
+        >
+          <option value="">Hele Norge</option>
+          {regions.map((r) => (
+            <option key={r} value={r}>
+              {displayPlace(r)}
             </option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
-          >
-            Søk
-          </button>
-        </div>
+          ))}
+        </select>
+        <select
+          value={kategori}
+          onChange={(e) => update({ kategori: e.target.value })}
+          aria-label="Kategori"
+          disabled={categories.length === 0}
+          className={`${selectClass} md:min-w-[180px]`}
+          style={{ backgroundImage: chevron }}
+        >
+          <option value="">
+            {categories.length === 0 ? "Kategorier kommer" : "Alle kategorier"}
+          </option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {formatCategory(c)}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="h-11 px-6 rounded-xl bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium hover:bg-[#a94424] transition-colors"
+        >
+          Søk
+        </button>
       </form>
       {(q || region || kategori) && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -109,7 +128,10 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
             />
           )}
           {kategori && (
-            <FilterChip label={kategori} onClear={() => update({ kategori: "" })} />
+            <FilterChip
+              label={formatCategory(kategori)}
+              onClear={() => update({ kategori: "" })}
+            />
           )}
         </div>
       )}

@@ -9,7 +9,7 @@ import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { displayPlace, isValidFacet } from "@/lib/jobs/format";
+import { displayPlace, formatCategory, isValidFacet } from "@/lib/jobs/format";
 import { JobsFilterBar } from "./JobsFilterBar";
 import { SaveButton } from "./SaveButton";
 
@@ -301,7 +301,7 @@ function JobCard({
           </div>
           {category && (
             <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
-              {category}
+              {formatCategory(category)}
             </span>
           )}
         </div>

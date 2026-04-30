@@ -29,7 +29,7 @@ import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getJobBySlug } from "@/lib/jobs/get-job";
-import { displayPlace } from "@/lib/jobs/format";
+import { displayPlace, formatCategory } from "@/lib/jobs/format";
 import { JobActions } from "./JobActions";
 
 export const revalidate = 1800;
@@ -417,7 +417,7 @@ export default async function JobDetailPage({ params }: Props) {
                     key={tag}
                     className="inline-flex px-3 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70"
                   >
-                    {tag}
+                    {formatCategory(tag)}
                   </span>
                 ))}
               </div>
