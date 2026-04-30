@@ -44,9 +44,9 @@ type SearchParams = Promise<{
 
 type SortMode = "recent" | "match";
 
-// Sikkerhetstak — pull aldri mer enn dette i en match-sort. Aktive jobber
-// er ~2k i dag, dette dekker hele NAV-feeden inkl. fremtidig vekst.
-const MATCH_CANDIDATE_LIMIT = 5000;
+// Match-sort pull. Hver kandidat ~5KB med categoryList JSON, så 800 = ~4MB
+// payload. Gir 40 sider × 20 = nok for de fleste filtrerte søk.
+const MATCH_CANDIDATE_LIMIT = 800;
 
 const PAGE_SIZE = 20;
 
@@ -78,24 +78,15 @@ export default async function JobsHubPage({
       : {}),
   };
 
-  const session = await getSession();
+  // Start session-fetch i parallell med jobs-spørringene. Match-sort triggers
+  // en stør re query (kategori-JSON for opp til 800 jobber); recent-sort
+  // er minimal payload.
+  const sessionPromise = getSession();
+  const wantsMatchSort = requestedSort === "match";
 
-  // Henter resume for ALLE innloggede så match-score kan vises på alle
-  // synlige jobber, uansett sort. Match-sort krever resume; faller tilbake
-  // til "recent" hvis CV mangler.
-  const userResume = session
-    ? await prisma.userData
-        .findUnique({
-          where: { userId: session.userId },
-          select: { resumeData: true },
-        })
-        .then((d) => parseActiveResume(d?.resumeData))
-    : null;
-
-  const effectiveSort: SortMode =
-    requestedSort === "match" && userResume ? "match" : "recent";
-
-  const jobSelect = {
+  // For match-sort må vi ha resume og full categoryList per kandidat.
+  // Recent-sort dropper begge for raskere TTFB.
+  const baseSelect = {
     slug: true,
     title: true,
     employerName: true,
@@ -103,9 +94,6 @@ export default async function JobsHubPage({
     location: true,
     region: true,
     category: true,
-    occupation: true,
-    categoryList: true,
-    occupationList: true,
     publishedAt: true,
     expiresAt: true,
     applicationDueAt: true,
@@ -114,18 +102,24 @@ export default async function JobsHubPage({
     extent: true,
     sector: true,
   } as const;
+  const matchSelect = {
+    ...baseSelect,
+    occupation: true,
+    categoryList: true,
+    occupationList: true,
+  } as const;
 
-  const [recentJobs, total, regionsRaw, categoriesRaw] = await Promise.all([
-    effectiveSort === "match"
+  const [recentJobs, total, regionsRaw, categoriesRaw, session, userResumeData] = await Promise.all([
+    wantsMatchSort
       ? prisma.job.findMany({
           where,
-          select: jobSelect,
+          select: matchSelect,
           orderBy: { publishedAt: "desc" },
           take: MATCH_CANDIDATE_LIMIT,
         })
       : prisma.job.findMany({
           where,
-          select: jobSelect,
+          select: baseSelect,
           orderBy: { publishedAt: "desc" },
           take: PAGE_SIZE,
           skip: (side - 1) * PAGE_SIZE,
@@ -145,14 +139,34 @@ export default async function JobsHubPage({
       orderBy: { _count: { category: "desc" } },
       take: 20,
     }),
+    sessionPromise,
+    sessionPromise.then((s) =>
+      wantsMatchSort && s
+        ? prisma.userData.findUnique({
+            where: { userId: s.userId },
+            select: { resumeData: true },
+          })
+        : null,
+    ),
   ]);
 
-  // Skår alle viste jobber når bruker har resume — uansett sort. Match-sort
-  // sorterer + paginerer på score; recent-sort viser score som badge på
-  // siden vi allerede henter.
-  const scoreJob = (job: (typeof recentJobs)[number]) => {
+  const userResume = wantsMatchSort
+    ? parseActiveResume(userResumeData?.resumeData)
+    : null;
+
+  const effectiveSort: SortMode =
+    wantsMatchSort && userResume ? "match" : "recent";
+
+  // Skår jobber kun når match-sort er aktiv. Recent-sort dropper score for
+  // å holde anonyme/recent-cases lette.
+  const scoreJob = (job: { categoryList?: unknown; occupationList?: unknown; category: string | null; occupation?: string | null }) => {
     if (!userResume) return null;
-    const keywords = extractJobKeywords(job);
+    const keywords = extractJobKeywords({
+      category: job.category,
+      occupation: job.occupation ?? null,
+      categoryList: job.categoryList,
+      occupationList: job.occupationList,
+    });
     if (keywords.length === 0) return null;
     return analyzeAtsWithKeywords(userResume, keywords).score;
   };
@@ -163,7 +177,7 @@ export default async function JobsHubPage({
           .map((job) => ({ ...job, matchScore: scoreJob(job) }))
           .sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1))
           .slice((side - 1) * PAGE_SIZE, side * PAGE_SIZE)
-      : recentJobs.map((job) => ({ ...job, matchScore: scoreJob(job) }));
+      : recentJobs.map((job) => ({ ...job, matchScore: null as number | null }));
 
   const regions = regionsRaw
     .map((r) => r.region)
