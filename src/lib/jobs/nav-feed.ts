@@ -194,6 +194,19 @@ export async function fetchFeedPage(
   };
 }
 
+/**
+ * NAV pam-stilling-feed returnerer FeedEntryContent: { uuid, sistEndret, status, ad_content }
+ * der ad_content er FeedAd (full annonse) eller null for event-stubs.
+ * Vi flater ut ad_content til toppnivå så pick*-helperne kan lese feltene direkte.
+ * Returnerer null når ad_content mangler — caller skal hoppe over upsert.
+ */
+type FeedEntryContent = {
+  uuid: string;
+  sistEndret: string;
+  status: string;
+  ad_content: Omit<FeedEntryDetail, "uuid" | "sistEndret" | "status"> | null;
+};
+
 export async function fetchFeedEntry(
   itemUrl: string,
   token: string,
@@ -210,7 +223,14 @@ export async function fetchFeedEntry(
   if (!res.ok) {
     throw new Error(`feedentry ${itemUrl} -> ${res.status}`);
   }
-  return (await res.json()) as FeedEntryDetail;
+  const wrapper = (await res.json()) as FeedEntryContent;
+  if (!wrapper.ad_content) return null;
+  return {
+    uuid: wrapper.uuid,
+    sistEndret: wrapper.sistEndret,
+    status: wrapper.status,
+    ...wrapper.ad_content,
+  };
 }
 
 // ─── Mapping-hjelpere ───────────────────────────────────────
