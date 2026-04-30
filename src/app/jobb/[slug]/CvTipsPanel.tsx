@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { savePendingTips } from "@/lib/cv-pending-tips";
 
 type CvTips = {
   strengths?: string[];
@@ -25,9 +25,13 @@ const SECTION_LABEL: Record<string, string> = {
 
 export function CvTipsPanel({
   slug,
+  jobTitle,
+  employerName,
   onClose,
 }: {
   slug: string;
+  jobTitle: string;
+  employerName: string;
   onClose: () => void;
 }) {
   const [tips, setTips] = useState<CvTips | null>(null);
@@ -234,13 +238,17 @@ export function CvTipsPanel({
             <span className="text-[11px] text-[#14110e]/50">
               Tips er AI-genererte forslag, ikke kommandoer.
             </span>
-            <Link
-              href="/app/cv"
+            <button
+              type="button"
+              onClick={() => {
+                savePendingTips({ slug, jobTitle, employerName, tips });
+                window.location.href = "/app/cv";
+              }}
               className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[var(--accent-hover)] transition-colors"
             >
-              Åpne CV-bygger
+              Åpne CV-bygger med forslag
               <span aria-hidden>→</span>
-            </Link>
+            </button>
           </div>
         )}
       </div>

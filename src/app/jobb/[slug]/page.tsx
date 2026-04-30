@@ -439,7 +439,12 @@ export default async function JobDetailPage({ params }: Props) {
 
             {session && (
               <div className="mt-6">
-                <JobAtsCard slug={job.slug} navKeywords={tags} />
+                <JobAtsCard
+                  slug={job.slug}
+                  jobTitle={job.title}
+                  employerName={job.employerName}
+                  navKeywords={tags}
+                />
               </div>
             )}
           </header>

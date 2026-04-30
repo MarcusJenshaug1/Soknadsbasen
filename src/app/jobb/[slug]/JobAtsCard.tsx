@@ -8,6 +8,8 @@ import { CvTipsPanel } from "./CvTipsPanel";
 
 type Props = {
   slug: string;
+  jobTitle: string;
+  employerName: string;
   /** NAV-klassifisering, brukt som fallback hvis AI ikke gir resultat. */
   navKeywords: string[];
 };
@@ -19,7 +21,7 @@ type MatchResult = {
   source: "ai" | "nav";
 };
 
-export function JobAtsCard({ slug, navKeywords }: Props) {
+export function JobAtsCard({ slug, jobTitle, employerName, navKeywords }: Props) {
   const data = useResumeStore((s) => s.data);
   const activeResumeId = useResumeStore((s) => s.activeResumeId);
 
@@ -205,7 +207,12 @@ export function JobAtsCard({ slug, navKeywords }: Props) {
       </div>
 
       {tipsOpen && (
-        <CvTipsPanel slug={slug} onClose={() => setTipsOpen(false)} />
+        <CvTipsPanel
+          slug={slug}
+          jobTitle={jobTitle}
+          employerName={employerName}
+          onClose={() => setTipsOpen(false)}
+        />
       )}
     </div>
   );
