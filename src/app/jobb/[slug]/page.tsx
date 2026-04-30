@@ -470,7 +470,7 @@ export default async function JobDetailPage({ params }: Props) {
                 id="stillingsbeskrivelse"
                 className="text-[22px] md:text-[26px] font-semibold tracking-[-0.01em] text-ink mb-6"
               >
-                Om stillingen
+                Stillingsbeskrivelse
               </h2>
               <div
                 className="prose prose-sm md:prose-base max-w-none text-[#14110e]/85 prose-p:my-4 prose-p:leading-[1.7] prose-headings:text-ink prose-headings:font-semibold prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-[18px] md:prose-h3:text-[20px] prose-strong:text-ink prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-ul:my-4 prose-li:my-1.5"
@@ -972,6 +972,10 @@ function SourceMetaPanel({
   applyUrl: string | null;
 }) {
   const sourceLabel = SOURCE_LABELS[source] ?? source;
+  const arbeidsplassenLink =
+    source === "arbeidsplassen"
+      ? `https://arbeidsplassen.nav.no/stillinger/stilling/${externalId}`
+      : null;
   const externalLink = sourceUrl && sourceUrl !== applyUrl ? sourceUrl : null;
 
   return (
@@ -1006,17 +1010,30 @@ function SourceMetaPanel({
           </div>
         )}
       </dl>
-      {externalLink && (
-        <div className="mt-5 pt-4 border-t border-black/5 text-[13px]">
-          <a
-            href={externalLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
-          >
-            <ExternalLink className="size-3.5" aria-hidden />
-            Se original annonse hos arbeidsgiver
-          </a>
+      {(arbeidsplassenLink || externalLink) && (
+        <div className="mt-5 pt-4 border-t border-black/5 text-[13px] flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2.5">
+          {arbeidsplassenLink && (
+            <a
+              href={arbeidsplassenLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
+            >
+              <ExternalLink className="size-3.5" aria-hidden />
+              Se på Arbeidsplassen.no
+            </a>
+          )}
+          {externalLink && (
+            <a
+              href={externalLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
+            >
+              <ExternalLink className="size-3.5" aria-hidden />
+              Se original annonse hos arbeidsgiver
+            </a>
+          )}
         </div>
       )}
     </section>

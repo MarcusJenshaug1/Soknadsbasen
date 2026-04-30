@@ -291,12 +291,9 @@ async function upsertJob(
   if (!title) return "skipped";
 
   const employerName = pickEmployerName(detail, item._feed_entry.businessName ?? "");
-  const titleSlug = slugify(title);
   const employerSlug = slugify(employerName);
-  const slug = `${titleSlug}-${employerSlug}-${item._feed_entry.uuid.slice(0, 8)}`.slice(
-    0,
-    100,
-  );
+  // Slug = stillingsnummer (UUID) for stabile, NAV-matchende URL-er.
+  const slug = item._feed_entry.uuid;
 
   const { location, region, postalCode, country } = pickLocation(
     detail,
