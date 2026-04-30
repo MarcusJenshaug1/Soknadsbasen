@@ -45,11 +45,19 @@ export type FeedPage = {
 // ─── Detail-entry typer (rik data, kun for ACTIVE) ──────────
 
 export type FeedEntryLocation = {
+  address?: string | null;
   city?: string | null;
   county?: string | null;
   country?: string | null;
   postalCode?: string | null;
   municipal?: string | null;
+};
+
+export type FeedEntryContact = {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  title?: string | null;
 };
 
 export type FeedEntryEmployer = {
@@ -85,10 +93,16 @@ export type FeedEntryDetail = {
   extent?: string | null;
   positioncount?: number | null;
   sector?: string | null;
+  workhours?: string | null;
+  workday?: string | null;
+  starttime?: string | null;
+  remote?: string | null;
+  workLanguage?: string[] | null;
   employer?: FeedEntryEmployer;
   workLocations?: FeedEntryLocation[];
   occupationCategories?: FeedEntryCategory[];
   categoryList?: FeedEntryCategory[];
+  contactList?: FeedEntryContact[];
 };
 
 // ─── Token-håndtering ───────────────────────────────────────
@@ -254,6 +268,7 @@ export function pickLocation(detail: FeedEntryDetail, fallbackMunicipal?: string
 }
 
 export type SerializedLocation = {
+  address: string | null;
   city: string | null;
   county: string | null;
   country: string | null;
@@ -265,13 +280,35 @@ export function serializeLocations(detail: FeedEntryDetail): SerializedLocation[
   const list = detail.workLocations ?? [];
   return list
     .map((loc) => ({
+      address: loc.address?.trim() ?? null,
       city: loc.city?.trim() ?? null,
       county: loc.county?.trim() ?? null,
       country: loc.country?.trim() ?? null,
       postalCode: loc.postalCode?.trim() ?? null,
       municipal: loc.municipal?.trim() ?? null,
     }))
-    .filter((l) => l.city || l.county || l.country || l.postalCode || l.municipal);
+    .filter(
+      (l) => l.address || l.city || l.county || l.country || l.postalCode || l.municipal,
+    );
+}
+
+export function pickPrimaryContact(detail: FeedEntryDetail): {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  title: string | null;
+} {
+  const c = detail.contactList?.[0];
+  return {
+    name: c?.name?.trim() || null,
+    email: c?.email?.trim() || null,
+    phone: c?.phone?.trim() || null,
+    title: c?.title?.trim() || null,
+  };
+}
+
+export function pickPrimaryAddress(detail: FeedEntryDetail): string | null {
+  return detail.workLocations?.[0]?.address?.trim() || null;
 }
 
 export function pickCategory(detail: FeedEntryDetail): {

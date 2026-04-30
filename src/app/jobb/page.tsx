@@ -1,13 +1,18 @@
 import Link from "next/link";
+import { Briefcase, Building2, Calendar, MapPin, Users } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { SectionLabel } from "@/components/ui/Pill";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { displayPlace, isValidFacet } from "@/lib/jobs/format";
 import { HeaderCTA } from "../LandingCTAs";
 import { JobsFilterBar } from "./JobsFilterBar";
+import { SaveButton } from "./SaveButton";
 
 export const revalidate = 1800;
 export const dynamic = "force-dynamic";
@@ -60,6 +65,8 @@ export default async function JobsHubPage({
       : {}),
   };
 
+  const session = await getSession();
+
   const [jobs, total, regionsRaw, categoriesRaw] = await Promise.all([
     prisma.job.findMany({
       where,
@@ -74,6 +81,9 @@ export default async function JobsHubPage({
         expiresAt: true,
         applicationDueAt: true,
         positionCount: true,
+        engagementType: true,
+        extent: true,
+        sector: true,
       },
       orderBy: { publishedAt: "desc" },
       take: PAGE_SIZE,
@@ -98,12 +108,33 @@ export default async function JobsHubPage({
 
   const regions = regionsRaw
     .map((r) => r.region)
-    .filter((x): x is string => Boolean(x));
+    .filter(isValidFacet);
   const categories = categoriesRaw
     .map((c) => c.category)
-    .filter((x): x is string => Boolean(x));
+    .filter(isValidFacet);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  // Resolve which of the visible jobs are already saved by the user. Cheap
+  // single query: filter on jobUrl matching any of the visible slugs.
+  const visibleSlugs = jobs.map((j) => j.slug);
+  const savedSlugSet = new Set<string>();
+  if (session && visibleSlugs.length > 0) {
+    const candidates = visibleSlugs.flatMap((s) => [
+      absoluteUrl(`/jobb/${s}`),
+      `/jobb/${s}`,
+    ]);
+    const saved = await prisma.jobApplication.findMany({
+      where: { userId: session.userId, jobUrl: { in: candidates } },
+      select: { jobUrl: true },
+    });
+    for (const row of saved) {
+      if (!row.jobUrl) continue;
+      const m = row.jobUrl.match(/\/jobb\/([^/?#]+)/);
+      if (m) savedSlugSet.add(m[1]);
+    }
+  }
+  const isLoggedIn = Boolean(session);
 
   return (
     <div className="min-h-dvh bg-[#faf8f5] text-[#14110e]">
@@ -182,6 +213,11 @@ export default async function JobsHubPage({
                     expiresAt={job.expiresAt}
                     applicationDueAt={job.applicationDueAt}
                     positionCount={job.positionCount}
+                    engagementType={job.engagementType}
+                    extent={job.extent}
+                    sector={job.sector}
+                    isLoggedIn={isLoggedIn}
+                    saved={savedSlugSet.has(job.slug)}
                   />
                 </li>
               ))}
@@ -238,6 +274,11 @@ function JobCard({
   expiresAt,
   applicationDueAt,
   positionCount,
+  engagementType,
+  extent,
+  sector,
+  isLoggedIn,
+  saved,
 }: {
   slug: string;
   title: string;
@@ -248,6 +289,11 @@ function JobCard({
   expiresAt: Date | null;
   applicationDueAt: Date | null;
   positionCount: number | null;
+  engagementType: string | null;
+  extent: string | null;
+  sector: string | null;
+  isLoggedIn: boolean;
+  saved: boolean;
 }) {
   const daysAgo = Math.floor(
     (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60 * 24),
@@ -257,49 +303,98 @@ function JobCard({
     ? Math.floor((dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
+  const employmentLabel = [engagementType, extent]
+    .filter((p): p is string => Boolean(p))
+    .join(" · ");
+
+  const isFresh = daysAgo <= 1;
+  const isUrgent = daysToExpiry !== null && daysToExpiry >= 0 && daysToExpiry <= 3;
+
   return (
-    <Link
-      href={`/jobb/${slug}`}
-      className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 transition-colors px-5 py-4 md:py-5 group"
-    >
-      <div className="flex items-start justify-between gap-4 mb-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[16px] md:text-[18px] font-medium tracking-tight mb-1 group-hover:text-[#D5592E] transition-colors">
-            {title}
-          </h3>
-          <div className="text-[13px] text-[#14110e]/70">
-            <span className="font-medium">{employerName}</span>
-            {location ? <span className="text-[#14110e]/50"> · {location}</span> : null}
+    <div className="relative group">
+      <Link
+        href={`/jobb/${slug}`}
+        className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 hover:shadow-[0_2px_12px_rgba(20,17,14,0.04)] transition-all px-5 py-4 md:py-5 pr-16"
+      >
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              {isFresh && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-800 uppercase tracking-wide">
+                  Ny
+                </span>
+              )}
+              {isUrgent && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#D5592E]/10 text-[#D5592E] uppercase tracking-wide">
+                  {daysToExpiry === 0
+                    ? "Frist i dag"
+                    : daysToExpiry === 1
+                      ? "Frist i morgen"
+                      : `${daysToExpiry} dager igjen`}
+                </span>
+              )}
+            </div>
+            <h3 className="text-[16px] md:text-[18px] font-medium tracking-tight mb-1.5 group-hover:text-[#D5592E] transition-colors">
+              {title}
+            </h3>
+            <div className="text-[13px] text-[#14110e]/70 font-medium">
+              {employerName}
+            </div>
           </div>
+          {category && (
+            <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
+              {category}
+            </span>
+          )}
         </div>
-        {category && (
-          <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
-            {category}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-3 text-[11px] text-[#14110e]/50">
-        <span>{daysAgo === 0 ? "I dag" : `${daysAgo} dager siden`}</span>
-        {daysToExpiry !== null && daysToExpiry >= 0 && (
-          <>
-            <span className="text-[#14110e]/25">·</span>
-            <span className={daysToExpiry <= 3 ? "text-[#D5592E]" : ""}>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[#14110e]/60">
+          {location && (
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="size-3.5 text-[#14110e]/40" aria-hidden />
+              {displayPlace(location)}
+            </span>
+          )}
+          {employmentLabel && (
+            <span className="inline-flex items-center gap-1.5">
+              <Briefcase className="size-3.5 text-[#14110e]/40" aria-hidden />
+              {employmentLabel}
+            </span>
+          )}
+          {sector && (
+            <span className="inline-flex items-center gap-1.5">
+              <Building2 className="size-3.5 text-[#14110e]/40" aria-hidden />
+              {sector}
+            </span>
+          )}
+          {typeof positionCount === "number" && positionCount > 1 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="size-3.5 text-[#14110e]/40" aria-hidden />
+              {positionCount} stillinger
+            </span>
+          )}
+          {daysToExpiry !== null && daysToExpiry >= 0 && !isUrgent && (
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-[#14110e]/40" aria-hidden />
               {daysToExpiry === 0
                 ? "Frist i dag"
-                : daysToExpiry === 1
-                  ? "Frist i morgen"
-                  : `${daysToExpiry} dager til frist`}
+                : `${daysToExpiry} dager til frist`}
             </span>
-          </>
-        )}
-        {typeof positionCount === "number" && positionCount > 1 && (
-          <>
-            <span className="text-[#14110e]/25">·</span>
-            <span>{positionCount} stillinger</span>
-          </>
-        )}
+          )}
+          <span className="ml-auto text-[11px] text-[#14110e]/45">
+            {daysAgo === 0 ? "I dag" : `${daysAgo}d siden`}
+          </span>
+        </div>
+      </Link>
+
+      <div className="absolute top-3 right-3 md:top-4 md:right-4">
+        <SaveButton
+          slug={slug}
+          isLoggedIn={isLoggedIn}
+          initialSaved={saved}
+        />
       </div>
-    </Link>
+    </div>
   );
 }
 

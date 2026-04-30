@@ -1,6 +1,25 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  Briefcase,
+  Building2,
+  Calendar,
+  CalendarClock,
+  Clock,
+  ExternalLink,
+  FileSearch,
+  Globe,
+  Hash,
+  Home,
+  Languages,
+  Mail,
+  MapPin,
+  Phone,
+  Sun,
+  User2,
+  Users,
+} from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
@@ -8,7 +27,10 @@ import { breadcrumbJsonLd, type JsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { displayPlace } from "@/lib/jobs/format";
 import { HeaderCTA } from "../../LandingCTAs";
+import { JobActions } from "./JobActions";
 
 export const revalidate = 1800;
 
@@ -40,6 +62,7 @@ export async function generateMetadata({ params }: Props) {
 }
 
 type WorkLocation = {
+  address: string | null;
   city: string | null;
   county: string | null;
   country: string | null;
@@ -68,11 +91,17 @@ function asCategoryList(value: unknown): CategoryEntry[] {
 }
 
 function formatLocationLine(loc: WorkLocation): string {
+  const cityPart = displayPlace(loc.city ?? loc.municipal ?? null) || null;
+  const cityWithPostal =
+    [loc.postalCode, cityPart].filter((p): p is string => Boolean(p)).join(" ") ||
+    null;
   const parts = [
-    loc.postalCode,
-    loc.city ?? loc.municipal,
-    loc.county,
-    loc.country && loc.country.toUpperCase() !== "NORGE" ? loc.country : null,
+    loc.address,
+    cityWithPostal,
+    displayPlace(loc.county ?? null) || null,
+    loc.country && loc.country.toUpperCase() !== "NORGE"
+      ? displayPlace(loc.country)
+      : null,
   ].filter((p): p is string => Boolean(p));
   return parts.join(", ");
 }
@@ -183,8 +212,24 @@ function jobPostingJsonLd(job: {
 
 export default async function JobDetailPage({ params }: Props) {
   const { slug } = await params;
-  const job = await prisma.job.findUnique({ where: { slug } });
+  const [job, session] = await Promise.all([
+    prisma.job.findUnique({ where: { slug } }),
+    getSession(),
+  ]);
   if (!job) notFound();
+
+  const savedApplication = session
+    ? await prisma.jobApplication.findFirst({
+        where: {
+          userId: session.userId,
+          OR: [
+            { jobUrl: absoluteUrl(`/jobb/${slug}`) },
+            { jobUrl: `/jobb/${slug}` },
+          ],
+        },
+        select: { id: true },
+      })
+    : null;
 
   const breadcrumbs = [
     { name: "Søknadsbasen", path: "/" },
@@ -244,19 +289,34 @@ export default async function JobDetailPage({ params }: Props) {
   }
   const tags = Array.from(tagSet);
 
-  // Related: same category, latest 4
-  const related = job.category
-    ? await prisma.job.findMany({
-        where: {
-          isActive: true,
-          category: job.category,
-          slug: { not: job.slug },
-        },
-        select: { slug: true, title: true, employerName: true, location: true },
-        orderBy: { publishedAt: "desc" },
-        take: 4,
-      })
-    : [];
+  // Related: prøv kategori → arbeidsgiver → region. Faller tilbake slik at
+  // vi alltid har 4 relaterte selv om kategori-dataen mangler.
+  const relatedWhereChain: Array<Record<string, unknown>> = [];
+  if (job.category) relatedWhereChain.push({ category: job.category });
+  if (job.employerSlug) relatedWhereChain.push({ employerSlug: job.employerSlug });
+  if (job.region) relatedWhereChain.push({ region: job.region });
+
+  let related: Array<{
+    slug: string;
+    title: string;
+    employerName: string;
+    location: string | null;
+  }> = [];
+  for (const filter of relatedWhereChain) {
+    if (related.length >= 4) break;
+    const existingSlugs = new Set(related.map((r) => r.slug));
+    const more = await prisma.job.findMany({
+      where: {
+        isActive: true,
+        ...filter,
+        slug: { not: job.slug, notIn: Array.from(existingSlugs) },
+      },
+      select: { slug: true, title: true, employerName: true, location: true },
+      orderBy: { publishedAt: "desc" },
+      take: 4 - related.length,
+    });
+    related = [...related, ...more];
+  }
 
   return (
     <div className="min-h-dvh bg-[#faf8f5] text-[#14110e]">
@@ -293,50 +353,12 @@ export default async function JobDetailPage({ params }: Props) {
 
         <article>
           <header className="pb-8 border-b border-black/10">
-            <h1 className="text-[32px] md:text-[48px] leading-[1.05] tracking-[-0.025em] font-medium mb-4">
-              {job.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-[#14110e]/75 mb-5">
-              <span className="font-medium text-[#14110e]">{job.employerName}</span>
-              {job.location && (
-                <>
-                  <span className="text-[#14110e]/30">·</span>
-                  <span>{job.location}</span>
-                </>
-              )}
-              {job.employmentType && (
-                <>
-                  <span className="text-[#14110e]/30">·</span>
-                  <span>{job.employmentType}</span>
-                </>
-              )}
-              {typeof job.positionCount === "number" && job.positionCount > 1 && (
-                <>
-                  <span className="text-[#14110e]/30">·</span>
-                  <span>{job.positionCount} stillinger</span>
-                </>
-              )}
-              {job.sector && (
-                <>
-                  <span className="text-[#14110e]/30">·</span>
-                  <span>{job.sector}</span>
-                </>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 mb-6">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex px-3 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70"
-                >
-                  {tag}
-                </span>
-              ))}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               {daysToExpiry !== null && daysToExpiry >= 0 && (
                 <span
-                  className={`inline-flex px-3 py-1 rounded-full text-[11px] ${daysToExpiry <= 3 ? "bg-[#D5592E]/10 text-[#D5592E]" : "bg-emerald-50 text-emerald-800"}`}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium ${daysToExpiry <= 3 ? "bg-[#D5592E]/10 text-[#D5592E]" : "bg-emerald-50 text-emerald-800"}`}
                 >
+                  <CalendarClock className="size-3.5" aria-hidden />
                   {daysToExpiry === 0
                     ? "Frist i dag"
                     : daysToExpiry === 1
@@ -351,32 +373,76 @@ export default async function JobDetailPage({ params }: Props) {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href={`/registrer?next=${encodeURIComponent(`/app/pipeline?job=${job.slug}`)}`}
-                className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] transition-colors"
-              >
-                Lag søknad i Søknadsbasen
-              </Link>
-              {job.applyUrl && (
-                <a
-                  href={job.applyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-black/15 text-[14px] hover:border-[#14110e]/30 hover:bg-black/5 transition-colors"
-                >
-                  Søk via {job.employerName} →
-                </a>
+            <h1 className="text-[32px] md:text-[48px] leading-[1.05] tracking-[-0.025em] font-medium mb-4">
+              {job.title}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px] text-[#14110e]/75 mb-6">
+              <span className="inline-flex items-center gap-2 font-medium text-[#14110e]">
+                <Building2 className="size-4 text-[#14110e]/45" aria-hidden />
+                {job.employerName}
+              </span>
+              {job.location && (
+                <span className="inline-flex items-center gap-2">
+                  <MapPin className="size-4 text-[#14110e]/45" aria-hidden />
+                  {displayPlace(job.location)}
+                </span>
+              )}
+              {(job.engagementType || job.extent || job.employmentType) && (
+                <span className="inline-flex items-center gap-2">
+                  <Briefcase className="size-4 text-[#14110e]/45" aria-hidden />
+                  {[job.engagementType, job.extent].filter(Boolean).join(" · ") ||
+                    job.employmentType}
+                </span>
+              )}
+              {typeof job.positionCount === "number" && job.positionCount > 1 && (
+                <span className="inline-flex items-center gap-2">
+                  <Users className="size-4 text-[#14110e]/45" aria-hidden />
+                  {job.positionCount} stillinger
+                </span>
+              )}
+              {job.sector && (
+                <span className="inline-flex items-center gap-2">
+                  <Hash className="size-4 text-[#14110e]/45" aria-hidden />
+                  {job.sector}
+                </span>
               )}
             </div>
+
+            {tags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex px-3 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <JobActions
+              slug={job.slug}
+              isLoggedIn={Boolean(session)}
+              initialSavedId={savedApplication?.id ?? null}
+              applyUrl={job.applyUrl}
+              employerName={job.employerName}
+            />
           </header>
 
           <FactsPanel
+            jobTitle={job.jobTitle}
             engagementType={job.engagementType}
             extent={job.extent}
             employmentType={job.employmentType}
             sector={job.sector}
             positionCount={job.positionCount}
+            workhours={job.workhours}
+            workdays={job.workdays}
+            starttime={job.starttime}
+            remote={job.remote}
+            workLanguages={job.workLanguages}
             workLocations={workLocations}
             location={job.location}
             region={job.region}
@@ -389,16 +455,33 @@ export default async function JobDetailPage({ params }: Props) {
             applyUrl={job.applyUrl}
           />
 
-          <section
-            aria-label="Stillingsbeskrivelse"
-            className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85"
-          >
-            {job.description.split("\n\n").map((paragraph, i) => (
-              <p key={i} className="mb-4 leading-[1.7] text-[15px] md:text-[16px]">
-                {paragraph}
-              </p>
-            ))}
-          </section>
+          {(job.contactName || job.contactEmail || job.contactPhone) && (
+            <ContactPanel
+              name={job.contactName}
+              title={job.contactTitle}
+              email={job.contactEmail}
+              phone={job.contactPhone}
+            />
+          )}
+
+          {job.description.trim().length > 0 ? (
+            <section
+              aria-label="Stillingsbeskrivelse"
+              className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85"
+            >
+              {job.description.split("\n\n").map((paragraph, i) => (
+                <p key={i} className="mb-4 leading-[1.7] text-[15px] md:text-[16px]">
+                  {paragraph}
+                </p>
+              ))}
+            </section>
+          ) : (
+            <DescriptionFallback
+              applyUrl={job.applyUrl}
+              sourceUrl={job.sourceUrl}
+              employerName={job.employerName}
+            />
+          )}
 
           {(job.employerDescription || job.employerHomepage || job.employerOrgnr) && (
             <EmployerPanel
@@ -408,6 +491,14 @@ export default async function JobDetailPage({ params }: Props) {
               orgnr={job.employerOrgnr}
             />
           )}
+
+          <SourceMetaPanel
+            externalId={job.externalId}
+            source={job.source}
+            sourceUpdatedAt={job.sourceUpdatedAt}
+            sourceUrl={job.sourceUrl}
+            applyUrl={job.applyUrl}
+          />
 
           <aside className="rounded-2xl border border-black/10 bg-white p-6 mb-8">
             <h2 className="text-[16px] font-medium mb-3">
@@ -466,7 +557,7 @@ export default async function JobDetailPage({ params }: Props) {
                     </div>
                     <div className="text-[12px] text-[#14110e]/65">
                       {r.employerName}
-                      {r.location ? ` · ${r.location}` : ""}
+                      {r.location ? ` · ${displayPlace(r.location)}` : ""}
                     </div>
                   </Link>
                 </li>
@@ -517,12 +608,20 @@ function formatDate(d: Date | null): string | null {
   return DATE_FORMAT.format(d);
 }
 
+type LucideIcon = typeof Briefcase;
+
 function FactsPanel({
+  jobTitle,
   engagementType,
   extent,
   employmentType,
   sector,
   positionCount,
+  workhours,
+  workdays,
+  starttime,
+  remote,
+  workLanguages,
   workLocations,
   location,
   region,
@@ -534,11 +633,17 @@ function FactsPanel({
   sourceUrl,
   applyUrl,
 }: {
+  jobTitle: string | null;
   engagementType: string | null;
   extent: string | null;
   employmentType: string | null;
   sector: string | null;
   positionCount: number | null;
+  workhours: string | null;
+  workdays: string | null;
+  starttime: string | null;
+  remote: string | null;
+  workLanguages: string[];
   workLocations: WorkLocation[];
   location: string | null;
   region: string | null;
@@ -550,35 +655,62 @@ function FactsPanel({
   sourceUrl: string | null;
   applyUrl: string | null;
 }) {
-  const facts: Array<{ label: string; value: ReactNode }> = [];
+  const facts: Array<{ icon: LucideIcon; label: string; value: ReactNode }> = [];
 
+  if (jobTitle) {
+    facts.push({ icon: Briefcase, label: "Stillingstittel", value: jobTitle });
+  }
   if (engagementType || extent || employmentType) {
     const parts = [engagementType, extent].filter((p): p is string => Boolean(p));
     facts.push({
+      icon: Briefcase,
       label: "Ansettelsesform",
       value: parts.length > 0 ? parts.join(" · ") : employmentType,
     });
   }
   if (sector) {
-    facts.push({ label: "Sektor", value: sector });
+    facts.push({ icon: Hash, label: "Sektor", value: sector });
   }
   if (typeof positionCount === "number" && positionCount > 0) {
     facts.push({
+      icon: Users,
       label: "Antall stillinger",
       value: positionCount.toString(),
     });
   }
+  if (workhours || workdays) {
+    facts.push({
+      icon: Sun,
+      label: "Arbeidstid",
+      value: [workhours, workdays].filter(Boolean).join(" · "),
+    });
+  }
+  if (starttime) {
+    facts.push({ icon: Clock, label: "Oppstart", value: starttime });
+  }
+  if (remote) {
+    facts.push({ icon: Home, label: "Hjemmekontor", value: remote });
+  }
+  if (workLanguages.length > 0) {
+    facts.push({
+      icon: Languages,
+      label: "Arbeidsspråk",
+      value: workLanguages.join(", "),
+    });
+  }
 
+  const fallbackPlace = displayPlace(location ?? region);
   const locationLines =
     workLocations.length > 0
       ? workLocations.map(formatLocationLine).filter((l) => l.length > 0)
       : [
-          [postalCode, location ?? region]
+          [postalCode, fallbackPlace || null]
             .filter((p): p is string => Boolean(p))
             .join(", "),
         ].filter((l) => l.length > 0);
   if (locationLines.length > 0) {
     facts.push({
+      icon: MapPin,
       label: locationLines.length > 1 ? "Arbeidssteder" : "Arbeidssted",
       value: (
         <ul className="space-y-0.5">
@@ -591,16 +723,28 @@ function FactsPanel({
   }
 
   if (applicationDueAt) {
-    facts.push({ label: "Søknadsfrist", value: formatDate(applicationDueAt) });
+    facts.push({
+      icon: CalendarClock,
+      label: "Søknadsfrist",
+      value: formatDate(applicationDueAt),
+    });
   } else if (expiresAt) {
-    facts.push({ label: "Søknadsfrist", value: formatDate(expiresAt) });
+    facts.push({
+      icon: CalendarClock,
+      label: "Søknadsfrist",
+      value: formatDate(expiresAt),
+    });
   }
-  facts.push({ label: "Publisert", value: formatDate(publishedAt) });
+  facts.push({ icon: Calendar, label: "Publisert", value: formatDate(publishedAt) });
   if (
     sourceUpdatedAt &&
     Math.abs(sourceUpdatedAt.getTime() - publishedAt.getTime()) > 24 * 60 * 60 * 1000
   ) {
-    facts.push({ label: "Sist oppdatert", value: formatDate(sourceUpdatedAt) });
+    facts.push({
+      icon: Clock,
+      label: "Sist oppdatert",
+      value: formatDate(sourceUpdatedAt),
+    });
   }
 
   const externalLink = sourceUrl && sourceUrl !== applyUrl ? sourceUrl : null;
@@ -610,28 +754,39 @@ function FactsPanel({
   return (
     <section
       aria-label="Stillingsfakta"
-      className="mt-8 rounded-2xl border border-black/10 bg-white p-6"
+      className="mt-8 rounded-2xl border border-black/10 bg-white p-6 md:p-7"
     >
-      <h2 className="text-[14px] font-medium tracking-tight mb-4 text-[#14110e]/55 uppercase">
+      <h2 className="text-[14px] font-medium tracking-tight mb-5 text-[#14110e]/55 uppercase">
         Om stillingen
       </h2>
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-[14px]">
-        {facts.map((f) => (
-          <div key={f.label}>
-            <dt className="text-[12px] text-[#14110e]/55 mb-1">{f.label}</dt>
-            <dd className="text-[#14110e]">{f.value}</dd>
-          </div>
-        ))}
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-[14px]">
+        {facts.map((f) => {
+          const Icon = f.icon;
+          return (
+            <div key={f.label} className="flex gap-3">
+              <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eee9df]">
+                <Icon className="size-4 text-[#14110e]/65" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <dt className="text-[11px] uppercase tracking-wide text-[#14110e]/50 mb-0.5">
+                  {f.label}
+                </dt>
+                <dd className="text-[14px] text-[#14110e] leading-snug">{f.value}</dd>
+              </div>
+            </div>
+          );
+        })}
       </dl>
       {externalLink && (
-        <div className="mt-5 pt-4 border-t border-black/5 text-[13px]">
+        <div className="mt-6 pt-5 border-t border-black/5 text-[13px]">
           <a
             href={externalLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
           >
-            Se annonsen hos arbeidsgiver →
+            <ExternalLink className="size-3.5" aria-hidden />
+            Se annonsen hos arbeidsgiver
           </a>
         </div>
       )}
@@ -650,17 +805,49 @@ function EmployerPanel({
   homepage: string | null;
   orgnr: string | null;
 }) {
+  const cleanHomepage = homepage
+    ? homepage.replace(/^https?:\/\//, "").replace(/\/$/, "")
+    : null;
+
   return (
     <section
       aria-label={`Om ${name}`}
-      className="mt-2 mb-8 rounded-2xl border border-black/10 bg-white p-6"
+      className="mt-2 mb-8 rounded-2xl border border-black/10 bg-white p-6 md:p-7"
     >
-      <h2 className="text-[14px] font-medium tracking-tight mb-4 text-[#14110e]/55 uppercase">
+      <h2 className="text-[14px] font-medium tracking-tight mb-5 text-[#14110e]/55 uppercase">
         Om arbeidsgiver
       </h2>
-      <h3 className="text-[18px] font-medium mb-2">{name}</h3>
+      <div className="flex items-start gap-4 mb-4">
+        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eee9df]">
+          <Building2 className="size-6 text-[#14110e]/65" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-[18px] md:text-[20px] font-medium tracking-tight mb-1">
+            {name}
+          </h3>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#14110e]/60">
+            {cleanHomepage && (
+              <a
+                href={homepage!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 hover:text-[#D5592E] transition-colors"
+              >
+                <Globe className="size-3.5" aria-hidden />
+                {cleanHomepage}
+              </a>
+            )}
+            {orgnr && (
+              <span className="inline-flex items-center gap-1.5">
+                <Hash className="size-3.5" aria-hidden />
+                Org.nr {orgnr}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
       {description && (
-        <div className="text-[14px] leading-[1.65] text-[#14110e]/80 mb-4">
+        <div className="text-[14px] leading-[1.65] text-[#14110e]/80">
           {description.split("\n\n").map((p, i) => (
             <p key={i} className="mb-2 last:mb-0">
               {p}
@@ -668,19 +855,171 @@ function EmployerPanel({
           ))}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-[#14110e]/60">
-        {homepage && (
+    </section>
+  );
+}
+
+function ContactPanel({
+  name,
+  title,
+  email,
+  phone,
+}: {
+  name: string | null;
+  title: string | null;
+  email: string | null;
+  phone: string | null;
+}) {
+  return (
+    <section
+      aria-label="Kontaktperson"
+      className="mt-2 mb-8 rounded-2xl border border-black/10 bg-white p-6 md:p-7"
+    >
+      <h2 className="text-[14px] font-medium tracking-tight mb-5 text-[#14110e]/55 uppercase">
+        Kontaktperson for stillingen
+      </h2>
+      <div className="flex items-start gap-4">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#eee9df]">
+          <User2 className="size-5 text-[#14110e]/65" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          {name && (
+            <h3 className="text-[16px] font-medium tracking-tight">{name}</h3>
+          )}
+          {title && (
+            <p className="text-[13px] text-[#14110e]/65 mb-2">{title}</p>
+          )}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
+            {email && (
+              <a
+                href={`mailto:${email}`}
+                className="inline-flex items-center gap-1.5 text-[#14110e]/75 hover:text-[#D5592E]"
+              >
+                <Mail className="size-3.5" aria-hidden />
+                {email}
+              </a>
+            )}
+            {phone && (
+              <a
+                href={`tel:${phone.replace(/\s+/g, "")}`}
+                className="inline-flex items-center gap-1.5 text-[#14110e]/75 hover:text-[#D5592E]"
+              >
+                <Phone className="size-3.5" aria-hidden />
+                {phone}
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DescriptionFallback({
+  applyUrl,
+  sourceUrl,
+  employerName,
+}: {
+  applyUrl: string | null;
+  sourceUrl: string | null;
+  employerName: string;
+}) {
+  const link = sourceUrl ?? applyUrl;
+  return (
+    <section
+      aria-label="Stillingsbeskrivelse"
+      className="my-10 rounded-2xl border border-dashed border-black/15 bg-[#eee9df]/40 p-6 md:p-8 text-center"
+    >
+      <span className="inline-flex size-10 items-center justify-center rounded-full bg-white border border-black/10 mb-3">
+        <FileSearch className="size-5 text-[#14110e]/55" aria-hidden />
+      </span>
+      <h2 className="text-[16px] md:text-[18px] font-medium mb-2">
+        Full beskrivelse mangler i sammendraget
+      </h2>
+      <p className="text-[13px] text-[#14110e]/70 max-w-[460px] mx-auto mb-4">
+        Vi henter stillingen automatisk fra Arbeidsplassen.no. Den fullstendige
+        annonseteksten ligger hos {employerName}.
+      </p>
+      {link && (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[13px] text-[#D5592E] hover:underline"
+        >
+          Les hele annonsen
+          <ExternalLink className="size-3.5" aria-hidden />
+        </a>
+      )}
+    </section>
+  );
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  arbeidsplassen: "Arbeidsplassen.no",
+};
+
+function SourceMetaPanel({
+  externalId,
+  source,
+  sourceUpdatedAt,
+  sourceUrl,
+  applyUrl,
+}: {
+  externalId: string;
+  source: string;
+  sourceUpdatedAt: Date | null;
+  sourceUrl: string | null;
+  applyUrl: string | null;
+}) {
+  const sourceLabel = SOURCE_LABELS[source] ?? source;
+  const externalLink = sourceUrl && sourceUrl !== applyUrl ? sourceUrl : null;
+
+  return (
+    <section
+      aria-label="Annonsedata"
+      className="mt-2 mb-8 rounded-2xl border border-black/10 bg-white p-6 md:p-7"
+    >
+      <h2 className="text-[14px] font-medium tracking-tight mb-5 text-[#14110e]/55 uppercase">
+        Annonsedata
+      </h2>
+      <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 text-[13px]">
+        <div>
+          <dt className="text-[11px] uppercase tracking-wide text-[#14110e]/50 mb-0.5">
+            Hentet fra
+          </dt>
+          <dd className="text-[#14110e]">{sourceLabel}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-[11px] uppercase tracking-wide text-[#14110e]/50 mb-0.5">
+            Stillingsnummer
+          </dt>
+          <dd className="text-[#14110e] font-mono text-[12px] break-all">
+            {externalId}
+          </dd>
+        </div>
+        {sourceUpdatedAt && (
+          <div>
+            <dt className="text-[11px] uppercase tracking-wide text-[#14110e]/50 mb-0.5">
+              Sist endret
+            </dt>
+            <dd className="text-[#14110e]">{formatDate(sourceUpdatedAt)}</dd>
+          </div>
+        )}
+      </dl>
+      {externalLink && (
+        <div className="mt-5 pt-4 border-t border-black/5 text-[13px]">
           <a
-            href={homepage}
+            href={externalLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#D5592E] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[#14110e]/70 hover:text-[#D5592E] transition-colors"
           >
-            {homepage.replace(/^https?:\/\//, "").replace(/\/$/, "")} →
+            <ExternalLink className="size-3.5" aria-hidden />
+            Se original annonse hos arbeidsgiver
           </a>
-        )}
-        {orgnr && <span>Org.nr {orgnr}</span>}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
