@@ -23,6 +23,10 @@ export const runtime = "nodejs";
 export const alt = "Stillingsannonse på Søknadsbasen";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// Bildet endres når deadline-countdown går ned, men én time mellom
+// regenereringer er rikelig — scrapers cacher uansett. Public cache
+// betyr CDN serverer flere requests fra ett render.
+export const revalidate = 3600;
 
 // Bruker site-tokens. Edge runtime kan ikke importere globals.css, så
 // hex-verdiene speiles her. Endringer her må holdes i synk med globals.css.
