@@ -19,8 +19,9 @@ export async function GET(req: NextRequest) {
   }
 
   const url = new URL(req.url);
+  // maxDuration er 300s, så budsjett kan opp til ~280s. Default 50s for cron.
   const budgetMs = Math.min(
-    60_000,
+    280_000,
     Math.max(10_000, Number(url.searchParams.get("budgetMs") ?? 50_000)),
   );
 
