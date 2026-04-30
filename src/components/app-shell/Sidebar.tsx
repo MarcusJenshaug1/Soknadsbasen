@@ -9,10 +9,11 @@ import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import type { OrgContext } from "@/lib/auth";
 
-type NavItem = { href: string; label: string; gated: boolean };
+type NavItem = { href: string; label: string; gated: boolean; dot?: boolean };
 
 const NAV: readonly NavItem[] = [
   { href: "/app", label: "Hjem", gated: true },
+  { href: "/jobb", label: "Stillinger", gated: false, dot: true },
   { href: "/app/cv", label: "Min CV", gated: true },
   { href: "/app/pipeline", label: "Søknader", gated: true },
   { href: "/app/brev", label: "Søknadsbrev", gated: true },
@@ -93,12 +94,18 @@ export function Sidebar({
               href={n.href}
               prefetch={true}
               className={cn(
-                "block px-3 py-2 rounded-full transition-colors",
+                "flex items-center gap-2 px-3 py-2 rounded-full transition-colors",
                 active
                   ? "bg-ink text-bg dark:bg-white/12 dark:text-ink"
                   : "text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-ink",
               )}
             >
+              {n.dot ? (
+                <span
+                  className="size-1.5 rounded-full bg-[#D5592E] shrink-0"
+                  aria-hidden
+                />
+              ) : null}
               {n.label}
             </Link>
           );

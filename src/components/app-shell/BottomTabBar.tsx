@@ -49,6 +49,7 @@ const TABS: readonly Tab[] = [
 ] as const;
 
 const MORE_ROUTES = [
+  "/jobb",
   "/app/brev",
   "/app/oppgaver",
   "/app/selskaper",
@@ -58,6 +59,7 @@ const MORE_ROUTES = [
 ];
 
 const MORE_ITEMS = [
+  { href: "/jobb", label: "Stillinger", gated: false, dot: true },
   { href: "/app/brev", label: "Søknadsbrev", gated: true },
   { href: "/app/oppgaver", label: "Oppgaver", gated: true },
   { href: "/app/selskaper", label: "Selskaper", gated: true },
@@ -102,12 +104,18 @@ export function BottomTabBar({ hasAccess }: { hasAccess: boolean }) {
                     prefetch={true}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex items-center px-4 py-3 rounded-2xl text-[14px] transition-colors",
+                      "flex items-center gap-2 px-4 py-3 rounded-2xl text-[14px] transition-colors",
                       active
                         ? "bg-ink text-bg font-medium"
                         : "text-ink hover:bg-black/5 dark:hover:bg-white/5",
                     )}
                   >
+                    {"dot" in item && item.dot ? (
+                      <span
+                        className="size-1.5 rounded-full bg-[#D5592E] shrink-0"
+                        aria-hidden
+                      />
+                    ) : null}
                     {item.label}
                   </Link>
                 );
