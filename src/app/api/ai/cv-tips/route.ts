@@ -40,19 +40,63 @@ export async function POST(req: Request) {
       where: { slug: body.slug },
       select: {
         title: true,
+        jobTitle: true,
         employerName: true,
+        employerDescription: true,
         description: true,
+        location: true,
+        region: true,
         category: true,
+        occupation: true,
+        engagementType: true,
+        extent: true,
+        sector: true,
+        remote: true,
+        workhours: true,
+        workdays: true,
+        starttime: true,
+        positionCount: true,
+        workLanguages: true,
+        contactTitle: true,
         aiKeywords: true,
       },
     });
     if (job) {
+      const ansettelse = [job.engagementType, job.extent]
+        .filter((v): v is string => Boolean(v))
+        .join(" · ");
+      const sted = [job.location, job.region]
+        .filter((v): v is string => Boolean(v))
+        .join(", ");
       jobContext = [
         `STILLING: ${job.title}`,
+        job.jobTitle && job.jobTitle !== job.title
+          ? `Formell tittel: ${job.jobTitle}`
+          : "",
         `Selskap: ${job.employerName}`,
+        sted ? `Sted: ${sted}` : "",
+        ansettelse ? `Ansettelse: ${ansettelse}` : "",
+        job.sector ? `Sektor: ${job.sector}` : "",
+        job.remote ? `Hjemmekontor: ${job.remote}` : "",
+        job.workhours ? `Arbeidstid: ${job.workhours}` : "",
+        job.workdays ? `Arbeidsdager: ${job.workdays}` : "",
+        job.starttime ? `Oppstart: ${job.starttime}` : "",
+        job.positionCount && job.positionCount > 1
+          ? `Antall stillinger: ${job.positionCount}`
+          : "",
+        Array.isArray(job.workLanguages) && job.workLanguages.length > 0
+          ? `Arbeidsspråk: ${job.workLanguages.join(", ")}`
+          : "",
         job.category ? `Kategori: ${job.category}` : "",
+        job.occupation && job.occupation !== job.category
+          ? `Yrkestittel: ${job.occupation}`
+          : "",
+        job.contactTitle ? `Kontaktperson rolle: ${job.contactTitle}` : "",
         job.aiKeywords.length > 0
           ? `Nøkkelord stillingen krever: ${job.aiKeywords.join(", ")}`
+          : "",
+        job.employerDescription
+          ? `Om arbeidsgiver:\n${job.employerDescription.replace(/<[^>]+>/g, " ").slice(0, 800)}`
           : "",
         job.description
           ? `Stillingsbeskrivelse:\n${job.description.replace(/<[^>]+>/g, " ").slice(0, 4000)}`

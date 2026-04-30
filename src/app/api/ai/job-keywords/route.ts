@@ -36,11 +36,17 @@ export async function POST(req: Request) {
   });
   if (!job) return NextResponse.json({ error: "Stilling ikke funnet" }, { status: 404 });
 
-  if (job.aiKeywords.length > 0) {
+  // Re-generer hvis cached array er mistenkelig kort (< 5) og vi nå har
+  // skikkelig description-tekst. Det skjer når AI ble kjørt før backfill
+  // av description, eller med dårlig tekst.
+  const descLen = job.description?.replace(/<[^>]+>/g, " ").trim().length ?? 0;
+  const cacheTooSmall = job.aiKeywords.length > 0 && job.aiKeywords.length < 5 && descLen > 500;
+
+  if (job.aiKeywords.length >= 5) {
     return NextResponse.json({ keywords: job.aiKeywords, cached: true });
   }
 
-  if (!job.description?.trim()) {
+  if (!job.description?.trim() && !cacheTooSmall) {
     return NextResponse.json({ keywords: [], cached: false });
   }
 
