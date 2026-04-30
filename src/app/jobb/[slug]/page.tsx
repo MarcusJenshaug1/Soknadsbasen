@@ -467,14 +467,9 @@ export default async function JobDetailPage({ params }: Props) {
           {job.description.trim().length > 0 ? (
             <section
               aria-label="Stillingsbeskrivelse"
-              className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85"
-            >
-              {job.description.split("\n\n").map((paragraph, i) => (
-                <p key={i} className="mb-4 leading-[1.7] text-[15px] md:text-[16px]">
-                  {paragraph}
-                </p>
-              ))}
-            </section>
+              className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85 prose-headings:text-ink prose-strong:text-ink prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-li:my-1"
+              dangerouslySetInnerHTML={{ __html: renderDescription(job.description) }}
+            />
           ) : (
             <DescriptionFallback
               applyUrl={job.applyUrl}
@@ -602,6 +597,25 @@ const DATE_FORMAT = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
   year: "numeric",
 });
+
+/**
+ * NAV leverer description som HTML (sanitized i sync). Eldre rader fra før
+ * sanitizer-fixen ligger lagret som plain text med \n\n-paragrafer. Detect
+ * HTML og rendre rett gjennom, ellers wrap plain text i <p>-tags.
+ */
+function renderDescription(input: string): string {
+  if (/<(p|h[1-6]|ul|ol|li|strong|em|br|a)\b/i.test(input)) {
+    return input;
+  }
+  const escaped = input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escaped
+    .split(/\n\n+/)
+    .map((p) => `<p>${p.replace(/\n/g, "<br />")}</p>`)
+    .join("");
+}
 
 function formatDate(d: Date | null): string | null {
   if (!d) return null;
@@ -847,13 +861,10 @@ function EmployerPanel({
         </div>
       </div>
       {description && (
-        <div className="text-[14px] leading-[1.65] text-[#14110e]/80">
-          {description.split("\n\n").map((p, i) => (
-            <p key={i} className="mb-2 last:mb-0">
-              {p}
-            </p>
-          ))}
-        </div>
+        <div
+          className="prose prose-sm max-w-none text-[14px] leading-[1.65] text-[#14110e]/80 prose-headings:text-ink prose-strong:text-ink prose-a:text-accent prose-li:my-0.5"
+          dangerouslySetInnerHTML={{ __html: renderDescription(description) }}
+        />
       )}
     </section>
   );

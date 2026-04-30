@@ -359,15 +359,57 @@ export function serializeCategories(
     .filter((c) => c.name || c.code);
 }
 
+/**
+ * Sanitiserer HTML-formattert annonse-tekst fra NAV. Beholder strukturelle
+ * elementer (h2-h4, p, ul/ol/li, strong/em, br, a) og stripper alt annet.
+ * NAV leverer rik HTML med fete overskrifter og bullet-lister, vi vil bevare
+ * det for visning, men ikke stole blindt på markup-en.
+ */
+const ALLOWED_TAGS = new Set([
+  "h2", "h3", "h4", "p", "ul", "ol", "li", "strong", "em", "b", "i", "br", "a",
+]);
+const SAFE_HREF = /^(https?:\/\/|mailto:|tel:)/i;
+
 export function cleanDescription(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<[^>]+>/g, "")
+  if (!html) return "";
+
+  let out = html
     .replace(/\r\n/g, "\n")
+    // fjern script/style/iframe og deres innhold
+    .replace(/<(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    // fjern HTML-kommentarer
+    .replace(/<!--[\s\S]*?-->/g, "");
+
+  // Filtrer tag-for-tag: behold whitelisted, fjern resten
+  out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, (match, tagRaw, attrs) => {
+    const tag = String(tagRaw).toLowerCase();
+    if (!ALLOWED_TAGS.has(tag)) return "";
+    const isClosing = match.startsWith("</");
+    if (isClosing) return `</${tag}>`;
+    if (tag === "a") {
+      const hrefMatch = String(attrs).match(/href\s*=\s*"([^"]*)"|href\s*=\s*'([^']*)'/i);
+      const href = hrefMatch?.[1] ?? hrefMatch?.[2] ?? "";
+      if (!SAFE_HREF.test(href)) return "<span>";
+      return `<a href="${escapeAttr(href)}" rel="nofollow noopener" target="_blank">`;
+    }
+    return `<${tag}>`;
+  });
+
+  // Erstatt span-fallback (fra a-tag uten safe href) tilbake til ren tekst
+  out = out.replace(/<span>([\s\S]*?)<\/span>/g, "$1");
+
+  // Komprimer whitespace inne i tekst, men bevar HTML-struktur
+  out = out
+    .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]+/g, " ")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
+
+  return out;
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 export function isDetailActive(detail: FeedEntryDetail, now: Date = new Date()): boolean {
