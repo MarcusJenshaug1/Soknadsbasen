@@ -465,11 +465,18 @@ export default async function JobDetailPage({ params }: Props) {
           )}
 
           {job.description.trim().length > 0 ? (
-            <section
-              aria-label="Stillingsbeskrivelse"
-              className="py-10 prose prose-sm md:prose-base max-w-none text-[#14110e]/85 prose-p:my-4 prose-p:leading-[1.7] prose-headings:text-ink prose-headings:font-semibold prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-[18px] md:prose-h3:text-[20px] prose-strong:text-ink prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-ul:my-4 prose-li:my-1.5"
-              dangerouslySetInnerHTML={{ __html: renderDescription(job.description) }}
-            />
+            <section aria-labelledby="stillingsbeskrivelse" className="py-10">
+              <h2
+                id="stillingsbeskrivelse"
+                className="text-[22px] md:text-[26px] font-semibold tracking-[-0.01em] text-ink mb-6"
+              >
+                Om stillingen
+              </h2>
+              <div
+                className="prose prose-sm md:prose-base max-w-none text-[#14110e]/85 prose-p:my-4 prose-p:leading-[1.7] prose-headings:text-ink prose-headings:font-semibold prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-[18px] md:prose-h3:text-[20px] prose-strong:text-ink prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-ul:my-4 prose-li:my-1.5"
+                dangerouslySetInnerHTML={{ __html: renderDescription(job.description) }}
+              />
+            </section>
           ) : (
             <DescriptionFallback
               applyUrl={job.applyUrl}
