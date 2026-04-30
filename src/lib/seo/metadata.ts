@@ -35,7 +35,15 @@ export function buildMetadata({
     siteName: siteConfig.name,
     title: fullTitle,
     description: desc,
-    images: [{ url: image, width: 1200, height: 630, alt: imageAlt }],
+    images: [
+      {
+        url: image,
+        width: 1200,
+        height: 630,
+        alt: imageAlt,
+        type: "image/png",
+      },
+    ],
   };
 
   const twitter: NonNullable<Metadata["twitter"]> = {
