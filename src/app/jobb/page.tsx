@@ -44,10 +44,9 @@ type SearchParams = Promise<{
 
 type SortMode = "recent" | "match";
 
-// Når sort=match henter vi inntil dette antall kandidater, scorer dem mot
-// brukerens CV, og paginerer top 20. Dekker realistisk de fleste filtrerte
-// søk uten å laste 11k jobber inn i minnet.
-const MATCH_CANDIDATE_LIMIT = 200;
+// Sikkerhetstak — pull aldri mer enn dette i en match-sort. Aktive jobber
+// er ~2k i dag, dette dekker hele NAV-feeden inkl. fremtidig vekst.
+const MATCH_CANDIDATE_LIMIT = 5000;
 
 const PAGE_SIZE = 20;
 
@@ -81,11 +80,10 @@ export default async function JobsHubPage({
 
   const session = await getSession();
 
-  // sort=match krever logget-inn bruker med CV. Falle tilbake til "recent"
-  // for anonyme eller hvis CV mangler.
-  const useMatchSort = requestedSort === "match" && Boolean(session);
-
-  const userResume = useMatchSort && session
+  // Henter resume for ALLE innloggede så match-score kan vises på alle
+  // synlige jobber, uansett sort. Match-sort krever resume; faller tilbake
+  // til "recent" hvis CV mangler.
+  const userResume = session
     ? await prisma.userData
         .findUnique({
           where: { userId: session.userId },
@@ -95,7 +93,7 @@ export default async function JobsHubPage({
     : null;
 
   const effectiveSort: SortMode =
-    useMatchSort && userResume ? "match" : "recent";
+    requestedSort === "match" && userResume ? "match" : "recent";
 
   const jobSelect = {
     slug: true,
@@ -149,21 +147,23 @@ export default async function JobsHubPage({
     }),
   ]);
 
-  // Skår + paginer hvis match-sort
+  // Skår alle viste jobber når bruker har resume — uansett sort. Match-sort
+  // sorterer + paginerer på score; recent-sort viser score som badge på
+  // siden vi allerede henter.
+  const scoreJob = (job: (typeof recentJobs)[number]) => {
+    if (!userResume) return null;
+    const keywords = extractJobKeywords(job);
+    if (keywords.length === 0) return null;
+    return analyzeAtsWithKeywords(userResume, keywords).score;
+  };
+
   const jobs =
     effectiveSort === "match" && userResume
       ? recentJobs
-          .map((job) => {
-            const keywords = extractJobKeywords(job);
-            const score =
-              keywords.length > 0
-                ? analyzeAtsWithKeywords(userResume, keywords).score
-                : 0;
-            return { ...job, matchScore: score };
-          })
-          .sort((a, b) => b.matchScore - a.matchScore)
+          .map((job) => ({ ...job, matchScore: scoreJob(job) }))
+          .sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1))
           .slice((side - 1) * PAGE_SIZE, side * PAGE_SIZE)
-      : recentJobs.map((job) => ({ ...job, matchScore: null as number | null }));
+      : recentJobs.map((job) => ({ ...job, matchScore: scoreJob(job) }));
 
   const regions = regionsRaw
     .map((r) => r.region)
@@ -368,51 +368,53 @@ function JobCard({
               {employerName}
             </div>
           </div>
-          {matchScore !== null && (
-            <span
-              className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
-              style={{
-                background:
-                  matchScore >= 80
-                    ? "rgba(22, 163, 74, 0.10)"
-                    : matchScore >= 60
-                      ? "rgba(213, 89, 46, 0.10)"
-                      : matchScore >= 40
-                        ? "rgba(245, 158, 11, 0.10)"
-                        : "rgba(148, 163, 184, 0.15)",
-                color:
-                  matchScore >= 80
-                    ? "#16a34a"
-                    : matchScore >= 60
-                      ? "#D5592E"
-                      : matchScore >= 40
-                        ? "#b45309"
-                        : "#475569",
-              }}
-              title={`${matchScore}% match mot CV-en din`}
-            >
+          <div className="shrink-0 flex flex-col items-end gap-1.5">
+            {matchScore !== null && (
               <span
-                className="size-1.5 rounded-full"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
                 style={{
                   background:
+                    matchScore >= 80
+                      ? "rgba(22, 163, 74, 0.10)"
+                      : matchScore >= 60
+                        ? "rgba(213, 89, 46, 0.10)"
+                        : matchScore >= 40
+                          ? "rgba(245, 158, 11, 0.10)"
+                          : "rgba(148, 163, 184, 0.15)",
+                  color:
                     matchScore >= 80
                       ? "#16a34a"
                       : matchScore >= 60
                         ? "#D5592E"
                         : matchScore >= 40
-                          ? "#f59e0b"
-                          : "#94a3b8",
+                          ? "#b45309"
+                          : "#475569",
                 }}
-                aria-hidden
-              />
-              {matchScore}% match
-            </span>
-          )}
-          {matchScore === null && category && (
-            <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
-              {formatCategory(category)}
-            </span>
-          )}
+                title={`${matchScore}% match mot CV-en din`}
+              >
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{
+                    background:
+                      matchScore >= 80
+                        ? "#16a34a"
+                        : matchScore >= 60
+                          ? "#D5592E"
+                          : matchScore >= 40
+                            ? "#f59e0b"
+                            : "#94a3b8",
+                  }}
+                  aria-hidden
+                />
+                {matchScore}% match
+              </span>
+            )}
+            {category && (
+              <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
+                {formatCategory(category)}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[#14110e]/60">
@@ -496,13 +498,14 @@ function Pagination({
 }: {
   current: number;
   total: number;
-  params: { q: string; region: string; kategori: string };
+  params: { q: string; region: string; kategori: string; sort?: string };
 }) {
   const buildUrl = (page: number) => {
     const sp = new URLSearchParams();
     if (params.q) sp.set("q", params.q);
     if (params.region) sp.set("region", params.region);
     if (params.kategori) sp.set("kategori", params.kategori);
+    if (params.sort) sp.set("sort", params.sort);
     if (page > 1) sp.set("side", String(page));
     const qs = sp.toString();
     return `/jobb${qs ? `?${qs}` : ""}`;
