@@ -120,23 +120,36 @@ function formatSingleNumber(digits: string): string {
 }
 
 /**
- * Trekker ut ATS-keywords fra en stilling. Bruker NAV's strukturerte
- * klassifisering (categoryList + occupationList) i stedet for tekst-extract,
- * som er kanonisk vokabular og mye mer relevant enn ord-bag-of-words fra
- * annonseteksten.
+ * Trekker ut ATS-keywords fra en stilling. Slår sammen NAV's strukturerte
+ * klassifisering (categoryList + occupationList + category + occupation)
+ * MED eventuelle AI-genererte aiKeywords. NAV-taksonomi er alltid med
+ * (kanonisk vokabular), AI utvider med tekniske ferdigheter, verktøy,
+ * domener og synonymer.
  */
 export function extractJobKeywords(job: {
   category: string | null;
-  occupation: string | null;
-  categoryList: unknown;
-  occupationList: unknown;
+  occupation?: string | null;
+  categoryList?: unknown;
+  occupationList?: unknown;
+  aiKeywords?: string[] | null;
 }): string[] {
-  const set = new Set<string>();
-  if (job.category) set.add(job.category);
-  if (job.occupation && job.occupation !== job.category) set.add(job.occupation);
-  for (const c of asNamedList(job.categoryList)) if (c) set.add(c);
-  for (const c of asNamedList(job.occupationList)) if (c) set.add(c);
-  return Array.from(set);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (kw: string | null | undefined) => {
+    if (!kw) return;
+    const key = kw.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(kw);
+  };
+  // NAV-klassifisering først (kanonisk yrkesvokabular)
+  add(job.category);
+  if (job.occupation && job.occupation !== job.category) add(job.occupation);
+  for (const c of asNamedList(job.categoryList)) add(c);
+  for (const c of asNamedList(job.occupationList)) add(c);
+  // AI-utvinnede termer (tech, verktøy, soft skills, synonymer)
+  for (const kw of job.aiKeywords ?? []) add(kw);
+  return out;
 }
 
 function asNamedList(value: unknown): string[] {

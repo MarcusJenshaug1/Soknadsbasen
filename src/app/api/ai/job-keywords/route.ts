@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { geminiGenerate } from "@/lib/gemini";
 import { parseLooseJson } from "@/lib/json";
+import { extractJobKeywords } from "@/lib/jobs/format";
 
 /**
  * POST /api/ai/job-keywords
@@ -31,6 +32,8 @@ export async function POST(req: Request) {
       description: true,
       category: true,
       occupation: true,
+      categoryList: true,
+      occupationList: true,
       aiKeywords: true,
     },
   });
@@ -50,19 +53,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ keywords: [], cached: false });
   }
 
-  const system = `Du er en ATS-spesialist. Trekk ut nøkkelord fra stillingsteksten som rekrutteringssystemer (ATS) og rekrutterer faktisk søker etter. Returner GYLDIG JSON.
+  const navKeywords = extractJobKeywords({
+    category: job.category,
+    occupation: job.occupation,
+    categoryList: job.categoryList,
+    occupationList: job.occupationList,
+  });
+
+  const system = `Du er en ATS-spesialist. Generer en UTFYLLENDE liste ATS-nøkkelord som rekrutteringssystemer matcher mot. Bedre å ha flere relevante enn for få. Returner GYLDIG JSON.
 
 SCHEMA:
 { "keywords": ["string", ...] }
 
 REGLER:
-- Maks 20 nøkkelord, sortert etter viktighet (viktigst først).
-- INKLUDER: yrkestitler/roller (sykepleier, frontend-utvikler, vekter), tekniske ferdigheter (React, SQL, Excel, AutoCAD), verktøy/plattformer (Salesforce, SAP, Figma), domener (B2B, e-handel, prosjektledelse), sertifiseringer (PRINCE2, autorisasjon), språk-krav, soft skills nevnt eksplisitt (ledelse, kommunikasjon, analytisk).
-- EKSKLUDER: stedsnavn (Oslo, Skien), datoer/måneder (april), ord som beskriver annonsen selv (publisert, arbeidssted), generiske ord (jobb, rolle, kandidat), bedriftens navn.
-- Bruk korte termer (1-3 ord). Lowercase med mindre egennavn (React, SAP, B2B).
+- 15-25 nøkkelord, sortert etter viktighet (viktigst først).
+- BEHOLD ALLE NAV-klassifiserte termer (gitt under) — de er kanonisk yrkesvokabular.
+- LEGG TIL fra stillingsteksten:
+  • Synonymer/varianter av jobbtittel
+  • Tekniske ferdigheter (React, SQL, TypeScript, Excel, AutoCAD)
+  • Verktøy/plattformer (Salesforce, SAP, Figma, Azure)
+  • Konsepter/metoder (CI/CD, agile, prosjektledelse, ISR)
+  • Domener/bransjer
+  • Sertifiseringer (autorisasjon, vekterkort, førerkort)
+  • Språk-krav (engelsk, norsk)
+  • Soft skills KONKRET nevnt (ledelse, kommunikasjon, analytisk)
+- EKSKLUDER: stedsnavn (Oslo, Skien), datoer (april), annonse-metadata (publisert, arbeidssted), generiske ord (jobb, rolle, kandidat), bedriftsnavn.
+- Korte termer (1-3 ord). Lowercase med mindre egennavn (React, SAP, B2B, TypeScript).
 - Returner KUN JSON. Ingen markdown, ingen forklaring.`;
 
-  const userPrompt = `Stilling: ${job.title}\nSelskap: ${job.employerName}\n${job.category ? `Kategori: ${job.category}\n` : ""}\n=== STILLINGSTEKST ===\n${job.description.replace(/<[^>]+>/g, " ").slice(0, 6000)}\n=== SLUTT ===`;
+  const userPrompt = [
+    `Stilling: ${job.title}`,
+    `Selskap: ${job.employerName}`,
+    job.category ? `Hovedkategori: ${job.category}` : "",
+    navKeywords.length > 0
+      ? `NAV-klassifisering (BEHOLD disse i output): ${navKeywords.join(", ")}`
+      : "",
+    "",
+    "=== STILLINGSTEKST ===",
+    job.description.replace(/<[^>]+>/g, " ").slice(0, 6000),
+    "=== SLUTT ===",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   try {
     const raw = await geminiGenerate(userPrompt, {
@@ -72,12 +104,23 @@ REGLER:
       json: true,
     });
     const parsed = parseLooseJson(raw) as { keywords?: unknown };
-    const keywords = Array.isArray(parsed.keywords)
+    const aiOnly = Array.isArray(parsed.keywords)
       ? parsed.keywords
           .filter((k): k is string => typeof k === "string" && k.trim().length > 0)
           .map((k) => k.trim())
-          .slice(0, 20)
       : [];
+
+    // Merge AI + NAV-klassifisering (dedup case-insensitive). NAV-termer er
+    // alltid med — de er kanonisk taksonomi.
+    const seen = new Set<string>();
+    const merged: string[] = [];
+    for (const kw of [...aiOnly, ...navKeywords]) {
+      const key = kw.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(kw);
+    }
+    const keywords = merged.slice(0, 30);
 
     if (keywords.length > 0) {
       await prisma.job.update({

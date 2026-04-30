@@ -341,6 +341,7 @@ export default async function JobDetailPage({ params }: Props) {
   const tagSet = new Set<string>();
   if (job.category) tagSet.add(job.category);
   if (job.occupation && job.occupation !== job.category) tagSet.add(job.occupation);
+  for (const kw of job.aiKeywords ?? []) tagSet.add(kw);
   for (const c of categoryList) {
     if (c.name) tagSet.add(c.name);
   }

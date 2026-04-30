@@ -107,6 +107,7 @@ export default async function JobsHubPage({
     occupation: true,
     categoryList: true,
     occupationList: true,
+    aiKeywords: true,
   } as const;
 
   const [recentJobs, total, regionsRaw, categoriesRaw, session, userResumeData] = await Promise.all([
@@ -159,13 +160,20 @@ export default async function JobsHubPage({
 
   // Skår jobber kun når match-sort er aktiv. Recent-sort dropper score for
   // å holde anonyme/recent-cases lette.
-  const scoreJob = (job: { categoryList?: unknown; occupationList?: unknown; category: string | null; occupation?: string | null }) => {
+  const scoreJob = (job: {
+    categoryList?: unknown;
+    occupationList?: unknown;
+    category: string | null;
+    occupation?: string | null;
+    aiKeywords?: string[];
+  }) => {
     if (!userResume) return null;
     const keywords = extractJobKeywords({
       category: job.category,
       occupation: job.occupation ?? null,
       categoryList: job.categoryList,
       occupationList: job.occupationList,
+      aiKeywords: job.aiKeywords,
     });
     if (keywords.length === 0) return null;
     return analyzeAtsWithKeywords(userResume, keywords).score;
