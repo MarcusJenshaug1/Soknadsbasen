@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { preconnect } from "react-dom";
 import { Briefcase, Building2, Calendar, MapPin, Users } from "lucide-react";
 import { SectionLabel } from "@/components/ui/Pill";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
@@ -6,7 +7,6 @@ import { JsonLdScript } from "@/components/seo/JsonLd";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
-import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import {
@@ -16,11 +16,12 @@ import {
   isValidFacet,
 } from "@/lib/jobs/format";
 import { parseActiveResume } from "@/lib/resume-server";
-import { analyzeAtsWithKeywords } from "@/lib/ats";
+import { buildNormalizedResume, scoreAtsFromNormalized } from "@/lib/ats";
 import { JobsFilterBar } from "./JobsFilterBar";
 import { SaveButton } from "./SaveButton";
 
-export const revalidate = 1800;
+// `revalidate` har ingen effekt her — searchParams gjør ruten dynamic per
+// request. Beholder ikke direktivet for å unngå falsk inntrykk av ISR.
 
 export const metadata = buildMetadata({
   path: "/jobb",
@@ -44,9 +45,10 @@ type SearchParams = Promise<{
 
 type SortMode = "recent" | "match";
 
-// Match-sort pull. Hver kandidat ~5KB med categoryList JSON, så 800 = ~4MB
-// payload. Gir 40 sider × 20 = nok for de fleste filtrerte søk.
-const MATCH_CANDIDATE_LIMIT = 800;
+// Match-sort pull. Vi henter aiKeywords (compact string[]) først; tunge
+// JSON-felter (categoryList/occupationList) er droppet siden ~alle aktive
+// jobs har aiKeywords populert via cron. 240 = 12 sider × 20.
+const MATCH_CANDIDATE_LIMIT = 240;
 
 /** NAV gir samme kategori i ulike case ("butikkmedarbeider" vs "Butikkmedarbeider").
  *  Behold første variant per case-insensitive nøkkel — første treff er typisk
@@ -70,6 +72,10 @@ export default async function JobsHubPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // 20 CompanyLogo client-islands henter favicons fra Google S2 — preconnect
+  // sparer DNS+TLS for første logo-load.
+  preconnect("https://www.google.com");
+
   const params = await searchParams;
   const q = (params.q ?? "").trim();
   const region = (params.region ?? "").trim();
@@ -120,12 +126,27 @@ export default async function JobsHubPage({
   const matchSelect = {
     ...baseSelect,
     occupation: true,
-    categoryList: true,
-    occupationList: true,
     aiKeywords: true,
   } as const;
 
-  const [recentJobs, total, regionsRaw, categoriesRaw, session, userResumeData] = await Promise.all([
+  // Pre-resolve userId så saved-state-query kan kjøre parallelt med jobs-fetch.
+  const userIdPromise = sessionPromise.then((s) => s?.userId ?? null);
+  const baseSavedSlugsPromise = userIdPromise.then(async (userId) => {
+    if (!userId) return null as string[] | null;
+    // Vi vet ikke hvilke slugs som blir vist før jobs-fetch er ferdig, så
+    // hent alle drafts for brukeren én gang. Drafts holder seg i lavt
+    // antall for de fleste brukere; mye billigere enn IN-query etter at
+    // jobs er resolvet.
+    const rows = await prisma.jobApplication.findMany({
+      where: { userId, source: "Søknadsbasen" },
+      select: { jobUrl: true },
+    });
+    return rows
+      .map((r) => r.jobUrl?.match(/\/jobb\/([^/?#]+)/)?.[1] ?? null)
+      .filter((s): s is string => Boolean(s));
+  });
+
+  const [recentJobs, total, regionsRaw, categoriesRaw, session, userResumeData, savedSlugs] = await Promise.all([
     wantsMatchSort
       ? prisma.job.findMany({
           where,
@@ -164,38 +185,37 @@ export default async function JobsHubPage({
           })
         : null,
     ),
+    baseSavedSlugsPromise,
   ]);
 
   const userResume = wantsMatchSort
     ? parseActiveResume(userResumeData?.resumeData)
     : null;
+  const normalizedResume = userResume ? buildNormalizedResume(userResume) : null;
 
   const effectiveSort: SortMode =
-    wantsMatchSort && userResume ? "match" : "recent";
+    wantsMatchSort && normalizedResume ? "match" : "recent";
 
   // Skår jobber kun når match-sort er aktiv. Recent-sort dropper score for
-  // å holde anonyme/recent-cases lette.
+  // å holde anonyme/recent-cases lette. Bruker pre-normalisert resume så
+  // vi normaliserer teksten én gang per render istedenfor N×.
   const scoreJob = (job: {
-    categoryList?: unknown;
-    occupationList?: unknown;
     category: string | null;
     occupation?: string | null;
     aiKeywords?: string[];
   }) => {
-    if (!userResume) return null;
+    if (!normalizedResume) return null;
     const keywords = extractJobKeywords({
       category: job.category,
       occupation: job.occupation ?? null,
-      categoryList: job.categoryList,
-      occupationList: job.occupationList,
       aiKeywords: job.aiKeywords,
     });
     if (keywords.length === 0) return null;
-    return analyzeAtsWithKeywords(userResume, keywords).score;
+    return scoreAtsFromNormalized(normalizedResume, keywords);
   };
 
   const jobs =
-    effectiveSort === "match" && userResume
+    effectiveSort === "match" && normalizedResume
       ? recentJobs
           .map((job) => ({ ...job, matchScore: scoreJob(job) }))
           .sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1))
@@ -215,25 +235,7 @@ export default async function JobsHubPage({
       ? Math.ceil(Math.min(total, MATCH_CANDIDATE_LIMIT) / PAGE_SIZE)
       : Math.ceil(total / PAGE_SIZE);
 
-  // Resolve which of the visible jobs are already saved by the user. Cheap
-  // single query: filter on jobUrl matching any of the visible slugs.
-  const visibleSlugs = jobs.map((j) => j.slug);
-  const savedSlugSet = new Set<string>();
-  if (session && visibleSlugs.length > 0) {
-    const candidates = visibleSlugs.flatMap((s) => [
-      absoluteUrl(`/jobb/${s}`),
-      `/jobb/${s}`,
-    ]);
-    const saved = await prisma.jobApplication.findMany({
-      where: { userId: session.userId, jobUrl: { in: candidates } },
-      select: { jobUrl: true },
-    });
-    for (const row of saved) {
-      if (!row.jobUrl) continue;
-      const m = row.jobUrl.match(/\/jobb\/([^/?#]+)/);
-      if (m) savedSlugSet.add(m[1]);
-    }
-  }
+  const savedSlugSet = new Set<string>(savedSlugs ?? []);
   const isLoggedIn = Boolean(session);
 
   return (

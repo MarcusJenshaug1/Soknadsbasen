@@ -24,8 +24,13 @@ export function JobsFilterBar({
   isLoggedIn,
 }: Props) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const [search, setSearch] = useState(q);
+  // Optimistic UI: speil sort/region/kategori-state lokalt så pillen flipper
+  // umiddelbart mens server-render er underveis.
+  const [optimisticSort, setOptimisticSort] = useState<"recent" | "match">(sort);
+  const [optimisticRegion, setOptimisticRegion] = useState(region);
+  const [optimisticKategori, setOptimisticKategori] = useState(kategori);
 
   function update(next: {
     q?: string;
@@ -35,16 +40,21 @@ export function JobsFilterBar({
   }) {
     const sp = new URLSearchParams();
     const qVal = next.q !== undefined ? next.q : search;
-    const rVal = next.region !== undefined ? next.region : region;
-    const kVal = next.kategori !== undefined ? next.kategori : kategori;
-    const sVal = next.sort !== undefined ? next.sort : sort;
+    const rVal = next.region !== undefined ? next.region : optimisticRegion;
+    const kVal = next.kategori !== undefined ? next.kategori : optimisticKategori;
+    const sVal = next.sort !== undefined ? next.sort : optimisticSort;
     if (qVal) sp.set("q", qVal);
     if (rVal) sp.set("region", rVal);
     if (kVal) sp.set("kategori", kVal);
     if (sVal === "match") sp.set("sort", "match");
     const qs = sp.toString();
+    if (next.region !== undefined) setOptimisticRegion(next.region);
+    if (next.kategori !== undefined) setOptimisticKategori(next.kategori);
+    if (next.sort !== undefined) setOptimisticSort(next.sort);
     startTransition(() => {
-      router.push(`/jobb${qs ? `?${qs}` : ""}`);
+      // replace + scroll:false: bevarer scroll-posisjon og hindrer at
+      // historikken fylles opp ved hver filter-justering.
+      router.replace(`/jobb${qs ? `?${qs}` : ""}`, { scroll: false });
     });
   }
 
@@ -55,7 +65,11 @@ export function JobsFilterBar({
   const chevron = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2314110e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E")`;
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-[#eee9df]/40 p-3 md:p-4">
+    <div
+      className="rounded-2xl border border-black/10 bg-[#eee9df]/40 p-3 md:p-4 transition-opacity"
+      aria-busy={pending}
+      style={{ opacity: pending ? 0.85 : 1 }}
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -90,7 +104,7 @@ export function JobsFilterBar({
           />
         </div>
         <select
-          value={region}
+          value={optimisticRegion}
           onChange={(e) => update({ region: e.target.value })}
           aria-label="Region"
           className={`${selectClass} md:min-w-[160px]`}
@@ -104,7 +118,7 @@ export function JobsFilterBar({
           ))}
         </select>
         <select
-          value={kategori}
+          value={optimisticKategori}
           onChange={(e) => update({ kategori: e.target.value })}
           aria-label="Kategori"
           disabled={categories.length === 0}
@@ -138,15 +152,15 @@ export function JobsFilterBar({
               }}
             />
           )}
-          {region && (
+          {optimisticRegion && (
             <FilterChip
-              label={displayPlace(region)}
+              label={displayPlace(optimisticRegion)}
               onClear={() => update({ region: "" })}
             />
           )}
-          {kategori && (
+          {optimisticKategori && (
             <FilterChip
-              label={formatCategory(kategori)}
+              label={formatCategory(optimisticKategori)}
               onClear={() => update({ kategori: "" })}
             />
           )}
@@ -154,13 +168,15 @@ export function JobsFilterBar({
         {isLoggedIn && (
           <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-white border border-black/10">
             <SortPill
-              active={sort === "recent"}
+              active={optimisticSort === "recent"}
+              pending={pending && optimisticSort === "recent"}
               onClick={() => update({ sort: "recent" })}
             >
               Nyeste
             </SortPill>
             <SortPill
-              active={sort === "match"}
+              active={optimisticSort === "match"}
+              pending={pending && optimisticSort === "match"}
               onClick={() => update({ sort: "match" })}
             >
               Best match
@@ -174,10 +190,12 @@ export function JobsFilterBar({
 
 function SortPill({
   active,
+  pending,
   onClick,
   children,
 }: {
   active: boolean;
+  pending?: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -187,10 +205,16 @@ function SortPill({
       onClick={onClick}
       className={
         active
-          ? "px-3 py-1 rounded-full text-[12px] font-medium bg-[#14110e] text-[#faf8f5]"
-          : "px-3 py-1 rounded-full text-[12px] text-[#14110e]/65 hover:text-[#14110e]"
+          ? "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium bg-[#14110e] text-[#faf8f5]"
+          : "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] text-[#14110e]/65 hover:text-[#14110e]"
       }
     >
+      {pending && (
+        <span
+          aria-hidden
+          className="size-1.5 rounded-full bg-[#D5592E] animate-pulse"
+        />
+      )}
       {children}
     </button>
   );

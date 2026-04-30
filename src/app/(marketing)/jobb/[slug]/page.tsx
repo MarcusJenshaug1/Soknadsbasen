@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { preconnect } from "react-dom";
 import {
   Briefcase,
   Building2,
@@ -30,6 +31,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getJobBySlug } from "@/lib/jobs/get-job";
 import { displayPlace, formatCategory, formatPhones } from "@/lib/jobs/format";
+import { getCachedMatch } from "@/lib/jobs/match-cache";
 import { JobActions } from "./JobActions";
 import { JobAtsCard } from "./JobAtsCard";
 
@@ -208,6 +210,10 @@ function jobPostingJsonLd(job: {
 }
 
 export default async function JobDetailPage({ params }: Props) {
+  // Google S2 leverer favicons for arbeidsgivere — preconnect tidligere
+  // sparer ~50-100 ms på første logo-load.
+  preconnect("https://www.google.com");
+
   const { slug } = await params;
 
   // Cachet helper: generateMetadata og denne page-bodyen deler én rundtur.
@@ -221,8 +227,12 @@ export default async function JobDetailPage({ params }: Props) {
   if (job.employerSlug) orFilters.push({ employerSlug: job.employerSlug });
   if (job.region) orFilters.push({ region: job.region });
 
-  const [session, candidates] = await Promise.all([
-    getSession(),
+  // Fan-out: session, related-jobs, saved-app, og cached AI-match kjører
+  // alle parallelt. Saved-app + match-cache leses fra DB direkte basert på
+  // userId fra session-promise — ingen sequential venting.
+  const sessionPromise = getSession();
+  const [session, candidates, savedApplication, initialMatch] = await Promise.all([
+    sessionPromise,
     orFilters.length === 0
       ? Promise.resolve(
           [] as Array<{
@@ -253,23 +263,24 @@ export default async function JobDetailPage({ params }: Props) {
             publishedAt: true,
           },
           orderBy: { publishedAt: "desc" },
-          take: 12,
+          take: 6,
         }),
+    sessionPromise.then((s) =>
+      s
+        ? prisma.jobApplication.findFirst({
+            where: {
+              userId: s.userId,
+              OR: [
+                { jobUrl: absoluteUrl(`/jobb/${slug}`) },
+                { jobUrl: `/jobb/${slug}` },
+              ],
+            },
+            select: { id: true },
+          })
+        : null,
+    ),
+    sessionPromise.then((s) => (s ? getCachedMatch(s.userId, slug) : null)),
   ]);
-
-  // Saved-state krever userId og kan ikke parallelliseres med session selv.
-  const savedApplication = session
-    ? await prisma.jobApplication.findFirst({
-        where: {
-          userId: session.userId,
-          OR: [
-            { jobUrl: absoluteUrl(`/jobb/${slug}`) },
-            { jobUrl: `/jobb/${slug}` },
-          ],
-        },
-        select: { id: true },
-      })
-    : null;
 
   // Rangér relaterte: kategori-match veier mest, deretter arbeidsgiver, så region.
   const related = candidates
@@ -445,6 +456,14 @@ export default async function JobDetailPage({ params }: Props) {
                   jobTitle={job.title}
                   employerName={job.employerName}
                   navKeywords={tags}
+                  initialMatch={
+                    initialMatch
+                      ? {
+                          cvKeywords: initialMatch.cvKeywords,
+                          jobKeywords: initialMatch.jobKeywords,
+                        }
+                      : null
+                  }
                 />
               </div>
             )}

@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
 import { cn } from "@/lib/cn";
-import { CvTipsPanel } from "./CvTipsPanel";
+
+// CvTipsPanel lazy-loades — kun nødvendig når brukeren klikker "Få hjelp
+// med CV". Sparer ~5 KB JS i initial detail-bundle.
+const CvTipsPanel = dynamic(
+  () => import("./CvTipsPanel").then((m) => m.CvTipsPanel),
+  { ssr: false },
+);
 
 type Props = {
   slug: string;
@@ -12,6 +19,14 @@ type Props = {
   employerName: string;
   /** NAV-klassifisering, brukt som fallback hvis AI ikke gir resultat. */
   navKeywords: string[];
+  /**
+   * Server-pre-fetched AI-keywords. Når satt rendrer kortet score umiddelbart
+   * uten klient-roundtrip. Klient re-fetcher kun hvis null (cache miss).
+   */
+  initialMatch?: {
+    cvKeywords: string[];
+    jobKeywords: string[];
+  } | null;
 };
 
 type MatchResult = {
@@ -21,7 +36,27 @@ type MatchResult = {
   source: "ai" | "nav";
 };
 
-export function JobAtsCard({ slug, jobTitle, employerName, navKeywords }: Props) {
+function computeAiMatch(cvKw: string[], jobKw: string[]): MatchResult | null {
+  if (cvKw.length === 0 || jobKw.length === 0) return null;
+  const cvLower = new Set(cvKw.map((k) => k.toLowerCase()));
+  const matched = jobKw.filter((k) => cvLower.has(k.toLowerCase()));
+  const missing = jobKw.filter((k) => !cvLower.has(k.toLowerCase()));
+  const coverage = jobKw.length > 0 ? matched.length / jobKw.length : 0;
+  return {
+    score: Math.round(coverage * 100),
+    matched,
+    missing,
+    source: "ai",
+  };
+}
+
+export function JobAtsCard({
+  slug,
+  jobTitle,
+  employerName,
+  navKeywords,
+  initialMatch,
+}: Props) {
   const data = useResumeStore((s) => s.data);
   const activeResumeId = useResumeStore((s) => s.activeResumeId);
 
@@ -34,13 +69,24 @@ export function JobAtsCard({ slug, jobTitle, employerName, navKeywords }: Props)
     return false;
   }, [activeResumeId, data]);
 
-  const [result, setResult] = useState<MatchResult | null>(null);
+  // Hvis serveren leverte cached keywords, vis score umiddelbart.
+  const initialResult = useMemo(() => {
+    if (!initialMatch) return null;
+    return computeAiMatch(initialMatch.cvKeywords, initialMatch.jobKeywords);
+  }, [initialMatch]);
+
+  const [result, setResult] = useState<MatchResult | null>(initialResult);
   const [loading, setLoading] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
 
   useEffect(() => {
     if (!hasResume) {
       setResult(null);
+      return;
+    }
+    // Cache hit fra server: hopp over klient-fetch.
+    if (initialResult) {
+      setResult(initialResult);
       return;
     }
     let cancelled = false;
@@ -61,26 +107,16 @@ export function JobAtsCard({ slug, jobTitle, employerName, navKeywords }: Props)
         const cvKw: string[] = cv?.keywords ?? [];
         const jobKw: string[] = job?.keywords ?? [];
 
-        if (cvKw.length === 0 || jobKw.length === 0) {
+        const ai = computeAiMatch(cvKw, jobKw);
+        if (ai) {
+          setResult(ai);
+        } else if (navKeywords.length > 0) {
           // Fallback til lokal NAV-match hvis AI ikke leverte
-          if (navKeywords.length > 0) {
-            const local = matchKeywords(buildResumeText(data), navKeywords);
-            setResult({ ...local, source: "nav" });
-          } else {
-            setResult(null);
-          }
-          setLoading(false);
-          return;
+          const local = matchKeywords(buildResumeText(data), navKeywords);
+          setResult({ ...local, source: "nav" });
+        } else {
+          setResult(null);
         }
-
-        // AI-match: intersect cvKw og jobKw (case-insensitive)
-        const cvLower = new Set(cvKw.map((k) => k.toLowerCase()));
-        const matched = jobKw.filter((k) => cvLower.has(k.toLowerCase()));
-        const missing = jobKw.filter((k) => !cvLower.has(k.toLowerCase()));
-        const coverage = jobKw.length > 0 ? matched.length / jobKw.length : 0;
-        const score = Math.round(coverage * 100);
-
-        setResult({ score, matched, missing, source: "ai" });
         setLoading(false);
       })
       .catch(() => {
@@ -99,7 +135,7 @@ export function JobAtsCard({ slug, jobTitle, employerName, navKeywords }: Props)
     // data brukes inni handler men trenger ikke trigge re-fetch ved hver
     // tastetrykk i resume — slug er den ekte trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasResume, slug]);
+  }, [hasResume, slug, initialResult]);
 
   if (!hasResume) {
     return (

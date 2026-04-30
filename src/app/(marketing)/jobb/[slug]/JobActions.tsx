@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bookmark, BookmarkCheck, ExternalLink, FileText } from "lucide-react";
@@ -25,21 +25,9 @@ export function JobActions({
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Re-sync server state on focus (in case user saved from another tab)
-  useEffect(() => {
-    function refresh() {
-      if (!isLoggedIn) return;
-      fetch(`/api/jobb/${slug}/save`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d) setSavedId(d.id ?? null);
-        })
-        .catch(() => {});
-    }
-    window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
-  }, [slug, isLoggedIn]);
+  // Tidligere window.focus-listener pinget /api/jobb/.../save på hver
+  // alt-tab. Lite verdi (sjelden lagrer man fra annen tab samtidig), mye
+  // støy. Fjernet — bruker kan refreshe manuelt om de trenger sync.
 
   async function toggleSave() {
     if (!isLoggedIn) {

@@ -58,6 +58,57 @@ export function parseResumeById(
 }
 
 /**
+ * Bygg en kanonisk tekstversjon av et resume til AI-prompt + hash-cache.
+ * Brukes både fra /api/ai/cv-keywords og /lib/jobs/match-cache så de ALDRI
+ * drifter — hash må matche eksakt for at server-pre-fetch skal hit cache.
+ */
+export function buildResumeSummary(resume: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (typeof resume.role === "string" && resume.role.trim()) {
+    parts.push(`Rolle: ${resume.role}`);
+  }
+  if (typeof resume.summary === "string" && resume.summary.trim()) {
+    parts.push(`Profil: ${String(resume.summary).slice(0, 600)}`);
+  }
+  if (Array.isArray(resume.skills) && resume.skills.length > 0) {
+    parts.push(`Ferdigheter: ${resume.skills.slice(0, 30).join(", ")}`);
+  }
+  if (Array.isArray(resume.experience) && resume.experience.length > 0) {
+    const exp = resume.experience
+      .slice(0, 6)
+      .map((e: Record<string, unknown>) => {
+        const t = typeof e.title === "string" ? e.title : "";
+        const c = typeof e.company === "string" ? e.company : "";
+        const d = typeof e.description === "string" ? String(e.description).slice(0, 200) : "";
+        return `- ${t} hos ${c}${d ? `: ${d}` : ""}`;
+      })
+      .join("\n");
+    parts.push(`Erfaring:\n${exp}`);
+  }
+  if (Array.isArray(resume.education) && resume.education.length > 0) {
+    const edu = resume.education
+      .map((e: Record<string, unknown>) => {
+        const deg = typeof e.degree === "string" ? e.degree : "";
+        const field = typeof e.field === "string" ? e.field : "";
+        const school = typeof e.school === "string" ? e.school : "";
+        return `${deg}${field ? ` i ${field}` : ""}${school ? ` ved ${school}` : ""}`;
+      })
+      .join(", ");
+    parts.push(`Utdanning: ${edu}`);
+  }
+  if (Array.isArray(resume.certifications) && resume.certifications.length > 0) {
+    const certs = resume.certifications
+      .map((c: Record<string, unknown>) =>
+        typeof c.name === "string" ? c.name : "",
+      )
+      .filter(Boolean)
+      .join(", ");
+    if (certs) parts.push(`Sertifiseringer: ${certs}`);
+  }
+  return parts.join("\n\n");
+}
+
+/**
  * List available CV ids + names from the persisted payload.
  * Used to validate POST /api/cv/share inputs and to label rows in the share-list UI.
  */
