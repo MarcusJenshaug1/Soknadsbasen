@@ -48,6 +48,21 @@ type SortMode = "recent" | "match";
 // payload. Gir 40 sider × 20 = nok for de fleste filtrerte søk.
 const MATCH_CANDIDATE_LIMIT = 800;
 
+/** NAV gir samme kategori i ulike case ("butikkmedarbeider" vs "Butikkmedarbeider").
+ *  Behold første variant per case-insensitive nøkkel — første treff er typisk
+ *  den med flest jobber siden groupBy returnerer i count desc. */
+function dedupCaseInsensitive(items: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of items) {
+    const key = item.toLocaleLowerCase("nb-NO");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
 const PAGE_SIZE = 20;
 
 export default async function JobsHubPage({
@@ -187,12 +202,12 @@ export default async function JobsHubPage({
           .slice((side - 1) * PAGE_SIZE, side * PAGE_SIZE)
       : recentJobs.map((job) => ({ ...job, matchScore: null as number | null }));
 
-  const regions = regionsRaw
-    .map((r) => r.region)
-    .filter(isValidFacet);
-  const categories = categoriesRaw
-    .map((c) => c.category)
-    .filter(isValidFacet);
+  const regions = dedupCaseInsensitive(
+    regionsRaw.map((r) => r.region).filter(isValidFacet),
+  );
+  const categories = dedupCaseInsensitive(
+    categoriesRaw.map((c) => c.category).filter(isValidFacet),
+  );
 
   // Match-sort kan bare paginere innen kandidat-poolen
   const totalPages =
