@@ -54,16 +54,13 @@ export function formatPhones(input: string | null | undefined): string[] {
   // kan fortsatt inneholde flere numre limt sammen med mellomrom.
   const segments = input.split(/\s*[,;/]\s*/);
 
-  const seen = new Set<string>();
   const out: string[] = [];
   for (const segment of segments) {
-    for (const formatted of extractNumbersFromSegment(segment)) {
-      const key = formatted.replace(/\s+/g, "");
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(formatted);
-    }
+    out.push(...extractNumbersFromSegment(segment));
   }
+  // Vi dedup'er IKKE: NAV-annonsører kan ha lagt inn samme nummer flere
+  // ganger med vilje (mobil + jobbtelefon som tilfeldigvis er like), eller
+  // simpelthen dobbeltrapportert. Vi viser begge så bruker selv kan vurdere.
   return out;
 }
 

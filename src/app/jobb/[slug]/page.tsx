@@ -875,9 +875,9 @@ function ContactPanel({
                 {email}
               </a>
             )}
-            {formatPhones(phone).map((p) => (
+            {formatPhones(phone).map((p, i) => (
               <a
-                key={p}
+                key={`${p}-${i}`}
                 href={`tel:${p.replace(/\s+/g, "")}`}
                 className="inline-flex items-center gap-1.5 text-[#14110e]/75 hover:text-[#D5592E]"
               >
