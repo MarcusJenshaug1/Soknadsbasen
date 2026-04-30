@@ -43,11 +43,16 @@ export async function generateMetadata({ params }: Props) {
   const job = await getJobBySlug(slug);
   if (!job) return buildMetadata({ path: `/jobb/${slug}`, noindex: true });
 
-  const description = job.description.slice(0, 155).replace(/\s+/g, " ");
+  // job.description er HTML etter sanitizer-fixen — strip tags for meta-tekst.
+  const plain = job.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const description = plain.slice(0, 155);
+  const title = `${job.title} hos ${job.employerName}${job.location ? ` (${job.location})` : ""}`;
   return buildMetadata({
     path: `/jobb/${slug}`,
-    title: `${job.title} hos ${job.employerName}${job.location ? ` (${job.location})` : ""}`,
+    title,
     description: description.length > 50 ? description : `${job.title} hos ${job.employerName}.${job.location ? ` ${job.location}.` : ""} Stilling fra Arbeidsplassen.no.`,
+    ogImage: `/jobb/${slug}/opengraph-image`,
+    ogImageAlt: title,
     noindex: !job.isActive,
   });
 }
