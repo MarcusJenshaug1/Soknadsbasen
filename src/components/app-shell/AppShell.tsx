@@ -1,5 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { BottomTabBar } from "./BottomTabBar";
+import { FirstLoadOverlay } from "./FirstLoadOverlay";
 import { MobileSessionBar } from "@/components/sessions/MobileSessionBar";
 import type { OrgContext } from "@/lib/auth";
 
@@ -29,6 +30,7 @@ export function AppShell({
         {children}
       </main>
       <BottomTabBar hasAccess={hasAccess} />
+      <FirstLoadOverlay />
     </div>
   );
 }
