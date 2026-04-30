@@ -3,16 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
-import { analyzeAtsWithKeywords, type AtsAnalysis } from "@/lib/ats";
 import { cn } from "@/lib/cn";
 
 type Props = {
-  jobDescription: string;
-  /** NAV-klassifisering: ESCO/JANZZ/STYRK navn fra categoryList/occupationList. */
-  keywords: string[];
+  slug: string;
+  /** NAV-klassifisering, brukt som fallback hvis AI ikke gir resultat. */
+  navKeywords: string[];
 };
 
-export function JobAtsCard({ jobDescription, keywords }: Props) {
+type MatchResult = {
+  score: number;
+  matched: string[];
+  missing: string[];
+  source: "ai" | "nav";
+};
+
+export function JobAtsCard({ slug, navKeywords }: Props) {
   const data = useResumeStore((s) => s.data);
   const activeResumeId = useResumeStore((s) => s.activeResumeId);
 
@@ -25,17 +31,71 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
     return false;
   }, [activeResumeId, data]);
 
-  const [result, setResult] = useState<AtsAnalysis | null>(null);
+  const [result, setResult] = useState<MatchResult | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!hasResume || keywords.length === 0) {
+    if (!hasResume) {
       setResult(null);
       return;
     }
-    setResult(
-      analyzeAtsWithKeywords(data, keywords, { jobAd: jobDescription }),
-    );
-  }, [hasResume, keywords, data, jobDescription]);
+    let cancelled = false;
+    setLoading(true);
+
+    Promise.all([
+      fetch("/api/ai/cv-keywords", { method: "POST" }).then((r) =>
+        r.ok ? r.json() : null,
+      ),
+      fetch("/api/ai/job-keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      }).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([cv, job]) => {
+        if (cancelled) return;
+        const cvKw: string[] = cv?.keywords ?? [];
+        const jobKw: string[] = job?.keywords ?? [];
+
+        if (cvKw.length === 0 || jobKw.length === 0) {
+          // Fallback til lokal NAV-match hvis AI ikke leverte
+          if (navKeywords.length > 0) {
+            const local = matchKeywords(buildResumeText(data), navKeywords);
+            setResult({ ...local, source: "nav" });
+          } else {
+            setResult(null);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // AI-match: intersect cvKw og jobKw (case-insensitive)
+        const cvLower = new Set(cvKw.map((k) => k.toLowerCase()));
+        const matched = jobKw.filter((k) => cvLower.has(k.toLowerCase()));
+        const missing = jobKw.filter((k) => !cvLower.has(k.toLowerCase()));
+        const coverage = jobKw.length > 0 ? matched.length / jobKw.length : 0;
+        const score = Math.round(coverage * 100);
+
+        setResult({ score, matched, missing, source: "ai" });
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Hard error → fallback
+        if (navKeywords.length > 0) {
+          const local = matchKeywords(buildResumeText(data), navKeywords);
+          setResult({ ...local, source: "nav" });
+        }
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // data brukes inni handler men trenger ikke trigge re-fetch ved hver
+    // tastetrykk i resume — slug er den ekte trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasResume, slug]);
 
   if (!hasResume) {
     return (
@@ -57,10 +117,7 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
     );
   }
 
-  if (!result) {
-    // Ingen NAV-keywords (gammel pre-backfill-rad). Skjul kortet, alternativet
-    // ville være å vise loading evig.
-    if (keywords.length === 0) return null;
+  if (loading || !result) {
     return (
       <div className="rounded-2xl border border-black/10 bg-white p-5 mb-6 flex items-center gap-3">
         <span className="inline-flex gap-[3px]">
@@ -72,14 +129,16 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
             />
           ))}
         </span>
-        <span className="text-[12px] text-[#14110e]/65">Sjekker match …</span>
+        <span className="text-[12px] text-[#14110e]/65">
+          AI sjekker match mot CV-en din …
+        </span>
       </div>
     );
   }
 
   const tone = scoreTone(result.score);
-  const matched = result.matchedKeywords.slice(0, 8);
-  const missing = result.missingKeywords.slice(0, 6);
+  const matched = result.matched.slice(0, 10);
+  const missing = result.missing.slice(0, 8);
 
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-5 mb-6">
@@ -94,16 +153,16 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
               {tone.label}
             </span>
             <span className="text-[10px] uppercase tracking-[0.18em] text-[#14110e]/45">
-              NAV-klassifisering
+              {result.source === "ai" ? "AI-analyse" : "NAV-klassifisering"}
             </span>
           </div>
           <h3 className="text-[15px] font-medium tracking-tight mb-1">
             ATS-match mot CV-en din
           </h3>
           <p className="text-[12px] text-[#14110e]/65 leading-[1.5]">
-            {result.matchedKeywords.length} av{" "}
-            {result.matchedKeywords.length + result.missingKeywords.length || 1}{" "}
-            nøkkelord matcher.
+            {result.matched.length} av{" "}
+            {result.matched.length + result.missing.length || 1} nøkkelord
+            matcher.
           </p>
         </div>
       </div>
@@ -114,7 +173,7 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
             <ChipRow
               label="Matchet"
               chips={matched}
-              extraCount={result.matchedKeywords.length - matched.length}
+              extraCount={result.matched.length - matched.length}
               variant="match"
             />
           )}
@@ -122,7 +181,7 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
             <ChipRow
               label="Mangler"
               chips={missing}
-              extraCount={result.missingKeywords.length - missing.length}
+              extraCount={result.missing.length - missing.length}
               variant="missing"
             />
           )}
@@ -130,6 +189,42 @@ export function JobAtsCard({ jobDescription, keywords }: Props) {
       )}
     </div>
   );
+}
+
+function buildResumeText(data: {
+  role?: string;
+  summary?: string;
+  skills?: string[];
+  experience?: { title: string; company: string; description?: string }[];
+}): string {
+  return [
+    data.role ?? "",
+    data.summary ?? "",
+    (data.skills ?? []).join(" "),
+    (data.experience ?? [])
+      .map((e) => `${e.title} ${e.company} ${e.description ?? ""}`)
+      .join(" "),
+  ].join(" ");
+}
+
+function matchKeywords(resumeText: string, keywords: string[]) {
+  const normalized = resumeText
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "");
+  const matched: string[] = [];
+  const missing: string[] = [];
+  for (const k of keywords) {
+    const norm = k
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "");
+    if (normalized.includes(norm)) matched.push(k);
+    else missing.push(k);
+  }
+  const total = keywords.length || 1;
+  const score = Math.round((matched.length / total) * 100);
+  return { score, matched, missing };
 }
 
 function ChipRow({

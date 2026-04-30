@@ -437,12 +437,9 @@ export default async function JobDetailPage({ params }: Props) {
               employerName={job.employerName}
             />
 
-            {session && tags.length > 0 && (
+            {session && (
               <div className="mt-6">
-                <JobAtsCard
-                  jobDescription={job.description}
-                  keywords={tags}
-                />
+                <JobAtsCard slug={job.slug} navKeywords={tags} />
               </div>
             )}
           </header>

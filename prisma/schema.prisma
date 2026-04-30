@@ -75,6 +75,11 @@ model UserData {
   userId          String   @unique @db.Uuid
   resumeData      String   @default("{}") // JSON blob of ResumeData
   coverLetterData String   @default("{}") // JSON blob of { letters, activeIndex }
+  /// AI-utvunne nøkkelord fra brukerens aktive CV. Cachet maks 24t,
+  /// regenereres når resumeHash endres (dvs. brukeren oppdaterer CV).
+  aiKeywords       String[]  @default([])
+  aiKeywordsAt     DateTime?
+  aiKeywordsHash   String?
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -768,6 +773,10 @@ model Job {
   // Hele category- og occupation-arrayene (inkl. STYRK/ESCO-koder).
   categoryList   Json?
   occupationList Json?
+  /// AI-utvunne ATS-nøkkelord, computet ved første visning av en logget-inn
+  /// bruker og cachet for resten. Tomt array = enda ikke computet.
+  aiKeywords     String[] @default([])
+  aiKeywordsAt   DateTime?
 
   // Stillingsdetaljer
   employmentType String?  // bakoverkomp.: engagementType ?? extent
