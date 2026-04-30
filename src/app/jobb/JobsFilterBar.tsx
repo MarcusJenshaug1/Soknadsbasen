@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { displayPlace } from "@/lib/jobs/format";
 
 type Props = {
   q: string;
@@ -62,7 +63,7 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
             <option value="">Hele Norge</option>
             {regions.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {displayPlace(r)}
               </option>
             ))}
           </select>
@@ -70,9 +71,12 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
             value={kategori}
             onChange={(e) => update({ kategori: e.target.value })}
             aria-label="Kategori"
-            className="px-4 py-2.5 rounded-full border border-black/10 bg-[#faf8f5] text-[13px] outline-none focus:border-[#D5592E] cursor-pointer min-w-[140px]"
+            disabled={categories.length === 0}
+            className="px-4 py-2.5 rounded-full border border-black/10 bg-[#faf8f5] text-[13px] outline-none focus:border-[#D5592E] cursor-pointer min-w-[140px] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <option value="">Alle kategorier</option>
+            <option value="">
+              {categories.length === 0 ? "Kategorier kommer" : "Alle kategorier"}
+            </option>
             {categories.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -99,7 +103,10 @@ export function JobsFilterBar({ q, region, kategori, regions, categories }: Prop
             />
           )}
           {region && (
-            <FilterChip label={region} onClear={() => update({ region: "" })} />
+            <FilterChip
+              label={displayPlace(region)}
+              onClear={() => update({ region: "" })}
+            />
           )}
           {kategori && (
             <FilterChip label={kategori} onClear={() => update({ kategori: "" })} />

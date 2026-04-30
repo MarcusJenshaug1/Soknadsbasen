@@ -12,6 +12,8 @@ import {
   pickCategory,
   pickEmployerName,
   pickLocation,
+  pickPrimaryAddress,
+  pickPrimaryContact,
   serializeCategories,
   serializeLocations,
   slugify,
@@ -335,6 +337,17 @@ async function upsertJob(
       : null;
   const sector = detail.sector?.trim() || null;
 
+  const jobTitle = detail.jobtitle?.trim() || null;
+  const workhours = detail.workhours?.trim() || null;
+  const workdays = detail.workday?.trim() || null;
+  const starttime = detail.starttime?.trim() || null;
+  const remote = detail.remote?.trim() || null;
+  const address = pickPrimaryAddress(detail);
+  const workLanguages = Array.isArray(detail.workLanguage)
+    ? detail.workLanguage.map((s) => s.trim()).filter(Boolean)
+    : [];
+  const contact = pickPrimaryContact(detail);
+
   // Drop findUnique-precheck: én roundtrip i stedet for to. Returner "updated"
   // som default (kan ikke skille created/updated uten precheck), men det er
   // bare metrics, ingen funksjonell forskjell.
@@ -365,6 +378,17 @@ async function upsertJob(
       extent,
       positionCount,
       sector,
+      jobTitle,
+      workhours,
+      workdays,
+      starttime,
+      address,
+      remote,
+      workLanguages,
+      contactName: contact.name,
+      contactEmail: contact.email,
+      contactPhone: contact.phone,
+      contactTitle: contact.title,
       applyUrl,
       sourceUrl,
       applicationDueAt,
@@ -394,6 +418,17 @@ async function upsertJob(
       extent,
       positionCount,
       sector,
+      jobTitle,
+      workhours,
+      workdays,
+      starttime,
+      address,
+      remote,
+      workLanguages,
+      contactName: contact.name,
+      contactEmail: contact.email,
+      contactPhone: contact.phone,
+      contactTitle: contact.title,
       applyUrl,
       sourceUrl,
       applicationDueAt,

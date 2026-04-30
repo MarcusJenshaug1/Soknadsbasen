@@ -775,6 +775,19 @@ model Job {
   extent         String?  // "Heltid"/"Deltid" + prosent
   positionCount  Int?
   sector         String?  // "Privat", "Offentlig"
+  jobTitle       String?  // Formell stillingstittel (avviker fra annonsetittel)
+  workhours      String?  // "Dagtid", "Kvelder", "Skift"
+  workdays       String?  // "Ukedager", "Helg"
+  starttime      String?  // Oppstart-tekst
+  address        String?  // Gateadresse fra workLocations[0]
+  remote         String?  // "Hjemmekontor", "Hybrid", "Ikke tilrettelagt"
+  workLanguages  String[] @default([])
+
+  // Kontaktperson
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  contactTitle   String?
 
   // Søknad
   applyUrl         String?
