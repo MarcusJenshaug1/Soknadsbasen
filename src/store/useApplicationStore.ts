@@ -79,8 +79,11 @@ export interface JobApplicationData {
   resumeSnapshotId: string | null;
   createdAt: string;
   updatedAt: string;
-  tasks: AppTask[];
-  activities: AppActivity[];
+  /** Only populated by GET /api/applications/[id] (detail view). List endpoint returns _count instead. */
+  tasks?: AppTask[];
+  /** Only populated by GET /api/applications/[id] (detail view). List endpoint returns _count instead. */
+  activities?: AppActivity[];
+  _count?: { tasks: number; activities: number };
   company: AppCompany | null;
 }
 

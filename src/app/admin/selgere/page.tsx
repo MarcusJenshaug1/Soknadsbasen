@@ -25,30 +25,33 @@ export default async function AdminSelgerePage() {
   });
 
   const monthStart = startOfMonth();
-  const stats = await Promise.all(
-    reps.map(async (rep) => {
-      const [mrr, eligible] = await Promise.all([
-        prisma.commissionEntry.aggregate({
-          where: {
-            salesRepId: rep.userId,
-            paidAt: { gte: monthStart },
-            status: { in: ["pending", "eligible", "paid"] },
-          },
-          _sum: { invoiceAmountCents: true },
-        }),
-        prisma.commissionEntry.aggregate({
-          where: { salesRepId: rep.userId, status: "eligible" },
-          _sum: { amountCents: true },
-        }),
-      ]);
-      return {
-        userId: rep.userId,
-        mrrCents: mrr._sum.invoiceAmountCents ?? 0,
-        eligibleCents: eligible._sum.amountCents ?? 0,
-      };
+  const userIds = reps.map((r) => r.userId);
+
+  const [mrrRows, eligibleRows] = await Promise.all([
+    prisma.commissionEntry.groupBy({
+      by: ["salesRepId"],
+      where: {
+        salesRepId: { in: userIds },
+        paidAt: { gte: monthStart },
+        status: { in: ["pending", "eligible", "paid"] },
+      },
+      _sum: { invoiceAmountCents: true },
     }),
+    prisma.commissionEntry.groupBy({
+      by: ["salesRepId"],
+      where: { salesRepId: { in: userIds }, status: "eligible" },
+      _sum: { amountCents: true },
+    }),
+  ]);
+
+  const mrrMap = new Map(mrrRows.map((r) => [r.salesRepId, r._sum.invoiceAmountCents ?? 0]));
+  const eligibleMap = new Map(eligibleRows.map((r) => [r.salesRepId, r._sum.amountCents ?? 0]));
+  const statsMap = new Map(
+    userIds.map((id) => [
+      id,
+      { userId: id, mrrCents: mrrMap.get(id) ?? 0, eligibleCents: eligibleMap.get(id) ?? 0 },
+    ]),
   );
-  const statsMap = new Map(stats.map((s) => [s.userId, s]));
 
   return (
     <div className="space-y-5">

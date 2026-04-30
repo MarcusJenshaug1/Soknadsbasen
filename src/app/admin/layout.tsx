@@ -43,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link
               key={href}
               href={href}
+              prefetch
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-ink/60 hover:text-ink hover:bg-black/5 transition-colors group"
             >
               <Icon size={15} className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
@@ -55,6 +56,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="px-3 py-4 border-t border-black/6">
           <Link
             href="/app"
+            prefetch
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-ink/40 hover:text-ink hover:bg-black/5 transition-colors"
           >
             ← Tilbake til appen

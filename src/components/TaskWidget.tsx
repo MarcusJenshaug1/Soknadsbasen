@@ -11,22 +11,12 @@ import { nb } from "date-fns/locale";
 interface Task {
   id: string;
   title: string;
-  description: string | null;
   dueAt: string | null;
   completedAt: string | null;
   type: string | null;
   priority: string;
   applicationId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Application {
-  id: string;
-  title: string;
-  companyName: string;
-  status: string;
-  tasks: Task[];
+  application: { id: string; companyName: string; title: string; status: string };
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -44,29 +34,24 @@ export function TaskWidget() {
   const loadTasks = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/applications");
+      const res = await fetch("/api/tasks");
       if (res.ok) {
-        const applications: Application[] = await res.json();
-        
-        // Extract all incomplete tasks with app context
-        const allTasks = applications.flatMap((app) =>
-          app.tasks
-            .filter((t) => !t.completedAt && t.dueAt)
-            .map((t) => ({
-              ...t,
-              appTitle: app.title,
-              appCompany: app.companyName,
-            }))
-        );
+        const all: Task[] = await res.json();
 
-        // Sort by due date
-        const sorted = allTasks.sort((a, b) => {
-          if (!a.dueAt || !b.dueAt) return 0;
-          return compareAsc(parseISO(a.dueAt), parseISO(b.dueAt));
-        });
+        const upcoming = all
+          .filter((t) => !t.completedAt && t.dueAt)
+          .map((t) => ({
+            ...t,
+            appTitle: t.application.title,
+            appCompany: t.application.companyName,
+          }))
+          .sort((a, b) => {
+            if (!a.dueAt || !b.dueAt) return 0;
+            return compareAsc(parseISO(a.dueAt), parseISO(b.dueAt));
+          })
+          .slice(0, 5);
 
-        // Only show next 5
-        setTasks(sorted.slice(0, 5));
+        setTasks(upcoming);
       }
     } catch (err) {
       console.error("Failed to load tasks:", err);

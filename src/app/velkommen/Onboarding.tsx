@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -510,13 +511,13 @@ function Step5({
         {error && <p className="text-[12px] text-[#D5592E] text-center">{error}</p>}
         <p className="mt-6 text-center text-[11px] text-[#14110e]/55">
           Ved å starte bekrefter du at{" "}
-          <a href="/vilkar" className="underline underline-offset-2 hover:text-[#14110e]">
+          <Link href="/vilkar" className="underline underline-offset-2 hover:text-[#14110e]">
             vilkårene
-          </a>{" "}
+          </Link>{" "}
           og{" "}
-          <a href="/personvern" className="underline underline-offset-2 hover:text-[#14110e]">
+          <Link href="/personvern" className="underline underline-offset-2 hover:text-[#14110e]">
             personvernerklæringen
-          </a>{" "}
+          </Link>{" "}
           gjelder. Du samtykker til at leveringen starter umiddelbart og at
           angreretten dermed faller bort (jf. angrerettsloven § 22 n).
         </p>

@@ -41,8 +41,7 @@ export async function GET(req: Request) {
     },
     orderBy: { [sort]: "desc" },
     include: {
-      tasks: { orderBy: { dueAt: "asc" } },
-      activities: { orderBy: { occurredAt: "desc" }, take: 5 },
+      _count: { select: { tasks: true, activities: true } },
       company: { select: { id: true, name: true, website: true } },
     },
   });
@@ -110,8 +109,7 @@ export async function POST(req: Request) {
       jobDescription: body.jobDescription ?? null,
     },
     include: {
-      tasks: true,
-      activities: true,
+      _count: { select: { tasks: true, activities: true } },
       company: { select: { id: true, name: true } },
     },
   });

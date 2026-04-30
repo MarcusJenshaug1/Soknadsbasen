@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
@@ -144,9 +145,9 @@ export function ShareView({
       <footer className="border-t border-black/8 dark:border-white/8 mt-16 px-5 py-6 text-center">
         <p className="text-[12px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
           Laget med{" "}
-          <a href="/" className="hover:text-accent transition-colors">
+          <Link href="/" prefetch={false} className="hover:text-accent transition-colors">
             Søknadsbasen
-          </a>{" "}
+          </Link>{" "}
           — jobbsøking med ro
         </p>
       </footer>
