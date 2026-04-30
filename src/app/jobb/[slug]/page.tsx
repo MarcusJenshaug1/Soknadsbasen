@@ -503,41 +503,7 @@ export default async function JobDetailPage({ params }: Props) {
             applyUrl={job.applyUrl}
           />
 
-          <aside className="rounded-2xl border border-black/10 bg-white p-6 mb-8">
-            <h2 className="text-[16px] font-medium mb-3">
-              Med Søknadsbasen får du
-            </h2>
-            <ul className="space-y-2 text-[13px] text-[#14110e]/75">
-              <li className="flex gap-2">
-                <span className="text-[#D5592E]">+</span>
-                <span>
-                  AI-søknadsbrev som speiler språket i denne annonsen, med norsk
-                  konvensjon (maks 350 ord, ingen amerikanske klisjéer)
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#D5592E]">+</span>
-                <span>
-                  CV-bygger med 8 maler og ATS-vennlig PDF-eksport som leses
-                  korrekt av Webcruiter, ReachMee og andre rekrutterings-systemer
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#D5592E]">+</span>
-                <span>
-                  Match Score som viser hvor godt CV-en din dekker kravene i
-                  denne stillingen, gratis
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-[#D5592E]">+</span>
-                <span>
-                  Pipeline med kanban og frister, slik at du holder oversikt
-                  over alle parallelle søknader
-                </span>
-              </li>
-            </ul>
-          </aside>
+          <SoknadsbasenPanel />
         </article>
 
         {related.length > 0 && (
@@ -1048,5 +1014,112 @@ function SourceMetaPanel({
         </div>
       )}
     </section>
+  );
+}
+
+const PANEL_ITEMS: { title: string; body: string; tag: string }[] = [
+  {
+    title: "AI-søknadsbrev som speiler annonsen",
+    body: "Skrevet med norsk konvensjon, maks 350 ord, og null amerikanske klisjéer. Tonen tilpasses bedriften, ikke en universalmal.",
+    tag: "2 min",
+  },
+  {
+    title: "CV-bygger med ATS-vennlig PDF",
+    body: "8 maler, leses korrekt av Webcruiter, ReachMee og andre rekrutterings-systemer. Ingen tabeller eller bilder som rotes til.",
+    tag: "8 maler",
+  },
+  {
+    title: "Match Score for denne stillingen",
+    body: "Viser hvor godt CV-en din dekker kravene i annonsen, og peker på det som mangler. Kjøres mot kompetansene fra stillingsannonsen.",
+    tag: "Gratis",
+  },
+  {
+    title: "Pipeline med kanban og frister",
+    body: "Hold oversikt over alle parallelle søknader. Kladd, sendt, intervju, tilbud, avslag, med varsler for frister du ellers ville glemt.",
+    tag: "Live sync",
+  },
+];
+
+function SoknadsbasenPanel() {
+  return (
+    <aside className="relative overflow-hidden rounded-2xl bg-ink text-bg p-7 md:p-9 mb-8">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full opacity-[0.18]"
+        style={{
+          background:
+            "radial-gradient(circle, var(--accent) 0%, transparent 70%)",
+        }}
+      />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-4 mb-7">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/15 bg-white/5 text-[10px] uppercase tracking-[0.18em] text-bg/75">
+            <span
+              className="size-1.5 rounded-full bg-accent"
+              aria-hidden
+            />
+            Skreddersydd til denne stillingen
+          </span>
+          <span
+            className="hidden md:inline-flex size-7 items-center justify-center rounded-full bg-accent/15 text-accent text-[11px] font-medium"
+            aria-hidden
+          >
+            ◆
+          </span>
+        </div>
+
+        <h2 className="text-[28px] md:text-[36px] leading-[1.1] tracking-[-0.02em] font-medium mb-3">
+          Med <em className="italic text-accent font-normal">Søknadsbasen</em> får du
+        </h2>
+        <p className="text-[14px] md:text-[15px] leading-[1.6] text-bg/65 max-w-[520px] mb-7">
+          Fire verktøy som er bygd for norsk arbeidsliv, ikke en oversettelse av
+          amerikansk programvare. Alt er klart å bruke nå.
+        </p>
+
+        <ul className="border-t border-white/10">
+          {PANEL_ITEMS.map((item, i) => (
+            <li
+              key={item.title}
+              className="grid grid-cols-[28px_1fr_auto] gap-4 items-start py-5 border-b border-white/10 last:border-b-0"
+            >
+              <span className="text-[11px] tracking-wide text-accent/80 font-mono pt-1">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[15px] md:text-[16px] font-medium text-bg mb-1">
+                  {item.title}
+                </h3>
+                <p className="text-[13px] leading-[1.55] text-bg/65">
+                  {item.body}
+                </p>
+              </div>
+              <span className="hidden sm:inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-white/8 text-[10px] uppercase tracking-wider text-bg/70">
+                {item.tag}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-7 pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <Link
+            href="/registrer"
+            prefetch
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-accent text-bg text-[14px] font-medium hover:bg-[var(--accent-hover)] transition-colors"
+          >
+            Start gratis i kveld
+            <span aria-hidden>→</span>
+          </Link>
+          <Link
+            href="/funksjoner"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full border border-white/20 text-bg/85 text-[14px] hover:bg-white/5 hover:border-white/35 transition-colors"
+          >
+            Se eksempelbrev
+          </Link>
+          <span className="sm:ml-auto text-[12px] text-bg/55">
+            Ingen kortinfo. Norsk fra dag én.
+          </span>
+        </div>
+      </div>
+    </aside>
   );
 }
