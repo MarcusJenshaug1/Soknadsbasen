@@ -811,6 +811,8 @@ model Job {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  linkedInPosts LinkedInPost[]
+
   @@index([slug])
   @@index([employerSlug])
   @@index([region, category])
@@ -819,6 +821,22 @@ model Job {
   @@index([isActive, category])
   @@index([isActive, employerSlug])
   @@index([externalId])
+}
+
+/// Sporing av jobber publisert til LinkedIn-bedriftsside.
+/// `none`-relasjon brukes som "ikke postet enda"-filter i kandidat-pick.
+model LinkedInPost {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  postUrn   String?  @unique
+  status    String
+  errorMsg  String?
+  score     Float
+  postedAt  DateTime @default(now())
+
+  @@index([jobId])
+  @@index([postedAt])
 }
 
 /// Cursor for NAV pam-stilling-feed walking. Singleton-rad (id = 'singleton').
