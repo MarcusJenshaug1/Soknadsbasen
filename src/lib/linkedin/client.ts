@@ -14,7 +14,9 @@ export type PostShareInput = {
 };
 
 export type PostShareResult = {
-  postUrn: string;
+  // null i dry-run (LinkedInPost.postUrn er @unique, NULL tillater flere rader);
+  // ekte URN i live-modus.
+  postUrn: string | null;
   dryRun: boolean;
 };
 
@@ -45,7 +47,7 @@ export async function postShare(input: PostShareInput): Promise<PostShareResult>
 
   if (dryRun) {
     console.log("[LinkedIn DRY_RUN] payload:", JSON.stringify(body, null, 2));
-    return { postUrn: "urn:li:share:DRYRUN", dryRun: true };
+    return { postUrn: null, dryRun: true };
   }
 
   const token = await getAccessToken();

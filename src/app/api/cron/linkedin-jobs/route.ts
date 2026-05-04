@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     slug: string;
     score: number;
     status: "posted" | "failed" | "skipped-dryrun";
-    postUrn?: string;
+    postUrn?: string | null;
     error?: string;
   }> = [];
 
