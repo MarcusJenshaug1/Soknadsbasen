@@ -21,7 +21,8 @@ export const NAV_SLIDES: PitchSlide[] = [
     id: 1,
     layout: "cover",
     eyebrow: "Søknadsbasen.no",
-    title: "En personlig søknadsassistent for hver norsk arbeidssøker",
+    title: "Et personlig verktøy for hver norsk arbeidssøker.",
+    lede: "Se hva CV-en og søknaden din mangler for å passe stillingen — før du sender.",
     footer: "PILOT-FORSLAG TIL NAV · 4. MAI 2026",
   },
   {
@@ -52,15 +53,15 @@ export const NAV_SLIDES: PitchSlide[] = [
     items: [
       { text: "NAVs Min CV registrerer strukturerte data for arbeidsgiver-søk, ikke selve søknaden" },
       { text: "Arbeidsplassen.no — KI-funksjoner for arbeidsgivere, ikke for jobbsøkere" },
-      { text: "Generisk ChatGPT krever teknisk kunnskap, ingen lagring, ingen norsk kontekst" },
+      { text: "Generisk ChatGPT genererer tekst, men gir ingen tilbakemelding på din egen søknad opp mot stillingen" },
     ],
   },
   {
     id: 5,
     layout: "cover",
     eyebrow: "VISJON",
-    title: "Tenk om hver arbeidssøker hadde en personlig søknadsassistent.",
-    lede: "Skreddersydd CV på minutter. AI-skrevet søknadsbrev for hver utlysning. Full oversikt over hva du har søkt på, hvor du står, og hva som er neste steg.",
+    title: "Tenk om hver arbeidssøker kunne se sin egen søknad slik arbeidsgiveren ser den.",
+    lede: "CV-en sjekket mot kravene i utlysningen. Søknadsteksten lest opp mot stillingen. Full oversikt over hva du har søkt på, hvor du står, og hva som er neste steg.",
   },
   {
     id: 6,
@@ -68,8 +69,8 @@ export const NAV_SLIDES: PitchSlide[] = [
     eyebrow: "VÅRT PRODUKT",
     title: "CV, søknadsbrev og pipeline på ett sted.",
     items: [
-      { text: "CV-bygger med rolle- og bransjespesifikk tilpasning" },
-      { text: "AI-genererte søknadsbrev skreddersydd til hver utlysning" },
+      { text: "CV-bygger som matcher CV-en mot kravene i utlysningen — peker på hull og svakheter" },
+      { text: "Søknadsbrev-feedback som leser teksten din opp mot stillingen og foreslår forbedringer" },
       { text: "Pipeline-tracker for alle aktive søknader og oppfølginger" },
       { text: "Norsk språk fra dag 1 — bokmål og nynorsk" },
     ],
@@ -79,8 +80,8 @@ export const NAV_SLIDES: PitchSlide[] = [
     layout: "stat-row",
     eyebrow: "MARKED",
     title: "Verktøyet NAV-veiledere har — for hver enkelt søker.",
-    lede: "Vi vil at hver norsk arbeidssøker skal ha en personlig søknadsassistent.",
-    body: "103 100 registrerte arbeidssøkere i mars 2026. 144 000 dagpengemottakere i 2025. Hver av dem trenger samme strukturerte støtte NAV-veilederne tilbyr — bare alltid tilgjengelig, alltid på eget initiativ.",
+    lede: "Vi vil at hver norsk arbeidssøker skal ha sitt eget verktøy for å forstå hva CV-en og søknaden mangler.",
+    body: "103 100 registrerte arbeidssøkere i mars 2026. 144 000 dagpengemottakere i 2025. Hver av dem trenger samme strukturerte tilbakemeldingen NAV-veilederne gir — bare alltid tilgjengelig, alltid på eget initiativ.",
   },
   {
     id: 8,
@@ -99,8 +100,8 @@ export const NAV_SLIDES: PitchSlide[] = [
     layout: "bullets",
     eyebrow: "VÅR FORDEL",
     title: "Søknad-først, ikke registrering-først.",
-    lede: "Andre verktøy registrerer hva du KAN. Vi hjelper deg formidle det til hver enkelt arbeidsgiver.",
-    body: "NAVs Min CV og arbeidsplassen.no bygger strukturerte data for arbeidsgiver-søk — nyttig, men halve jobben. Selve søknaden, det språklige og skreddersydde, er der søkere strever mest. Vi erstatter ikke NAVs verktøy. Vi fyller hullet mellom CV-registrering og innsendt søknad.",
+    lede: "Andre verktøy registrerer hva du KAN. Vi viser deg hva du må endre for å nå frem til hver enkelt arbeidsgiver.",
+    body: "NAVs Min CV og arbeidsplassen.no bygger strukturerte data for arbeidsgiver-søk — nyttig, men halve jobben. Selve søknaden — det språklige og skreddersydde — er der søkere strever mest, og det er der vi gir konkret tilbakemelding. Vi erstatter ikke NAVs verktøy. Vi fyller hullet mellom CV-registrering og innsendt søknad.",
   },
   {
     id: 10,
