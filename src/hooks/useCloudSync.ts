@@ -61,26 +61,6 @@ export function suspendCloudSync() {
   suspended = true;
 }
 
-/* ─── Helpers ─────────────────────────────────────────────── */
-
-function extractCvEmail(
-  resumeData: ResumePayloadV2 | ResumePayloadV1 | null | undefined,
-): string | null {
-  if (!resumeData) return null;
-  // v2 multi-CV payload
-  if ("resumes" in resumeData && resumeData.resumes?.length) {
-    const active = resumeData._resumeDataMap?.[resumeData.activeResumeId];
-    const email = active?.contact?.email ?? resumeData.data?.contact?.email;
-    return typeof email === "string" && email.trim() ? email.trim() : null;
-  }
-  // v1
-  if ("data" in resumeData && resumeData.data) {
-    const email = resumeData.data.contact?.email;
-    return typeof email === "string" && email.trim() ? email.trim() : null;
-  }
-  return null;
-}
-
 /* ─── The hook ────────────────────────────────────────────── */
 
 export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
@@ -101,10 +81,11 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         }
         const data: ServerData = await res.json();
 
-        // Sjekk om server-data tilhører den brukeren vi tror er innlogget.
-        // Hvis mismatch (f.eks. impersonation-cookie tapt, eller target's
-        // UserData-rad ble korrumpert), IKKE setState — det ville skrevet
-        // feil bruker sin CV inn i editoren.
+        // Sjekk om server-sesjonen tilhører den brukeren vi tror er
+        // innlogget. Hvis useAuthStore.user.email ≠ debug.sessionEmail er
+        // klient-state usynkron med serveren (sjeldent, men kan skje rundt
+        // impersonation-overganger). IKKE setState — det kan vise feil
+        // bruker sin CV.
         const serverEmail = data.debug?.sessionEmail ?? null;
         if (expectedEmail && serverEmail && expectedEmail !== serverEmail) {
           console.warn(
@@ -116,19 +97,10 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
           return;
         }
 
-        // Sjekk om CV-en i raden tilhører serverens session-bruker. Hvis
-        // contact.email ≠ session-email betyr det at raden er korrumpert
-        // av tidligere impersonation-bug. Loggfør og hopp over hydrering.
-        const cvEmail = extractCvEmail(data.resumeData);
-        if (serverEmail && cvEmail && cvEmail !== serverEmail) {
-          console.warn(
-            "[CloudSync] CV-data tilhører feil bruker, hopper over hydrering.",
-            { sessionEmail: serverEmail, cvEmail, debug: data.debug },
-          );
-          useResumeStore.getState().setLoaded(true);
-          loadedRef.current = true;
-          return;
-        }
+        // Tidligere hadde vi også en sjekk på resumeData.contact.email vs
+        // sessionEmail. Den ble fjernet fordi mange brukere har forskjellig
+        // login-email og CV-kontakt-email (work vs. personal). Korrumperte
+        // rader fra impersonation-bugen ryddes nå via /admin/cv-cleanup.
 
         if (data.resumeData) {
           const rd = data.resumeData;

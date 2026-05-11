@@ -66,26 +66,12 @@ async function saveUserData(request: Request) {
     coverLetterData?: unknown;
   };
 
-  // Defensive: hvis innkommende resumeData har en contact.email satt som
-  // ≠ sessionens email, er det sannsynligvis en cross-bruker lekkasje
-  // (admins state som blir lagret som target's CV). Avvis lagringen.
-  if (resumeData !== undefined) {
-    const incomingEmail = extractIncomingCvEmail(resumeData);
-    if (incomingEmail && incomingEmail.toLowerCase() !== session.email.toLowerCase()) {
-      console.warn(
-        `[user/data] avviser write: contact.email=${incomingEmail} ≠ session.email=${session.email}`,
-      );
-      return Response.json(
-        {
-          error: {
-            code: "email_mismatch",
-            message: "CV-data tilhører en annen bruker enn sesjonen",
-          },
-        },
-        { status: 422 },
-      );
-    }
-  }
+  // Merk: tidligere hadde vi en 422 her som avviste writes med
+  // contact.email ≠ session.email. Den var for streng — mange brukere har
+  // login-email forskjellig fra kontakt-email på CV-en (work vs. personal).
+  // Cross-user-skrivebeskyttelsen ligger nå utelukkende i 403 ved aktiv
+  // impersonering ovenfor, kombinert med /admin/cv-cleanup for å rydde
+  // eksisterende korrumperte rader.
 
   // Build the update/create payload — only include fields that were sent
   const data: Record<string, string> = {};
@@ -126,42 +112,4 @@ function safeJson(raw: string): unknown {
   } catch {
     return null;
   }
-}
-
-/**
- * Plukk ut contact.email fra v1- og v2-resume-payloader. Brukes til
- * cross-user write-guard: hvis innkommende payload har en email satt
- * som ≠ sessionens email, er det en lekkasje, og raden lagres ikke.
- */
-function extractIncomingCvEmail(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const p = payload as Record<string, unknown>;
-
-  // v2: { resumes, activeResumeId, _resumeDataMap, data }
-  if (
-    p._resumeDataMap &&
-    typeof p._resumeDataMap === "object" &&
-    typeof p.activeResumeId === "string"
-  ) {
-    const map = p._resumeDataMap as Record<string, unknown>;
-    const active = map[p.activeResumeId as string];
-    const email = readContactEmail(active) ?? readContactEmail(p.data);
-    return email;
-  }
-
-  // v1: { data }
-  if (p.data) {
-    return readContactEmail(p.data);
-  }
-
-  return readContactEmail(p);
-}
-
-function readContactEmail(node: unknown): string | null {
-  if (!node || typeof node !== "object") return null;
-  const contact = (node as Record<string, unknown>).contact;
-  if (!contact || typeof contact !== "object") return null;
-  const email = (contact as Record<string, unknown>).email;
-  if (typeof email === "string" && email.trim()) return email.trim();
-  return null;
 }
