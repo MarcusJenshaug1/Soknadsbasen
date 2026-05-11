@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type CorruptRow = {
   userId: string;
@@ -25,11 +25,34 @@ type InspectPayload = {
 export function CvCleanupClient() {
   const [rows, setRows] = useState<CorruptRow[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState<string | null>(null);
   const [result, setResult] = useState<CleanupResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspect, setInspect] = useState<InspectPayload | null>(null);
   const [inspectLoading, setInspectLoading] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
+
+  const fetchRows = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = filter.trim()
+        ? `/api/admin/cv-cleanup?cvEmail=${encodeURIComponent(filter.trim())}`
+        : "/api/admin/cv-cleanup";
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as ListResponse;
+      setRows(data.rows);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ukjent feil");
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    fetchRows();
+  }, [fetchRows]);
 
   async function openInspect(userId: string) {
     setInspectLoading(userId);
@@ -45,42 +68,43 @@ export function CvCleanupClient() {
     }
   }
 
-  async function fetchRows() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/cv-cleanup", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as ListResponse;
-      setRows(data.rows);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ukjent feil");
-    } finally {
-      setLoading(false);
-    }
+  async function resetOne(userId: string, userEmail: string) {
+    if (!confirm(`Resette resumeData på ${userEmail}? Kan ikke angres.`)) return;
+    await runReset([userId]);
   }
 
-  useEffect(() => {
-    fetchRows();
-  }, []);
-
-  async function runCleanup() {
+  async function resetAllVisible() {
     if (!rows || rows.length === 0) return;
-    const confirmText = `Resette resumeData på ${rows.length} korrupte rader? Kan ikke angres.`;
-    if (!confirm(confirmText)) return;
-    setRunning(true);
+    const userEmails = rows.map((r) => r.userEmail).join(", ");
+    if (
+      !confirm(
+        `Resette resumeData på ${rows.length} rader (${userEmails})? Kan ikke angres.`,
+      )
+    )
+      return;
+    await runReset(rows.map((r) => r.userId));
+  }
+
+  async function runReset(userIds: string[]) {
+    setRunning(userIds.join(","));
     setError(null);
     try {
-      const res = await fetch("/api/admin/cv-cleanup", { method: "DELETE" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await fetch("/api/admin/cv-cleanup", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error ?? `HTTP ${res.status}`);
+      }
       const data = (await res.json()) as CleanupResponse;
       setResult(data);
-      // Refresh listen
       await fetchRows();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ukjent feil");
     } finally {
-      setRunning(false);
+      setRunning(null);
     }
   }
 
@@ -88,23 +112,23 @@ export function CvCleanupClient() {
     return <p className="text-[13px] text-ink/55">Skanner UserData …</p>;
   }
 
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
-        Feil: {error}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-900 leading-[1.5]">
+        <strong>Advarsel:</strong> Mange brukere har legitim email-mismatch
+        (jobb-login vs personlig CV-kontakt). Reset bare rader hvor du har
+        verifisert at CV-innholdet IKKE tilhører den faktiske bruker-id-en
+        (typisk: contact-info matcher en annen bruker / admin). Bruk{" "}
+        <strong>Vis CV</strong>-knappen først.
+      </div>
+
       {result && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 space-y-3">
           <div className="text-[13px] text-emerald-800 font-medium">
             Resettet resumeData på {result.reset} av {result.count} rader.
           </div>
           {result.affected.length > 0 && (
-            <details className="text-[12px] text-emerald-900">
+            <details className="text-[12px] text-emerald-900" open>
               <summary className="cursor-pointer hover:underline">
                 Vis hvilke brukere som ble ryddet ({result.affected.length})
               </summary>
@@ -126,40 +150,72 @@ export function CvCleanupClient() {
         </div>
       )}
 
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          Feil: {error}
+        </div>
+      )}
+
       <div className="rounded-2xl border border-black/8 overflow-hidden">
-        <div className="px-5 py-4 border-b border-black/6 flex items-center justify-between gap-4">
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-ink/40">
-              Korrupte rader
+        <div className="px-5 py-4 border-b border-black/6 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-ink/40">
+                Email-mismatch-rader
+              </div>
+              <div className="text-[20px] font-semibold mt-0.5">
+                {rows?.length ?? 0}
+              </div>
             </div>
-            <div className="text-[20px] font-semibold mt-0.5">
-              {rows?.length ?? 0}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={fetchRows}
+                disabled={loading}
+                className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:bg-black/5 disabled:opacity-40"
+              >
+                {loading ? "Skanner …" : "Skann på nytt"}
+              </button>
+              <button
+                type="button"
+                onClick={resetAllVisible}
+                disabled={!!running || !rows || rows.length === 0}
+                className="px-4 py-2 rounded-full bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-40"
+              >
+                {running ? "Resetter …" : "Reset alle synlige"}
+              </button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={fetchRows}
-              disabled={loading}
-              className="px-4 py-2 rounded-full border border-black/15 text-[12px] hover:bg-black/5 disabled:opacity-40"
-            >
-              {loading ? "Skanner …" : "Skann på nytt"}
-            </button>
-            <button
-              type="button"
-              onClick={runCleanup}
-              disabled={running || !rows || rows.length === 0}
-              className="px-4 py-2 rounded-full bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-40"
-            >
-              {running ? "Resetter …" : "Reset alle"}
-            </button>
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] uppercase tracking-wide text-ink/40">
+              Filtrer på CV-email
+            </label>
+            <input
+              type="email"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="marcus@jenshaug.no"
+              className="flex-1 max-w-[280px] border-b border-black/20 bg-transparent py-1 text-[13px] outline-none focus:border-ink"
+            />
+            {filter && (
+              <button
+                type="button"
+                onClick={() => setFilter("")}
+                className="text-[11px] text-ink/45 hover:text-ink"
+              >
+                Tøm
+              </button>
+            )}
           </div>
         </div>
 
         {rows && rows.length > 0 ? (
           <div className="divide-y divide-black/6">
             {rows.map((r) => (
-              <div key={r.userId} className="px-5 py-3 grid grid-cols-[1fr_1fr_auto_auto] gap-4 items-baseline">
+              <div
+                key={r.userId}
+                className="px-5 py-3 grid grid-cols-[1fr_1fr_auto_auto_auto] gap-3 items-baseline"
+              >
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium truncate">
                     {r.userName ?? r.userEmail}
@@ -190,12 +246,20 @@ export function CvCleanupClient() {
                 >
                   {inspectLoading === r.userId ? "Henter…" : "Vis CV"}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => resetOne(r.userId, r.userEmail)}
+                  disabled={running !== null}
+                  className="px-3 py-1.5 rounded-full border border-red-200 text-red-600 text-[11px] hover:bg-red-50 disabled:opacity-40 shrink-0"
+                >
+                  {running === r.userId ? "…" : "Reset denne"}
+                </button>
               </div>
             ))}
           </div>
         ) : (
           <div className="px-5 py-8 text-center text-[13px] text-ink/45">
-            Ingen korrupte rader. ✓
+            {filter ? `Ingen rader med CV-email = ${filter}` : "Ingen email-mismatch-rader."}
           </div>
         )}
       </div>
@@ -205,9 +269,11 @@ export function CvCleanupClient() {
       )}
 
       <p className="text-[11px] text-ink/45 leading-[1.5] max-w-2xl">
-        Reset setter <code>resumeData</code> til <code>{`'{}'`}</code>. <code>coverLetterData</code>{" "}
-        beholdes (har ikke samme korrupsjons-vektor). Target-brukere må bygge CV fra null
-        ved neste login.
+        Reset setter <code>resumeData</code> til <code>{`'{}'`}</code>.{" "}
+        <code>coverLetterData</code> beholdes. Admins egen rad blokkeres
+        serverside selv om den havner i lista. Tips: filtrér på en spesifikk
+        cv-email (f.eks. admin sin) for å finne nøyaktig de radene som ble
+        korrumpert av impersonation-bugen.
       </p>
     </div>
   );

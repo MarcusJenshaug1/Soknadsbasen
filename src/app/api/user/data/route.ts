@@ -1,4 +1,4 @@
-import { getSession, getImpersonationContext } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // `debug.sessionEmail` brukes av useCloudSync som ground-truth for å fange
@@ -49,16 +49,12 @@ async function saveUserData(request: Request) {
     return Response.json({ error: "Ikke autentisert" }, { status: 401 });
   }
 
-  // Read-only mens impersonering er aktiv. Forhindrer at en pending
-  // beforeunload-/debounced save (fra admins fane eller fra /app under
-  // impersonering) overskriver målbrukerens UserData med stale in-memory CV.
-  const imp = await getImpersonationContext();
-  if (imp) {
-    return Response.json(
-      { error: { code: "impersonation_read_only", message: "Skriv blokkert under impersonering" } },
-      { status: 403 },
-    );
-  }
+  // Tidligere returnerte vi 403 under impersonering. Det er fjernet fordi
+  // admin SKAL kunne hjelpe bruker med CV-en (samarbeids-scenario). Den
+  // farlige cross-user-write (admins stale state lekker via beforeunload
+  // ved impersonation-overgang) er stoppet av suspendCloudSync() i
+  // BrukereClient/ImpersonationBanner FØR hard-nav. Skriv under
+  // steady-state impersonation går nå riktig sted (target's userId).
 
   const body = await request.json();
   const { resumeData, coverLetterData } = body as {

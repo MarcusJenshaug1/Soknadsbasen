@@ -3,14 +3,14 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Identifiserer og rydder opp i UserData-rader hvor stored CV-email
- * (resumeData.data.contact.email) ikke matcher User.email. Disse er
- * sannsynligvis korrumpert av tidligere impersonering-bug der admins
- * in-memory CV ble skrevet til target's rad via beforeunload-sendBeacon.
+ * Identifiserer UserData-rader hvor stored CV-email
+ * (resumeData.data.contact.email) ikke matcher User.email. Dette inkluderer
+ * BÅDE faktisk impersonation-korrupsjon OG legitime brukere som har
+ * separat login-email og CV-kontakt-email. Derfor må reset gjøres per rad
+ * eller filtrert på spesifikk email-pattern, IKKE bulk på hele lista.
  *
- * GET = dry-run, list kandidater.
- * DELETE = reset `resumeData` til '{}' på korrupte rader. coverLetterData
- *          beholdes (har ikke samme korrupsjons-vektor).
+ * GET = dry-run list (alle email-mismatch-rader, eller filtert på ?cvEmail=X)
+ * DELETE = reset rader spesifisert i body { userIds: string[] }
  */
 
 type CorruptRow = {
@@ -23,60 +23,100 @@ type CorruptRow = {
   updatedAt: string;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
   const guard = await requireAdmin();
   if (!guard.ok) return guard.response;
 
-  const rows = await findCorruptRows();
+  const url = new URL(req.url);
+  const cvEmailFilter = url.searchParams.get("cvEmail");
+
+  const rows = await findRows(cvEmailFilter);
   return NextResponse.json({ count: rows.length, rows });
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   const guard = await requireAdmin();
   if (!guard.ok) return guard.response;
 
-  const rows = await findCorruptRows();
+  let body: { userIds?: string[] };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Ugyldig body. Forventet { userIds: string[] }" },
+      { status: 400 },
+    );
+  }
 
-  if (rows.length === 0) {
+  const userIds = Array.isArray(body.userIds)
+    ? body.userIds.filter((id): id is string => typeof id === "string" && id.length > 0)
+    : [];
+
+  if (userIds.length === 0) {
+    return NextResponse.json(
+      { error: "Forventet userIds-array med minst én id" },
+      { status: 400 },
+    );
+  }
+
+  // Safety: ALDRI reset admins egen rad. Selv hvis admin har email-mismatch
+  // på sin egen CV (login != CV-kontakt) skal admin gjøre det manuelt.
+  const filteredIds = userIds.filter((id) => id !== guard.userId);
+  if (filteredIds.length !== userIds.length) {
+    console.warn(`[cv-cleanup] admin=${guard.email} prøvde å reset egen rad — blokkert`);
+  }
+
+  if (filteredIds.length === 0) {
     return NextResponse.json({ count: 0, reset: 0, affected: [] });
   }
 
-  const userIds = rows.map((r) => r.userId);
+  // Hent rad-info FØR reset så vi kan returnere affected-liste
+  const beforeReset = await fetchRowsByIds(filteredIds);
 
-  // Reset KUN resumeData. coverLetterData er sannsynligvis trygt (ingen
-  // tilsvarende beforeunload-skriv-bug der). Hvis vi vil rense det også
-  // må vi legge til en separat sjekk.
   const result = await prisma.userData.updateMany({
-    where: { userId: { in: userIds } },
+    where: { userId: { in: filteredIds } },
     data: { resumeData: "{}" },
   });
 
   console.warn(
-    `[cv-cleanup] admin=${guard.email} resettet ${result.count} korrupte CV-rader:`,
-    rows.map((r) => `${r.userEmail} (cv-eier var ${r.cvEmail})`).join(", "),
+    `[cv-cleanup] admin=${guard.email} resettet ${result.count} rader:`,
+    beforeReset.map((r) => `${r.userEmail} (cv-eier var ${r.cvEmail})`).join(", "),
   );
 
   return NextResponse.json({
-    count: rows.length,
+    count: beforeReset.length,
     reset: result.count,
-    affected: rows,
+    affected: beforeReset,
   });
 }
 
-async function findCorruptRows(): Promise<CorruptRow[]> {
-  // raw query fordi JSON-path-uttrykk på prisma er mer tungvint enn rå SQL.
-  // resumeData er en JSON-streng (TEXT-kolonne), så vi caster først.
-  const rows = await prisma.$queryRaw<
-    Array<{
-      userId: string;
-      user_email: string;
-      user_name: string | null;
-      cv_email: string | null;
-      cv_first_name: string | null;
-      cv_last_name: string | null;
-      updatedAt: Date;
-    }>
-  >`
+async function findRows(cvEmailFilter: string | null): Promise<CorruptRow[]> {
+  if (cvEmailFilter) {
+    // Filtrert: bare rader hvor cv.email = cvEmailFilter (case-insensitive)
+    // OG user.email != cvEmailFilter (ikke admin's egen rad om de har email match)
+    const rows = await prisma.$queryRaw<RawRow[]>`
+      SELECT
+        ud."userId",
+        u.email AS user_email,
+        u.name AS user_name,
+        ud."resumeData"::jsonb #>> '{data,contact,email}' AS cv_email,
+        ud."resumeData"::jsonb #>> '{data,contact,firstName}' AS cv_first_name,
+        ud."resumeData"::jsonb #>> '{data,contact,lastName}' AS cv_last_name,
+        ud."updatedAt"
+      FROM "UserData" ud
+      JOIN "User" u ON u.id = ud."userId"
+      WHERE
+        ud."resumeData" != '{}'
+        AND lower(ud."resumeData"::jsonb #>> '{data,contact,email}') = lower(${cvEmailFilter})
+        AND lower(u.email) != lower(${cvEmailFilter})
+      ORDER BY ud."updatedAt" DESC
+    `;
+    return rows.map(rowToCorrupt);
+  }
+
+  // Ufiltret: alle email-mismatch-rader. NB: dette inkluderer legitime
+  // tilfeller (jobb-login vs personlig CV-email), så ikke reset bulk.
+  const rows = await prisma.$queryRaw<RawRow[]>`
     SELECT
       ud."userId",
       u.email AS user_email,
@@ -94,8 +134,38 @@ async function findCorruptRows(): Promise<CorruptRow[]> {
       AND lower(ud."resumeData"::jsonb #>> '{data,contact,email}') != lower(u.email)
     ORDER BY ud."updatedAt" DESC
   `;
+  return rows.map(rowToCorrupt);
+}
 
-  return rows.map((r) => ({
+async function fetchRowsByIds(userIds: string[]): Promise<CorruptRow[]> {
+  const rows = await prisma.$queryRaw<RawRow[]>`
+    SELECT
+      ud."userId",
+      u.email AS user_email,
+      u.name AS user_name,
+      ud."resumeData"::jsonb #>> '{data,contact,email}' AS cv_email,
+      ud."resumeData"::jsonb #>> '{data,contact,firstName}' AS cv_first_name,
+      ud."resumeData"::jsonb #>> '{data,contact,lastName}' AS cv_last_name,
+      ud."updatedAt"
+    FROM "UserData" ud
+    JOIN "User" u ON u.id = ud."userId"
+    WHERE ud."userId" = ANY(${userIds})
+  `;
+  return rows.map(rowToCorrupt);
+}
+
+type RawRow = {
+  userId: string;
+  user_email: string;
+  user_name: string | null;
+  cv_email: string | null;
+  cv_first_name: string | null;
+  cv_last_name: string | null;
+  updatedAt: Date;
+};
+
+function rowToCorrupt(r: RawRow): CorruptRow {
+  return {
     userId: r.userId,
     userEmail: r.user_email,
     userName: r.user_name,
@@ -103,5 +173,5 @@ async function findCorruptRows(): Promise<CorruptRow[]> {
     cvFirstName: r.cv_first_name,
     cvLastName: r.cv_last_name,
     updatedAt: r.updatedAt.toISOString(),
-  }));
+  };
 }
