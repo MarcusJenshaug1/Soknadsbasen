@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
+import { suspendCloudSync } from "@/hooks/useCloudSync";
 
 type Status = {
   active: boolean;
@@ -29,6 +30,10 @@ export function ImpersonationBanner() {
     setStopping(true);
     try {
       await fetch("/api/admin/impersonate", { method: "DELETE" });
+      // Cookien er nå borte, så session.userId er admin igjen. Et pending
+      // save eller beforeunload herfra ville skrevet target's in-memory CV
+      // inn i ADMINS rad. Suspend før vi tømmer storage og hard-naver.
+      suspendCloudSync();
       // Tøm Zustand-persist slik at admins egen CV hentes fra server igjen
       // (i stedet for å re-hydrere målbrukerens CV som lå i localStorage).
       try {

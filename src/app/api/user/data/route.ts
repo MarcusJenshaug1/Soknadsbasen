@@ -1,4 +1,4 @@
-import { getSession } from "@/lib/auth";
+import { getSession, getImpersonationContext } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 /* ─── GET: Load user data from DB ─────────────────────────── */
@@ -39,6 +39,17 @@ async function saveUserData(request: Request) {
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "Ikke autentisert" }, { status: 401 });
+  }
+
+  // Read-only mens impersonering er aktiv. Forhindrer at en pending
+  // beforeunload-/debounced save (fra admins fane eller fra /app under
+  // impersonering) overskriver målbrukerens UserData med stale in-memory CV.
+  const imp = await getImpersonationContext();
+  if (imp) {
+    return Response.json(
+      { error: { code: "impersonation_read_only", message: "Skriv blokkert under impersonering" } },
+      { status: 403 },
+    );
   }
 
   const body = await request.json();

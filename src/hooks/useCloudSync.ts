@@ -37,6 +37,16 @@ interface ServerData {
 
 const SAVE_DEBOUNCE_MS = 2_000; // Wait 2s after last change before saving
 
+/* ─── Module-level suspend flag ───────────────────────────── */
+
+// Sett til true før impersonation start/stop hard-nav for å hindre at
+// admins (eller targets) in-memory CV-state lekker inn i feil UserData-rad
+// via beforeunload-sendBeacon eller en pending debounced save.
+let suspended = false;
+export function suspendCloudSync() {
+  suspended = true;
+}
+
 /* ─── The hook ────────────────────────────────────────────── */
 
 export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
@@ -83,6 +93,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
 
   /* ── Save current state to server ──────────────────────── */
   const saveToServer = useCallback(async () => {
+    if (suspended) return;
     if (isSavingRef.current) return;
     isSavingRef.current = true;
 
@@ -109,6 +120,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
 
   /* ── Debounced save ────────────────────────────────────── */
   const debouncedSave = useCallback(() => {
+    if (suspended) return;
     if (!loadedRef.current) return; // Don't save before initial load
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(saveToServer, SAVE_DEBOUNCE_MS);
@@ -140,6 +152,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     if (!enabled || !user) return;
 
     const handleBeforeUnload = () => {
+      if (suspended) return;
       if (!loadedRef.current) return;
       const rs = useResumeStore.getState();
       const resumeData: ResumePayloadV2 = {
