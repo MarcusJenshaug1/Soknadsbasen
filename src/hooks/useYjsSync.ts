@@ -2,32 +2,36 @@
 
 /**
  * Yjs-basert collab-sync. Erstatter useCloudSync for /app/cv når
- * NEXT_PUBLIC_HOCUSPOCUS_URL er satt. Hvis ikke faller appen tilbake
- * til useCloudSync (Supabase Realtime Broadcast-baserte sync).
+ * NEXT_PUBLIC_HOCUSPOCUS_URL er satt. Uten URL faller appen tilbake
+ * til Supabase Realtime Broadcast (useCloudSync).
  *
- * Arkitektur:
+ * VIKTIG: yjs (~50KB), @hocuspocus/provider (~10KB) og mapperen
+ * lastes via dynamic imports inne i useEffect, IKKE som top-level
+ * imports. Det betyr at klienter UTEN Hocuspocus-URL aldri laster
+ * ned koden — kommer ut som egne Next.js-chunks som code-splittes
+ * automatisk.
+ *
+ * Arkitektur (når aktiv):
  *  - HocuspocusProvider åpner WebSocket til collab.soknadsbasen.no
  *  - Y.Doc er sannhet under aktiv collab-session
  *  - Lokale Zustand-endringer → Y.Doc via applyResumeToYDoc
  *  - Y.Doc remote-endringer → Zustand via yDocToResumePayload
  *  - Server (Hocuspocus) persisterer Y.Doc binary + JSON-snapshot
  *    debounced 2 sek
- *  - Awareness brukes for cursors + fokus-highlighting (erstatter
- *    Supabase Presence)
+ *  - Awareness brukes for cursors + fokus-highlighting
  */
 
 import { useEffect, useRef } from "react";
-import * as Y from "yjs";
-import { HocuspocusProvider } from "@hocuspocus/provider";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useResumeStore } from "@/store/useResumeStore";
 import { useCloudSyncStore } from "@/store/useCloudSyncStore";
-import {
-  applyResumeToYDoc,
-  yDocToResumePayload,
-  type ResumePayloadV2,
-} from "@/lib/yjs/mapper";
+
+// Type-only imports — strippes ved build, drar ikke inn kode.
+import type * as YjsTypes from "yjs";
+import type { HocuspocusProvider } from "@hocuspocus/provider";
+import type { ResumeData } from "@/store/useResumeStore";
+import type { ResumePayloadV2 } from "@/lib/yjs/mapper";
 
 const CLIENT_ID = `cli-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -41,7 +45,7 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
   const user = useAuthStore((s) => s.user);
   const impersonatedBy = useAuthStore((s) => s.impersonatedBy);
   const providerRef = useRef<HocuspocusProvider | null>(null);
-  const ydocRef = useRef<Y.Doc | null>(null);
+  const ydocRef = useRef<YjsTypes.Doc | null>(null);
 
   useEffect(() => {
     const hocuspocusUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
@@ -50,9 +54,23 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
     }
 
     let cancelled = false;
+    let cleanup: (() => void) | null = null;
 
     void (async () => {
-      const supabase = supabaseBrowser();
+      // Dynamic imports — yjs/hocuspocus/mapper lastes KUN her, ikke ved
+      // initial bundle. Next.js gjør code-splitting automatisk.
+      const [yjsMod, providerMod, mapperMod, supabase] = await Promise.all([
+        import("yjs"),
+        import("@hocuspocus/provider"),
+        import("@/lib/yjs/mapper"),
+        Promise.resolve(supabaseBrowser()),
+      ]);
+      if (cancelled) return;
+
+      const Y = yjsMod;
+      const { HocuspocusProvider } = providerMod;
+      const { applyResumeToYDoc, yDocToResumePayload } = mapperMod;
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -68,10 +86,6 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
         token: session.access_token,
         onSynced: () => {
           if (cancelled) return;
-          // Y.Doc har lastet fra server — hydrer Zustand én gang.
-          // Hvis dokumentet var tomt (ny bruker), Y.Doc har ikke noe;
-          // i så fall lar vi useCloudSync sin /api/user/data-fetch ta
-          // initial-load. Her sjekker vi om Y.Doc har innhold først.
           const meta = ydoc.getMap("meta");
           if (meta.get("activeResumeId")) {
             const payload = yDocToResumePayload(ydoc);
@@ -88,8 +102,8 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
               isApplyingFromYjs = false;
             }
           } else {
-            // Tom Y.Doc — seed fra eksisterende Zustand-state (som
-            // useCloudSync sannsynligvis allerede har hydrert fra REST).
+            // Tom Y.Doc — seed fra eksisterende Zustand-state (useCloudSync
+            // har sannsynligvis allerede hydrert fra REST).
             const current = useResumeStore.getState();
             if (current.isLoaded) {
               const payload: ResumePayloadV2 = {
@@ -118,8 +132,8 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
 
       providerRef.current = provider;
 
-      // Awareness: kringkast vår identitet + step + fokus til alle
-      // andre klienter på samme dokument. Erstatter Supabase Presence.
+      // Awareness: kringkast identitet til alle andre klienter.
+      // Erstatter Supabase Presence-laget vi har i useCloudSync.
       const identity = impersonatedBy ?? user;
       provider.awareness?.setLocalStateField("user", {
         clientId: CLIENT_ID,
@@ -131,12 +145,10 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
         joinedAt: Date.now(),
       });
 
-      // Y.Doc-endringer fra remote → Zustand. Bruker observeDeep så
-      // alle nested Y.Map/Y.Array/Y.Text-endringer fanges.
-      const observer = (events: Array<Y.YEvent<Y.AbstractType<unknown>>>) => {
-        // Vi vil ikke applye våre EGNE endringer tilbake (de gikk allerede
-        // fra Zustand → Y.Doc). Yjs har transaction.origin som vi bruker
-        // til å skille lokale fra remote endringer.
+      // Y.Doc-endringer fra remote → Zustand.
+      const observer = (
+        events: Array<YjsTypes.YEvent<YjsTypes.AbstractType<unknown>>>,
+      ) => {
         const allLocal = events.every(
           (e) => e.transaction.origin === "local",
         );
@@ -145,8 +157,6 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
         const payload = yDocToResumePayload(ydoc);
         isApplyingFromYjs = true;
         try {
-          // Beskytt feltet bruker har fokus på akkurat nå — IKKE
-          // overskriv mens de skriver.
           const focusedEl = document.activeElement as HTMLElement | null;
           const focusedFieldId =
             focusedEl?.getAttribute("data-cv-field") ?? null;
@@ -177,7 +187,6 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
       const unsubResume = useResumeStore.subscribe((state, prev) => {
         if (isApplyingFromYjs) return;
         if (state === prev) return;
-        // Bare push hvis CV-data faktisk endret seg (ikke isLoaded etc.)
         if (
           state.data === prev.data &&
           state.activeResumeId === prev.activeResumeId &&
@@ -200,8 +209,7 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
         }, "local");
       });
 
-      // Cleanup
-      return () => {
+      cleanup = () => {
         unsubResume();
         ydoc.getMap("active").unobserveDeep(observer);
         ydoc.getMap("meta").unobserveDeep(observer);
@@ -214,6 +222,7 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
 
     return () => {
       cancelled = true;
+      cleanup?.();
       providerRef.current?.destroy();
       ydocRef.current?.destroy();
       providerRef.current = null;
@@ -229,10 +238,10 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
  * den nåværende lokale verdien.
  */
 function preserveFocusedField(
-  current: import("@/store/useResumeStore").ResumeData,
-  incoming: import("@/store/useResumeStore").ResumeData,
+  current: ResumeData,
+  incoming: ResumeData,
   fieldId: string,
-): import("@/store/useResumeStore").ResumeData {
+): ResumeData {
   const parts = fieldId.split(".");
   if (parts.length !== 2) return incoming;
   const [section, key] = parts;
@@ -256,5 +265,5 @@ function preserveFocusedField(
   return {
     ...incoming,
     [section]: mergedSection,
-  } as import("@/store/useResumeStore").ResumeData;
+  } as ResumeData;
 }
