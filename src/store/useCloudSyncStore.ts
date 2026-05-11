@@ -18,8 +18,12 @@ export type Collaborator = {
   userId: string;
   email: string;
   name: string | null;
+  /** Profilbilde-URL fra Supabase storage. Brukes som Live-indikator-avatar. */
+  avatarUrl: string | null;
   /** ResumeEditor.currentStep, 0-indeksert. Brukes til å vise "X redigerer Erfaring". */
   step: number;
+  /** Label/placeholder på inputet collaborator har fokus på. Null hvis ingen. */
+  focusLabel: string | null;
   /** True hvis dette er admin som impersonerer (egen indikator i UI). */
   impersonating: boolean;
   joinedAt: number;

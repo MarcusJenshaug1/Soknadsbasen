@@ -49,7 +49,9 @@ type PresenceMeta = {
   userId: string;
   email: string;
   name: string | null;
+  avatarUrl: string | null;
   step: number;
+  focusLabel: string | null;
   impersonating: boolean;
   joinedAt: number;
 };
@@ -73,6 +75,49 @@ export function suspendCloudSync() {
 // hentede serverdataen umiddelbart blir re-savet (subscribe → debounced
 // save). Dekker BÅDE resumeData-setState og setLoaded-setState.
 let isHydrating = false;
+
+/* ─── Helpers ─────────────────────────────────────────────── */
+
+/**
+ * Plukk en lesbar label fra et fokusert input. Prøver i rekkefølge:
+ * 1. aria-label
+ * 2. Tilknyttet <label for="id">
+ * 3. Nærmeste forelder-<label> som wrapper inputet
+ * 4. placeholder
+ * Returnerer null hvis ingenting funnet.
+ */
+function resolveFieldLabel(
+  el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+): string | null {
+  const aria = el.getAttribute("aria-label");
+  if (aria) return aria.trim();
+
+  if (el.id) {
+    const labelEl = document.querySelector<HTMLLabelElement>(
+      `label[for="${el.id}"]`,
+    );
+    if (labelEl?.textContent) return labelEl.textContent.trim();
+  }
+
+  const wrapper = el.closest("label");
+  if (wrapper?.textContent) {
+    return wrapper.textContent.replace(el.value ?? "", "").trim();
+  }
+
+  // Søk etter <label> som søsken-element i samme container (vanlig form-mønster).
+  const parent = el.parentElement;
+  if (parent) {
+    const labels = parent.querySelectorAll("label");
+    if (labels.length === 1 && labels[0].textContent) {
+      return labels[0].textContent.trim();
+    }
+  }
+
+  const placeholder = (el as HTMLInputElement).placeholder;
+  if (placeholder) return placeholder.trim();
+
+  return null;
+}
 
 /* ─── The hook ────────────────────────────────────────────── */
 
@@ -282,12 +327,33 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
           userId: meta.userId,
           email: meta.email,
           name: meta.name,
+          avatarUrl: meta.avatarUrl ?? null,
           step: meta.step,
+          focusLabel: meta.focusLabel ?? null,
           impersonating: meta.impersonating,
           joinedAt: meta.joinedAt,
         });
       }
       useCloudSyncStore.getState().setCollaborators(list);
+    }
+
+    // Lokal focus-state holdes i en let så vi kan re-tracke med oppdatert
+    // focusLabel uten å trigge subscribe-loops.
+    let currentFocusLabel: string | null = null;
+
+    function buildMeta(): PresenceMeta {
+      const identity = impersonatedBy ?? user!;
+      return {
+        clientId: CLIENT_ID,
+        userId: user!.id,
+        email: identity.email,
+        name: identity.name,
+        avatarUrl: identity.avatarUrl ?? null,
+        step: useCloudSyncStore.getState().currentStep,
+        focusLabel: currentFocusLabel,
+        impersonating: !!impersonatedBy,
+        joinedAt: Date.now(),
+      };
     }
 
     channel
@@ -298,30 +364,84 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         if (status === "dirty" || status === "saving") return;
         loadFromServer(user.email ?? null);
       })
+      .on("broadcast", { event: "cursor" }, (msg) => {
+        const p = msg.payload as
+          | { clientId: string; xPct: number; yPct: number }
+          | undefined;
+        if (!p || p.clientId === CLIENT_ID) return;
+        // Skriv direkte til DOM via CSS custom properties for å unngå
+        // React-render storm. LiveCursorsLayer renderer ett <div> per
+        // collaborator; vi oppdaterer bare transform-variablene her.
+        if (typeof window === "undefined") return;
+        const el = document.querySelector<HTMLElement>(
+          `[data-cursor-id="${p.clientId}"]`,
+        );
+        if (!el) return;
+        const x = Math.round(p.xPct * window.innerWidth);
+        const y = Math.round(p.yPct * window.innerHeight);
+        el.style.setProperty("--cursor-x", `${x}px`);
+        el.style.setProperty("--cursor-y", `${y}px`);
+        el.style.opacity = "1";
+      })
       .on("presence", { event: "sync" }, refreshCollaborators)
       .on("presence", { event: "join" }, refreshCollaborators)
       .on("presence", { event: "leave" }, refreshCollaborators)
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          // Vis admins faktiske identitet hvis vi impersonerer, ellers vis user
-          const identity = impersonatedBy ?? user;
-          const meta: PresenceMeta = {
-            clientId: CLIENT_ID,
-            userId: user.id,
-            email: identity.email,
-            name: identity.name,
-            step: useCloudSyncStore.getState().currentStep,
-            impersonating: !!impersonatedBy,
-            joinedAt: Date.now(),
-          };
-          await channel.track(meta);
+          await channel.track(buildMeta());
         }
       });
+
+    // Global focus-listener: når en input/textarea får fokus, finn
+    // tilhørende <label>-tekst eller placeholder/aria-label og kringkast
+    // det via presence så andre ser "X redigerer 'Fornavn'".
+    const focusHandler = (ev: FocusEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (!target) return;
+      if (
+        !(target instanceof HTMLInputElement) &&
+        !(target instanceof HTMLTextAreaElement) &&
+        !(target instanceof HTMLSelectElement)
+      )
+        return;
+      currentFocusLabel = resolveFieldLabel(target);
+      channel.track(buildMeta()).catch(() => {});
+    };
+    const blurHandler = () => {
+      if (currentFocusLabel === null) return;
+      currentFocusLabel = null;
+      channel.track(buildMeta()).catch(() => {});
+    };
+    window.addEventListener("focusin", focusHandler);
+    window.addEventListener("focusout", blurHandler);
+
+    // Mouse-broadcast throttlet til 50ms (20fps). Sender viewport-%-
+    // koordinater så ulike skjermstørrelser ser hverandres cursors
+    // proporsjonalt.
+    let lastCursorSent = 0;
+    const cursorHandler = (ev: MouseEvent) => {
+      const now = Date.now();
+      if (now - lastCursorSent < 50) return;
+      lastCursorSent = now;
+      const xPct = ev.clientX / window.innerWidth;
+      const yPct = ev.clientY / window.innerHeight;
+      channel
+        .send({
+          type: "broadcast",
+          event: "cursor",
+          payload: { clientId: CLIENT_ID, xPct, yPct },
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("mousemove", cursorHandler);
 
     channelRef.current = channel;
 
     return () => {
       channelRef.current = null;
+      window.removeEventListener("focusin", focusHandler);
+      window.removeEventListener("focusout", blurHandler);
+      window.removeEventListener("mousemove", cursorHandler);
       useCloudSyncStore.getState().setCollaborators([]);
       supabase.removeChannel(channel);
     };
@@ -343,7 +463,9 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         userId: user.id,
         email: identity.email,
         name: identity.name,
+        avatarUrl: identity.avatarUrl ?? null,
         step: state.currentStep,
+        focusLabel: null,
         impersonating: !!impersonatedBy,
         joinedAt: Date.now(),
       } satisfies PresenceMeta);

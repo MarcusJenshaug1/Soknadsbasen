@@ -64,6 +64,7 @@ export function ResumeEditor() {
   return (
     <>
       <PrintOutput />
+      <LiveCursorsLayer />
       <ImportCVModal open={showImport} onClose={() => setShowImport(false)} />
 
       <div className="flex flex-col h-[calc(100dvh-80px)] md:h-[calc(100dvh-20px)] bg-bg print:hidden">
@@ -289,15 +290,29 @@ function CollaboratorBar() {
         {collaborators.slice(0, 3).map((c) => {
           const color = colorForClientId(c.clientId);
           const stepLabel = STEPS[c.step]?.title ?? "ukjent";
+          const focusBit = c.focusLabel ? ` › ${c.focusLabel}` : "";
+          const adminBit = c.impersonating ? " (admin)" : "";
+          const tooltip = `${c.name ?? c.email}${adminBit} redigerer ${stepLabel}${focusBit}`;
           return (
-            <span
+            <div
               key={c.clientId}
-              title={`${c.name ?? c.email}${c.impersonating ? " (admin)" : ""} redigerer ${stepLabel}`}
-              className="w-6 h-6 rounded-full ring-2 ring-bg flex items-center justify-center text-[9px] font-semibold text-white"
+              title={tooltip}
+              className="w-6 h-6 rounded-full ring-2 ring-bg overflow-hidden flex items-center justify-center text-[9px] font-semibold text-white"
               style={{ background: color }}
             >
-              {initialsOf(c.name, c.email)}
-            </span>
+              {c.avatarUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={c.avatarUrl}
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{initialsOf(c.name, c.email)}</span>
+              )}
+            </div>
           );
         })}
       </div>
@@ -306,6 +321,51 @@ function CollaboratorBar() {
           +{collaborators.length - 3}
         </span>
       )}
+    </div>
+  );
+}
+
+function LiveCursorsLayer() {
+  const collaborators = useCloudSyncStore((s) => s.collaborators);
+  if (collaborators.length === 0) return null;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[80] print:hidden">
+      {collaborators.map((c) => {
+        const color = colorForClientId(c.clientId);
+        return (
+          <div
+            key={c.clientId}
+            data-cursor-id={c.clientId}
+            className="absolute top-0 left-0 transition-[transform] duration-[80ms] ease-linear pointer-events-none opacity-0"
+            style={{
+              transform:
+                "translate(calc(var(--cursor-x, -100px)), calc(var(--cursor-y, -100px)))",
+              willChange: "transform",
+            }}
+          >
+            <svg
+              width="14"
+              height="18"
+              viewBox="0 0 14 18"
+              className="drop-shadow"
+            >
+              <path
+                d="M1 1 L13 9 L7 10 L4 16 Z"
+                fill={color}
+                stroke="white"
+                strokeWidth="1"
+              />
+            </svg>
+            <span
+              className="ml-3 -mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap shadow"
+              style={{ background: color }}
+            >
+              {c.name?.split(" ")[0] || c.email.split("@")[0]}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
