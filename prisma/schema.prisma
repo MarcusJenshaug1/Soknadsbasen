@@ -107,6 +107,24 @@ model UserData {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+/// Yjs binary state for live-collaborative CV-editing via Hocuspocus.
+///
+/// Stores the canonical Y.Doc as a BYTEA blob, separate from the JSON
+/// snapshot in `UserData.resumeData`. The JSON copy is kept eventually-
+/// consistent via Hocuspocus' onStoreDocument hook (writes both in the
+/// same Prisma transaction) so non-collab consumers (PDF templates,
+/// share-token viewer, AI endpoints) keep reading the existing JSON shape.
+///
+/// `cvId` matches the resume slot id (currently `User.id` since we have
+/// one canonical CV per user in the v2 multi-CV payload).
+model CvYjsState {
+  cvId      String   @id @map("cv_id") @db.Uuid
+  ydoc      Bytes
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("cv_yjs_state")
+}
+
 model Resume {
   id        String   @id @default(uuid())
   title     String
