@@ -51,7 +51,14 @@ interface ServerData {
 // Marcus mistet arbeid med 2s debounce + nav-før-timer.
 const SAVE_DEBOUNCE_MS = 500;
 
-/* ─── Module-level suspend flag ───────────────────────────── */
+// Poll-intervall for "live" samarbeid: admin impersonerer + bruker er
+// innlogget samtidig, begge ser hverandres edits innen ~3 sek. Hopper
+// over polling når brukeren skriver (status=dirty/saving) for å unngå
+// å overskrive ulagrede endringer. Hopper også over når faneblikket
+// er skjult (sparer batteri/quota).
+const POLL_INTERVAL_MS = 3_000;
+
+/* ─── Module-level flags ──────────────────────────────────── */
 
 // Sett til true før impersonation start/stop hard-nav for å hindre at
 // admins (eller targets) in-memory CV-state lekker inn i feil UserData-rad
@@ -60,6 +67,11 @@ let suspended = false;
 export function suspendCloudSync() {
   suspended = true;
 }
+
+// True mens loadFromServer kaller setState. Forhindrer at den nylig
+// hentede serverdataen umiddelbart blir re-savet (subscribe → debounced
+// save). Settes synkront før setState, resettes etter.
+let isHydrating = false;
 
 /* ─── The hook ────────────────────────────────────────────── */
 
@@ -102,31 +114,53 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         // login-email og CV-kontakt-email (work vs. personal). Korrumperte
         // rader fra impersonation-bugen ryddes nå via /admin/cv-cleanup.
 
+        // Sjekk status PÅ NYTT etter fetch (kan ha endret seg mens fetch
+        // pågikk — bruker startet å skrive). Hvis dirty/saving, må vi
+        // IKKE overskrive lokale endringer med server-data.
+        const statusAfter = useCloudSyncStore.getState().status;
+        if (statusAfter === "dirty" || statusAfter === "saving") {
+          useResumeStore.getState().setLoaded(true);
+          loadedRef.current = true;
+          return;
+        }
+
         if (data.resumeData) {
           const rd = data.resumeData;
-          if ("resumes" in rd && rd.resumes?.length) {
-            // v2 multi-CV payload
-            useResumeStore.setState({
-              resumes: rd.resumes,
-              activeResumeId: rd.activeResumeId,
-              _resumeDataMap: rd._resumeDataMap,
-              data: rd._resumeDataMap[rd.activeResumeId] ?? rd.data,
-            });
-          } else if ("data" in rd && rd.data) {
-            // v1 single-CV payload — wrap into multi-CV
-            const id = "resume-default";
-            useResumeStore.setState({
-              resumes: [{ id, name: "Min CV", createdAt: new Date().toISOString() }],
-              activeResumeId: id,
-              _resumeDataMap: { [id]: rd.data },
-              data: rd.data,
-            });
+          isHydrating = true;
+          try {
+            if ("resumes" in rd && rd.resumes?.length) {
+              // v2 multi-CV payload
+              useResumeStore.setState({
+                resumes: rd.resumes,
+                activeResumeId: rd.activeResumeId,
+                _resumeDataMap: rd._resumeDataMap,
+                data: rd._resumeDataMap[rd.activeResumeId] ?? rd.data,
+              });
+            } else if ("data" in rd && rd.data) {
+              // v1 single-CV payload — wrap into multi-CV
+              const id = "resume-default";
+              useResumeStore.setState({
+                resumes: [{ id, name: "Min CV", createdAt: new Date().toISOString() }],
+                activeResumeId: id,
+                _resumeDataMap: { [id]: rd.data },
+                data: rd.data,
+              });
+            }
+          } finally {
+            isHydrating = false;
           }
         }
 
         useResumeStore.getState().setLoaded(true);
         loadedRef.current = true;
-        useCloudSyncStore.getState().setStatus("idle");
+        // Etter hydrering er state nettopp lik server, så vi går tilbake
+        // til "idle" (eller "saved" hvis vi har lastSavedAt). Status forblir
+        // dirty/saving hvis bruker hadde ulagrede endringer — men vi nådde
+        // ikke setState i så fall pga dirty-guarden i poll.
+        const currentStatus = useCloudSyncStore.getState().status;
+        if (currentStatus !== "dirty" && currentStatus !== "saving") {
+          useCloudSyncStore.getState().setStatus("idle");
+        }
       } catch (err) {
         console.error("[CloudSync] Failed to load:", err);
         useResumeStore.getState().setLoaded(true);
@@ -185,6 +219,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   /* ── Debounced save ────────────────────────────────────── */
   const debouncedSave = useCallback(() => {
     if (suspended) return;
+    if (isHydrating) return; // setState kom fra loadFromServer, ikke fra bruker
     if (!loadedRef.current) return; // Don't save before initial load
     useCloudSyncStore.getState().setStatus("dirty");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -212,6 +247,24 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       unsubResume();
     };
   }, [enabled, user, debouncedSave]);
+
+  /* ── Live polling: hent server-data jevnlig så admin+bruker ser
+       hverandres edits. Hopper over når dirty/saving (ikke overskrive
+       ulagrede endringer) og når fanen er skjult (batteri/quota). ─── */
+  useEffect(() => {
+    if (!enabled || !user) return;
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      const status = useCloudSyncStore.getState().status;
+      // Bare poll når lokalt state er "rolig". Hvis bruker skriver
+      // (dirty) eller save pågår (saving), vent til neste tick.
+      if (status === "dirty" || status === "saving") return;
+      loadFromServer(user.email ?? null);
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [enabled, user, loadFromServer]);
 
   /* ── Save immediately before page unload ───────────────── */
   useEffect(() => {
