@@ -52,6 +52,8 @@ model User {
   impersonationsStarted ImpersonationSession[] @relation("ImpersonationAdmin")
   impersonationsTarget  ImpersonationSession[] @relation("ImpersonationTarget")
 
+  collabInvites         CollabInvite[]
+
   @@index([role])
 }
 
@@ -123,6 +125,93 @@ model CvYjsState {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("cv_yjs_state")
+}
+
+/// Type ressurs som en CollabInvite gir tilgang til.
+enum CollabResourceKind {
+  cv
+  letter
+  application
+}
+
+enum CollabSuggestionStatus {
+  pending
+  accepted
+  rejected
+}
+
+/// Offentlig invitasjons-token. Eier deler URL `/collab/<kind>/<token>` med
+/// en hjelper, som joiner uten å være logget inn. Hjelperen kan foreslå
+/// endringer (CollabSuggestion); eier godkjenner/avviser.
+///
+/// Separat fra ResumeShareLink — den er read-only PDF-share. Denne er
+/// edit-orientert med suggestion-flow.
+model CollabInvite {
+  id           String              @id @default(uuid()) @db.Uuid
+  /// 12-byte base64url-encoded random token. Brukes i public URL.
+  token        String              @unique
+  ownerId      String              @db.Uuid
+  resourceKind CollabResourceKind
+  /// For `cv`: User.id. For `letter`/`application`: JobApplication.id.
+  resourceId   String              @db.Uuid
+  /// Valgfri eier-label ("Mamma", "Karriere-rådgiver Per").
+  label        String?
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime            @default(now())
+
+  owner       User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  suggestions CollabSuggestion[]
+  sessions    CollabSession[]
+
+  @@index([ownerId])
+}
+
+/// Anonyme hjelperes endrings-forslag. Lagrer field-level diff så eier kan
+/// se before/after og godkjenne/avvise per forslag.
+model CollabSuggestion {
+  id           String                 @id @default(uuid()) @db.Uuid
+  inviteId     String                 @db.Uuid
+  resourceKind CollabResourceKind
+  resourceId   String                 @db.Uuid
+  /// JSON-path inn i ressurs-shape, f.eks. "summary" eller
+  /// "experience.2.title".
+  fieldPath    String
+  /// Snapshot av verdien FØR forslaget (for diff-rendring og rollback).
+  beforeValue  Json
+  afterValue   Json
+  authorName   String
+  status       CollabSuggestionStatus @default(pending)
+  createdAt    DateTime               @default(now())
+  resolvedAt   DateTime?
+  /// User.id hvis eier (eller hjelpende admin) godkjente/avviste.
+  resolvedById String?                @db.Uuid
+
+  invite CollabInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@index([resourceKind, resourceId, status])
+  @@index([inviteId])
+}
+
+/// Aktiv collab-sesjon (én rad per koblet anonym klient). Brukes for
+/// kick-funksjonalitet + audit. Settes opp av `POST /api/collab/join` og
+/// markeres `endedAt` ved Hocuspocus-disconnect eller eier-kick.
+model CollabSession {
+  id          String    @id @default(uuid()) @db.Uuid
+  inviteId    String    @db.Uuid
+  /// Klient-id fra Hocuspocus-providerens awareness, persisted for å
+  /// matche kick-kommandoer mot riktig socket.
+  clientId    String
+  /// Navnet anonym bruker oppga ved join.
+  displayName String
+  connectedAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now()) @updatedAt
+  /// Settes når eier kicker eller klient disconnecter naturlig.
+  endedAt     DateTime?
+
+  invite CollabInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@index([inviteId, endedAt])
 }
 
 model Resume {
