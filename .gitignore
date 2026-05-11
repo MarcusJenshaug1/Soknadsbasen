@@ -52,9 +52,13 @@ prisma/migrations.sqlite-archive/
 *.pdf
 
 # local tooling (Claude Code, etc.)
-.claude/
+# Track .claude/ config (dotclaude), but ignore per-user state
+.claude/settings.local.json
+.claude/launch.json
+.claude/worktrees/
 
 # Lokale ytelse-notater (skal ikke i repo)
 perf-baseline.md
 perf-plan.md
 perf-results.md
+CLAUDE.local.md
