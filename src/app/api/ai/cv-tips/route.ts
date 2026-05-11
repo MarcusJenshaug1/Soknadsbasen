@@ -7,18 +7,22 @@ import { parseActiveResume } from "@/lib/resume-server";
 
 /**
  * POST /api/ai/cv-tips
- * Body: { slug?: string }
+ * Body: { slug?: string; applicationId?: string }
  * Returns: { strengths, gaps, rewrites, additions }
  *
- * Gir konkrete forbedringstips for brukerens CV. Hvis slug oppgis,
- * skreddersys tips mot den spesifikke stillingen (hva som mangler,
- * hva som bør fremheves). Uten slug = generelle tips.
+ * Gir konkrete forbedringstips for brukerens CV. Med `slug` matches mot
+ * Job-tabellen (offentlig /jobb-side). Med `applicationId` matches mot
+ * JobApplication.jobDescription / companyName (pipeline-detalj). Uten
+ * noen av delene = generelle tips.
  */
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { slug?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    slug?: string;
+    applicationId?: string;
+  };
 
   const userData = await prisma.userData.findUnique({
     where: { userId: session.userId },
@@ -100,6 +104,31 @@ export async function POST(req: Request) {
           : "",
         job.description
           ? `Stillingsbeskrivelse:\n${job.description.replace(/<[^>]+>/g, " ").slice(0, 4000)}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    }
+  } else if (body.applicationId) {
+    // Pipeline-applikasjon: bruker manuell jobDescription og selskap-data fra
+    // søknaden. Eierskap gates via userId så admin ikke kan trekke andres
+    // søknader gjennom denne API-en.
+    const app = await prisma.jobApplication.findFirst({
+      where: { id: body.applicationId, userId: session.userId },
+      select: {
+        title: true,
+        companyName: true,
+        jobDescription: true,
+        jobUrl: true,
+      },
+    });
+    if (app) {
+      jobContext = [
+        `STILLING: ${app.title}`,
+        `Selskap: ${app.companyName}`,
+        app.jobUrl ? `Annonse: ${app.jobUrl}` : "",
+        app.jobDescription
+          ? `Stillingsbeskrivelse:\n${app.jobDescription.replace(/<[^>]+>/g, " ").slice(0, 4000)}`
           : "",
       ]
         .filter(Boolean)

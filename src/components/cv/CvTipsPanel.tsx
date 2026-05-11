@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { savePendingTips } from "@/lib/cv-pending-tips";
+import { savePendingTips, type CvTipsLink } from "@/lib/cv-pending-tips";
 
 type CvTips = {
   strengths?: string[];
@@ -23,28 +23,42 @@ const SECTION_LABEL: Record<string, string> = {
   summary: "Sammendrag",
 };
 
-export function CvTipsPanel({
-  slug,
-  jobTitle,
-  employerName,
-  onClose,
-}: {
-  slug: string;
+type CommonProps = {
   jobTitle: string;
   employerName: string;
   onClose: () => void;
-}) {
+};
+
+type Props =
+  | (CommonProps & { slug: string; applicationId?: never })
+  | (CommonProps & { applicationId: string; slug?: never });
+
+/**
+ * AI-coach modal: henter tips fra /api/ai/cv-tips og lar bruker hoppe over
+ * til CV-bygger med forslagene i drawer. Aksepterer enten `slug` (offentlig
+ * /jobb-side) eller `applicationId` (pipeline-detalj). API-et matcher mot
+ * Job-tabellen ved slug, eller mot JobApplication.jobDescription ved id.
+ */
+export function CvTipsPanel(props: Props) {
+  const { jobTitle, employerName, onClose } = props;
   const [tips, setTips] = useState<CvTips | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const requestKey = props.slug
+    ? `slug:${props.slug}`
+    : `application:${props.applicationId}`;
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    const body = props.slug
+      ? { slug: props.slug }
+      : { applicationId: props.applicationId };
     fetch("/api/ai/cv-tips", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug }),
+      body: JSON.stringify(body),
     })
       .then(async (r) => {
         const payload = await r.json();
@@ -65,7 +79,9 @@ export function CvTipsPanel({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+    // requestKey kapsler både slug og applicationId så vi ikke trenger begge i deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestKey]);
 
   return (
     <div
@@ -241,7 +257,11 @@ export function CvTipsPanel({
             <button
               type="button"
               onClick={() => {
-                savePendingTips({ slug, jobTitle, employerName, tips });
+                const link: CvTipsLink =
+                  "slug" in props && props.slug
+                    ? { kind: "job", slug: props.slug }
+                    : { kind: "application", applicationId: props.applicationId! };
+                savePendingTips({ link, jobTitle, employerName, tips });
                 window.location.href = "/app/cv";
               }}
               className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[var(--accent-hover)] transition-colors"

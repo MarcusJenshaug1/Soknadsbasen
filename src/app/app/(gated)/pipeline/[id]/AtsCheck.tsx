@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
 import {
@@ -10,10 +11,22 @@ import {
 } from "@/lib/ats";
 import { SectionLabel } from "@/components/ui/Pill";
 import { IconArrowRight, IconCheck, IconPlus } from "@/components/ui/Icons";
+import { AtsScoreRing } from "@/components/ats/AtsScoreRing";
+import { AtsChipRow } from "@/components/ats/AtsChipRow";
+import { scoreTone } from "@/components/ats/ats-display";
 import { cn } from "@/lib/cn";
+
+// Lazy: CvTipsPanel henter AI-tips på modal-åpning, ikke ved kort-render.
+// Samme mønster som JobAtsCard på /jobb/[slug].
+const CvTipsPanel = dynamic(
+  () => import("@/components/cv/CvTipsPanel").then((m) => m.CvTipsPanel),
+  { ssr: false },
+);
 
 type Props = {
   applicationId: string;
+  jobTitle: string;
+  companyName: string;
   jobUrl: string | null;
   jobDescription: string | null;
   onJobDescriptionUpdate: (next: string) => void;
@@ -31,6 +44,8 @@ type ResultMeta = { source: "ai" | "local" };
 
 export function AtsCheck({
   applicationId,
+  jobTitle,
+  companyName,
   jobUrl,
   jobDescription,
   onJobDescriptionUpdate,
@@ -41,6 +56,7 @@ export function AtsCheck({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AtsAnalysis | null>(null);
   const [resultMeta, setResultMeta] = useState<ResultMeta | null>(null);
+  const [tipsOpen, setTipsOpen] = useState(false);
 
   const hasJobUrl = Boolean(jobUrl?.trim());
   const hasJobText = Boolean(jobDescription?.trim());
@@ -203,6 +219,16 @@ export function AtsCheck({
           analysis={result}
           currentTemplateId={data.templateId}
           source={resultMeta?.source ?? "local"}
+          onOpenTips={() => setTipsOpen(true)}
+        />
+      )}
+
+      {tipsOpen && (
+        <CvTipsPanel
+          applicationId={applicationId}
+          jobTitle={jobTitle}
+          employerName={companyName}
+          onClose={() => setTipsOpen(false)}
         />
       )}
     </div>
@@ -255,7 +281,7 @@ function IdleState({
       {!hasJobText && hasJobUrl && (
         <div className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45 flex items-center gap-1.5">
           <span className="inline-block w-1 h-1 rounded-full bg-accent" />
-          Stillings-URL er lagt inn — vi henter teksten automatisk
+          Stillings-URL er lagt inn, vi henter teksten automatisk
         </div>
       )}
     </div>
@@ -290,10 +316,12 @@ function ResultView({
   analysis,
   currentTemplateId,
   source,
+  onOpenTips,
 }: {
   analysis: AtsAnalysis;
   currentTemplateId: string;
   source: "ai" | "local";
+  onOpenTips: () => void;
 }) {
   const { score, matchedKeywords, missingKeywords, summary, recommendedTemplateId } =
     analysis;
@@ -304,7 +332,7 @@ function ResultView({
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-5">
-        <ScoreRing score={score} color={tone.color} />
+        <AtsScoreRing score={score} color={tone.color} size={88} stroke={8} showOutOf />
         <div className="min-w-0">
           <div
             className="text-[11px] uppercase tracking-[0.2em]"
@@ -321,7 +349,7 @@ function ResultView({
       </div>
 
       {matchedKeywords.length > 0 && (
-        <KeywordGroup
+        <AtsChipRow
           label="Matchet"
           icon={<IconCheck size={11} className="text-emerald-700 dark:text-emerald-400" />}
           chips={matchedKeywords}
@@ -331,7 +359,7 @@ function ResultView({
       )}
 
       {missingKeywords.length > 0 && (
-        <KeywordGroup
+        <AtsChipRow
           label="Mangler"
           icon={<IconPlus size={11} className="text-accent" />}
           chips={missingKeywords}
@@ -367,149 +395,53 @@ function ResultView({
         </div>
       )}
 
-      <div className="pt-2 border-t border-black/5 dark:border-white/5 flex items-center justify-between gap-2">
+      <div className="pt-3 border-t border-black/5 dark:border-white/5 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
+          Vil du forbedre matchen mot denne stillingen?
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpenTips}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-ink text-bg text-[12px] font-medium hover:bg-[#2a2520] transition-colors"
+          >
+            <SparkleIcon />
+            Få hjelp med CV
+          </button>
+          <Link
+            href="/app/cv"
+            className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline underline-offset-2"
+          >
+            Åpne CV
+            <IconArrowRight size={12} />
+          </Link>
+        </div>
+      </div>
+
+      <div className="-mt-2">
         <span className="text-[10px] uppercase tracking-[0.18em] text-[#14110e]/45 dark:text-[#f0ece6]/45">
-          {source === "ai" ? "AI-nøkkelord · lokal match" : "Lokal analyse · ingen AI"}
+          {source === "ai" ? "AI-nøkkelord, lokal match" : "Lokal analyse, ingen AI"}
         </span>
-        <Link
-          href="/app/cv"
-          className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline underline-offset-2"
-        >
-          Åpne CV
-          <IconArrowRight size={12} />
-        </Link>
       </div>
     </div>
   );
 }
 
-function KeywordGroup({
-  label,
-  icon,
-  chips,
-  collapsedLimit,
-  variant,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  chips: string[];
-  collapsedLimit: number;
-  variant: "match" | "missing";
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const total = chips.length;
-  const visible = expanded ? chips : chips.slice(0, collapsedLimit);
-  const hidden = total - visible.length;
-
+function SparkleIcon() {
   return (
-    <div>
-      <div className="text-[10px] uppercase tracking-[0.2em] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-2 flex items-center gap-1.5">
-        {icon}
-        <span>
-          {label}{" "}
-          <span className="text-[#14110e]/35 dark:text-[#f0ece6]/35">({total})</span>
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {visible.map((kw) => (
-          <span
-            key={kw}
-            className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px]",
-              variant === "match"
-                ? "bg-emerald-100/80 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300"
-                : "bg-accent/10 text-accent",
-            )}
-          >
-            {variant === "missing" && <span className="opacity-60">+</span>}
-            {kw}
-          </span>
-        ))}
-        {hidden > 0 && !expanded && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] text-[#14110e]/65 dark:text-[#f0ece6]/65 bg-panel hover:bg-black/8 dark:hover:bg-white/8 transition-colors"
-          >
-            +{hidden} til
-          </button>
-        )}
-        {expanded && total > collapsedLimit && (
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 hover:text-ink transition-colors"
-          >
-            Vis færre
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ScoreRing({ score, color }: { score: number; color: string }) {
-  const size = 88;
-  const stroke = 8;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(100, score));
-  const offset = circumference - (clamped / 100) * circumference;
-
-  return (
-    <div
-      className="relative shrink-0"
-      style={{ width: size, height: size }}
-      role="img"
-      aria-label={`ATS-score ${score} av 100`}
+    <svg
+      width={12}
+      height={12}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        className="-rotate-90"
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={stroke}
-          className="stroke-black/8 dark:stroke-white/10"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          stroke={color}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 600ms ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span
-          className="text-[26px] leading-none tracking-[-0.04em] font-medium"
-          style={{ color }}
-        >
-          {clamped}
-        </span>
-        <span className="text-[9px] uppercase tracking-[0.2em] text-[#14110e]/45 dark:text-[#f0ece6]/45 mt-0.5">
-          / 100
-        </span>
-      </div>
-    </div>
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+    </svg>
   );
-}
-
-function scoreTone(score: number): { label: string; color: string } {
-  if (score >= 80) return { label: "Sterk match", color: "#16a34a" };
-  if (score >= 60) return { label: "God match", color: "#D5592E" };
-  if (score >= 40) return { label: "Delvis match", color: "#f59e0b" };
-  return { label: "Lav match", color: "#dc2626" };
 }
 
 function AtsIcon() {

@@ -174,8 +174,12 @@ export function Sidebar({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://marcusjenshaug-web.vercel.app/_next/image?url=%2Fportrett.jpg&w=384&q=75"
+          src="/portrett.jpg"
           alt=""
+          width={16}
+          height={16}
+          loading="lazy"
+          decoding="async"
           className="w-4 h-4 rounded-full object-cover object-top"
         />
         <span>laget av Marcus Jenshaug</span>

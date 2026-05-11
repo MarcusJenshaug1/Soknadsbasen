@@ -5,6 +5,7 @@ import { useResumeStore } from "@/store/useResumeStore";
 import {
   clearPendingTips,
   readPendingTips,
+  tipsLinkHref,
   type CvTipsPayload,
 } from "@/lib/cv-pending-tips";
 import { cn } from "@/lib/cn";
@@ -42,7 +43,9 @@ export function PendingCvTipsDrawer() {
 
   if (!payload || !open) return null;
 
-  const { tips, jobTitle, employerName, slug } = payload;
+  const { tips, jobTitle, employerName, link } = payload;
+  const linkHref = tipsLinkHref(link);
+  const linkLabel = link?.kind === "application" ? "Åpne søknad ↗" : "Se stillingen ↗";
 
   const close = () => {
     setOpen(false);
@@ -366,14 +369,18 @@ export function PendingCvTipsDrawer() {
         </div>
 
         <footer className="border-t border-black/8 px-5 py-3.5 flex items-center justify-between gap-3 bg-bg/95">
-          <a
-            href={`/jobb/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[12px] text-[#14110e]/55 hover:text-ink"
-          >
-            Se stillingen ↗
-          </a>
+          {linkHref ? (
+            <a
+              href={linkHref}
+              target={link?.kind === "job" ? "_blank" : undefined}
+              rel={link?.kind === "job" ? "noopener noreferrer" : undefined}
+              className="text-[12px] text-[#14110e]/55 hover:text-ink"
+            >
+              {linkLabel}
+            </a>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
             onClick={dismissAll}

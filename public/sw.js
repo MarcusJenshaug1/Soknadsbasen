@@ -12,7 +12,19 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  // Network-first med cache-fallback. `caches.match` kan returnere undefined
+  // (cache-miss); respondWith krever en Response, så fall tilbake til en
+  // tom 504 i stedet for å returnere undefined (= "Failed to convert value
+  // to 'Response'"-feil i konsollen).
+  e.respondWith(
+    fetch(e.request).catch(async () => {
+      const cached = await caches.match(e.request);
+      return (
+        cached ??
+        new Response("", { status: 504, statusText: "Offline" })
+      );
+    }),
+  );
 });
 
 self.addEventListener("push", (e) => {

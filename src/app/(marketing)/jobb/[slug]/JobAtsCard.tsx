@@ -4,12 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
-import { cn } from "@/lib/cn";
+import { AtsScoreRing } from "@/components/ats/AtsScoreRing";
+import { AtsChipRow } from "@/components/ats/AtsChipRow";
+import {
+  computeAiMatch,
+  matchLocalKeywords,
+  scoreTone,
+  type AiMatchResult,
+} from "@/components/ats/ats-display";
 
 // CvTipsPanel lazy-loades — kun nødvendig når brukeren klikker "Få hjelp
 // med CV". Sparer ~5 KB JS i initial detail-bundle.
 const CvTipsPanel = dynamic(
-  () => import("./CvTipsPanel").then((m) => m.CvTipsPanel),
+  () => import("@/components/cv/CvTipsPanel").then((m) => m.CvTipsPanel),
   { ssr: false },
 );
 
@@ -28,27 +35,6 @@ type Props = {
     jobKeywords: string[];
   } | null;
 };
-
-type MatchResult = {
-  score: number;
-  matched: string[];
-  missing: string[];
-  source: "ai" | "nav";
-};
-
-function computeAiMatch(cvKw: string[], jobKw: string[]): MatchResult | null {
-  if (cvKw.length === 0 || jobKw.length === 0) return null;
-  const cvLower = new Set(cvKw.map((k) => k.toLowerCase()));
-  const matched = jobKw.filter((k) => cvLower.has(k.toLowerCase()));
-  const missing = jobKw.filter((k) => !cvLower.has(k.toLowerCase()));
-  const coverage = jobKw.length > 0 ? matched.length / jobKw.length : 0;
-  return {
-    score: Math.round(coverage * 100),
-    matched,
-    missing,
-    source: "ai",
-  };
-}
 
 export function JobAtsCard({
   slug,
@@ -75,7 +61,7 @@ export function JobAtsCard({
     return computeAiMatch(initialMatch.cvKeywords, initialMatch.jobKeywords);
   }, [initialMatch]);
 
-  const [result, setResult] = useState<MatchResult | null>(initialResult);
+  const [result, setResult] = useState<AiMatchResult | null>(initialResult);
   const [loading, setLoading] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
 
@@ -112,7 +98,7 @@ export function JobAtsCard({
           setResult(ai);
         } else if (navKeywords.length > 0) {
           // Fallback til lokal NAV-match hvis AI ikke leverte
-          const local = matchKeywords(buildResumeText(data), navKeywords);
+          const local = matchLocalKeywords(data, navKeywords);
           setResult({ ...local, source: "nav" });
         } else {
           setResult(null);
@@ -123,7 +109,7 @@ export function JobAtsCard({
         if (cancelled) return;
         // Hard error → fallback
         if (navKeywords.length > 0) {
-          const local = matchKeywords(buildResumeText(data), navKeywords);
+          const local = matchLocalKeywords(data, navKeywords);
           setResult({ ...local, source: "nav" });
         }
         setLoading(false);
@@ -183,7 +169,7 @@ export function JobAtsCard({
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-5 mb-6">
       <div className="flex items-start gap-5">
-        <ScoreRing score={result.score} color={tone.color} />
+        <AtsScoreRing score={result.score} color={tone.color} size={64} stroke={6} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 mb-1">
             <span
@@ -210,19 +196,21 @@ export function JobAtsCard({
       {(matched.length > 0 || missing.length > 0) && (
         <div className="mt-4 space-y-2.5">
           {matched.length > 0 && (
-            <ChipRow
+            <AtsChipRow
               label="Matchet"
               chips={matched}
               extraCount={result.matched.length - matched.length}
               variant="match"
+              layout="inline"
             />
           )}
           {missing.length > 0 && (
-            <ChipRow
+            <AtsChipRow
               label="Mangler"
               chips={missing}
               extraCount={result.missing.length - missing.length}
               variant="missing"
+              layout="inline"
             />
           )}
         </div>
@@ -269,138 +257,4 @@ function SparkleIcon() {
       <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
     </svg>
   );
-}
-
-function buildResumeText(data: {
-  role?: string;
-  summary?: string;
-  skills?: string[];
-  experience?: { title: string; company: string; description?: string }[];
-}): string {
-  return [
-    data.role ?? "",
-    data.summary ?? "",
-    (data.skills ?? []).join(" "),
-    (data.experience ?? [])
-      .map((e) => `${e.title} ${e.company} ${e.description ?? ""}`)
-      .join(" "),
-  ].join(" ");
-}
-
-function matchKeywords(resumeText: string, keywords: string[]) {
-  const normalized = resumeText
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "");
-  const matched: string[] = [];
-  const missing: string[] = [];
-  for (const k of keywords) {
-    const norm = k
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/[̀-ͯ]/g, "");
-    if (normalized.includes(norm)) matched.push(k);
-    else missing.push(k);
-  }
-  const total = keywords.length || 1;
-  const score = Math.round((matched.length / total) * 100);
-  return { score, matched, missing };
-}
-
-function ChipRow({
-  label,
-  chips,
-  extraCount,
-  variant,
-}: {
-  label: string;
-  chips: string[];
-  extraCount: number;
-  variant: "match" | "missing";
-}) {
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[10px] uppercase tracking-[0.18em] text-[#14110e]/55 shrink-0">
-        {label}
-      </span>
-      {chips.map((kw) => (
-        <span
-          key={kw}
-          className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]",
-            variant === "match"
-              ? "bg-emerald-100/70 text-emerald-800"
-              : "bg-accent/10 text-accent",
-          )}
-        >
-          {variant === "missing" && <span className="opacity-60">+</span>}
-          {kw}
-        </span>
-      ))}
-      {extraCount > 0 && (
-        <span className="text-[11px] text-[#14110e]/50">+{extraCount}</span>
-      )}
-    </div>
-  );
-}
-
-function ScoreRing({ score, color }: { score: number; color: string }) {
-  const size = 64;
-  const stroke = 6;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(100, score));
-  const offset = circumference - (clamped / 100) * circumference;
-
-  return (
-    <div
-      className="relative shrink-0"
-      style={{ width: size, height: size }}
-      role="img"
-      aria-label={`ATS-score ${score} av 100`}
-    >
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        className="-rotate-90"
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={stroke}
-          className="stroke-black/10"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          stroke={color}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 600ms ease" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span
-          className="text-[20px] leading-none font-medium tracking-[-0.03em]"
-          style={{ color }}
-        >
-          {clamped}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function scoreTone(score: number): { label: string; color: string } {
-  if (score >= 80) return { label: "Sterk match", color: "#16a34a" };
-  if (score >= 60) return { label: "God match", color: "#D5592E" };
-  if (score >= 40) return { label: "Delvis match", color: "#f59e0b" };
-  return { label: "Lav match", color: "#dc2626" };
 }

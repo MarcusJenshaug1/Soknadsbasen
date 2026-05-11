@@ -472,6 +472,8 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
 
           <AtsCheck
             applicationId={app.id}
+            jobTitle={app.title}
+            companyName={app.companyName}
             jobUrl={app.jobUrl}
             jobDescription={app.jobDescription}
             onJobDescriptionUpdate={(next) =>
