@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Building2, Users, Tag, Inbox, LayoutDashboard, UserCheck } from "lucide-react";
+import { Building2, Users, Tag, Inbox, LayoutDashboard, UserCheck, ShieldAlert } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Oversikt", icon: LayoutDashboard, exact: true },
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/brukere", label: "Brukere", icon: Users },
   { href: "/admin/promo", label: "Rabattkoder", icon: Tag },
   { href: "/admin/innboks", label: "Innboks", icon: Inbox },
+  { href: "/admin/cv-cleanup", label: "CV-cleanup", icon: ShieldAlert },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
