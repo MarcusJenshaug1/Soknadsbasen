@@ -213,6 +213,12 @@ body {
   animation: app-loader-bounce 1.4s ease-in-out infinite both;
 }
 
+/* Live-collab: dempet pulse på step-tab der annen bruker er aktiv */
+@keyframes collabPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.05); }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar {

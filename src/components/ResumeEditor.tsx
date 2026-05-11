@@ -244,29 +244,64 @@ function StepTab({
     [allCollaborators, index],
   );
 
+  const primaryColor =
+    collaboratorsHere.length > 0
+      ? colorForClientId(collaboratorsHere[0].clientId)
+      : null;
+
   return (
     <button
       onClick={onClick}
-      className={`relative px-3 md:px-4 py-1.5 rounded-full text-[11px] md:text-[12px] transition-colors ${
+      className={`relative px-3 md:px-4 py-1.5 rounded-full text-[11px] md:text-[12px] transition-all ${
         active
           ? "bg-bg text-ink font-medium"
           : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink"
       }`}
+      style={
+        primaryColor
+          ? {
+              boxShadow: `0 0 0 2px ${primaryColor}, 0 0 14px ${hexAlpha(primaryColor, 0.35)}`,
+              animation: "collabPulse 1.6s ease-in-out infinite",
+            }
+          : undefined
+      }
     >
       <span className="mr-1.5 text-[#14110e]/40 dark:text-[#f0ece6]/40">
         {index + 1}
       </span>
       {title}
       {collaboratorsHere.length > 0 && (
-        <span className="absolute -top-1 -right-1 inline-flex items-center gap-0.5">
-          {collaboratorsHere.slice(0, 3).map((c) => (
-            <span
-              key={c.clientId}
-              title={`${c.name ?? c.email} ${c.impersonating ? "(admin)" : ""} er her`}
-              className="w-2 h-2 rounded-full ring-2 ring-bg"
-              style={{ background: colorForClientId(c.clientId) }}
-            />
-          ))}
+        <span className="absolute -top-2 -right-2 flex -space-x-1.5 pointer-events-none">
+          {collaboratorsHere.slice(0, 2).map((c) => {
+            const color = colorForClientId(c.clientId);
+            const tooltip = `${c.name ?? c.email}${c.impersonating ? " (admin)" : ""} er her`;
+            return (
+              <span
+                key={c.clientId}
+                title={tooltip}
+                className="w-5 h-5 rounded-full ring-2 ring-bg overflow-hidden flex items-center justify-center text-[9px] font-bold text-white shadow-sm"
+                style={{ background: color }}
+              >
+                {c.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={c.avatarUrl}
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  initialsOf(c.name, c.email).slice(0, 1)
+                )}
+              </span>
+            );
+          })}
+          {collaboratorsHere.length > 2 && (
+            <span className="w-5 h-5 rounded-full ring-2 ring-bg bg-ink text-bg text-[8px] font-bold flex items-center justify-center">
+              +{collaboratorsHere.length - 2}
+            </span>
+          )}
         </span>
       )}
     </button>
