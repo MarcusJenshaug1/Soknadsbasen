@@ -257,17 +257,8 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
       }
       // Stopp alle pending/beforeunload saves: cookien er nå satt, så et
       // siste save fra denne fanen ville skrevet admins in-memory CV inn
-      // i target's UserData-rad. Må kjøres FØR localStorage tømmes og
-      // før hard-nav.
+      // i target's UserData-rad. Må kjøres FØR hard-nav.
       suspendCloudSync();
-      // Zustand-persist cacher CV-en i localStorage. Tøm før hard-nav slik at
-      // ResumeEditor henter målbrukerens UserData fra server i stedet for
-      // å re-hydrere admins egen CV.
-      try {
-        localStorage.removeItem("cv-maker-storage");
-      } catch {
-        // ignore — vil bare bety at gammel cache står igjen
-      }
       window.location.href = "/app";
     } catch {
       alert("Klarte ikke starte impersonering");

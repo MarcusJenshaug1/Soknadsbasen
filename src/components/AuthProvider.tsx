@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { clearLegacyResumeStorage } from "@/store/useResumeStore";
 import { SupabaseErrorSilencer } from "./SupabaseErrorSilencer";
 
 const AUTH_ROUTES = [
@@ -30,6 +31,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isAuthRoute) return;
     fetchSession();
   }, [fetchSession, isAuthRoute]);
+
+  // Ryd opp legacy localStorage-entry fra forrige persist-versjon.
+  // Persist ble fjernet for å hindre CV-leak under impersonering.
+  useEffect(() => {
+    clearLegacyResumeStorage();
+  }, []);
 
   // Cloud sync — hopper over på auth-ruter siden ingen sesjon er aktiv.
   useCloudSync({ enabled: !isAuthRoute });

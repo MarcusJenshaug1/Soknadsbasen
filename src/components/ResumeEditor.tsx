@@ -33,22 +33,19 @@ const STEPS = [
 
 export function ResumeEditor() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [hydrated, setHydrated] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
 
-  useEffect(() => {
-    // Wait for Zustand persist to finish rehydration from localStorage
-    const unsub = useResumeStore.persist.onFinishHydration(() => setHydrated(true));
-    if (useResumeStore.persist.hasHydrated()) setHydrated(true);
-    return unsub;
-  }, []);
+  // Vent på useCloudSync.loadFromServer (eller dens fall-through når
+  // serveren returnerer mismatch/feil). Persist-laget er fjernet, så
+  // første render har bare default-state inntil server har svart.
+  const isLoaded = useResumeStore((s) => s.isLoaded);
 
   const nextStep = () => setCurrentStep((p) => Math.min(p + 1, STEPS.length - 1));
   const prevStep = () => setCurrentStep((p) => Math.max(p - 1, 0));
 
-  if (!hydrated) {
+  if (!isLoaded) {
     return (
       <div className="flex items-center justify-center py-20 text-[12px] uppercase tracking-[0.2em] text-[#14110e]/45 dark:text-[#f0ece6]/45">
         Laster CV-data

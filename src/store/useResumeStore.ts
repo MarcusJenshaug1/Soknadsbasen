@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 /* ─── Section item types ───────────────────────────────────── */
 
@@ -269,6 +268,16 @@ interface ResumeStore {
   setDatePosition: (pos: "left" | "right") => void;
   replaceData: (data: ResumeData) => void;
 
+  /**
+   * `isLoaded` settes til true av `useCloudSync` etter første server-fetch.
+   * Brukes av `ResumeEditor` for å vise "Laster CV-data" inntil vi VET hva
+   * brukerens CV inneholder. Tidligere brukte vi `persist.hasHydrated()`,
+   * men localStorage-persisten ble fjernet for å eliminere CV-leasking
+   * mellom brukere (særlig under admin-impersonering).
+   */
+  isLoaded: boolean;
+  setLoaded: (loaded: boolean) => void;
+
   isSaving: boolean;
 }
 
@@ -343,12 +352,18 @@ function removeItem<T extends { id: string }>(list: T[], id: string): T[] {
   return list.filter((item) => item.id !== id);
 }
 
-/* ─── Store (localStorage, multi-CV) ──────────────────────── */
+/* ─── Store (in-memory only, multi-CV) ────────────────────── */
+//
+// localStorage-persist ble fjernet 2026-05 fordi den lekket admins CV inn
+// i target's editor under impersonering. Synkronisering med server skjer
+// via useCloudSync (auto-save debounce + load on auth-change). Konsekvens:
+// første render etter pageload viser "Laster CV-data" inntil server-fetch
+// fullfører (~150 ms). Offline-edit tolereres ikke lenger på samme måte,
+// men i praksis lagrer cloud-sync hver 2s så vinduet er smalt.
 
 const INITIAL_RESUME_ID = "resume-default";
 
 export const useResumeStore = create<ResumeStore>()(
-  persist(
     (set, get) => ({
       /* Multi-CV state */
       resumes: [{ id: INITIAL_RESUME_ID, name: "Min CV", createdAt: new Date().toISOString() }],
@@ -357,6 +372,8 @@ export const useResumeStore = create<ResumeStore>()(
 
       data: defaultData,
       isSaving: false,
+      isLoaded: false,
+      setLoaded: (loaded) => set({ isLoaded: loaded }),
 
       /* ── Multi-CV actions ───────────────────────────── */
 
@@ -531,65 +548,19 @@ export const useResumeStore = create<ResumeStore>()(
       setShowSectionIcons: (show) => set((s) => ({ data: { ...s.data, showSectionIcons: show } })),
       setDatePosition: (pos) => set((s) => ({ data: { ...s.data, datePosition: pos } })),
       replaceData: (data) => set(() => ({ data })),
-    }),
-    {
-      name: "cv-maker-storage",
-      version: 2,
-      partialize: (state) => ({
-        resumes: state.resumes,
-        activeResumeId: state.activeResumeId,
-        _resumeDataMap: { ...state._resumeDataMap, [state.activeResumeId]: state.data },
-        data: state.data,
-      }),
-      migrate: (persisted: unknown, version: number) => {
-        const state = persisted as Record<string, unknown>;
-        if (version < 2) {
-          // v1 → v2: wrap single `data` into multi-CV structure
-          const existingData = state.data as ResumeData | undefined;
-          const id = INITIAL_RESUME_ID;
-          state.resumes = [{ id, name: "Min CV", createdAt: new Date().toISOString() }];
-          state.activeResumeId = id;
-          state._resumeDataMap = { [id]: existingData ?? defaultData };
-          // data stays as-is
-        }
-        return state;
-      },
-      merge: (persisted, current) => {
-        const p = persisted as {
-          resumes?: ResumeEntry[];
-          activeResumeId?: string;
-          _resumeDataMap?: Record<string, ResumeData>;
-          data?: Partial<ResumeData>;
-        } | undefined;
-        if (!p) return current;
-
-        const resumes = p.resumes ?? current.resumes;
-        const activeResumeId = p.activeResumeId ?? current.activeResumeId;
-        const resumeDataMap = p._resumeDataMap ?? current._resumeDataMap;
-
-        // Resolve active data from map or persisted data
-        const activeData = resumeDataMap[activeResumeId] ?? p.data ?? current.data;
-
-        return {
-          ...current,
-          resumes,
-          activeResumeId,
-          _resumeDataMap: resumeDataMap,
-          data: {
-            ...current.data,
-            ...activeData,
-            contact: {
-              ...current.data.contact,
-              ...(activeData.contact ?? {}),
-            },
-            sectionOrder: activeData.sectionOrder ?? current.data.sectionOrder,
-            sectionVisibility: {
-              ...current.data.sectionVisibility,
-              ...(activeData.sectionVisibility ?? {}),
-            },
-          },
-        };
-      },
-    }
-  )
+    })
 );
+
+/**
+ * Fjerner legacy localStorage-entry fra forrige persist-versjon. Kalles fra
+ * AuthProvider for å rydde opp på alle klienter som hadde kjørt den gamle
+ * versjonen. Trygt å kalle gjentatte ganger.
+ */
+export function clearLegacyResumeStorage() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("cv-maker-storage");
+  } catch {
+    // Storage utilgjengelig (privat modus etc.) — ignorer.
+  }
+}

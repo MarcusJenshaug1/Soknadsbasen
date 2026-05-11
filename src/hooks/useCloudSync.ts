@@ -31,6 +31,13 @@ interface ResumePayloadV1 {
 
 interface ServerData {
   resumeData: ResumePayloadV2 | ResumePayloadV1 | null;
+  /** Diagnostikk-felter fra serveren — brukes til mismatch-warning. */
+  debug?: {
+    sessionUserId?: string;
+    sessionEmail?: string;
+    impTargetId?: string | null;
+    impAdminId?: string | null;
+  };
 }
 
 /* ─── Constants ───────────────────────────────────────────── */
@@ -47,6 +54,26 @@ export function suspendCloudSync() {
   suspended = true;
 }
 
+/* ─── Helpers ─────────────────────────────────────────────── */
+
+function extractCvEmail(
+  resumeData: ResumePayloadV2 | ResumePayloadV1 | null | undefined,
+): string | null {
+  if (!resumeData) return null;
+  // v2 multi-CV payload
+  if ("resumes" in resumeData && resumeData.resumes?.length) {
+    const active = resumeData._resumeDataMap?.[resumeData.activeResumeId];
+    const email = active?.contact?.email ?? resumeData.data?.contact?.email;
+    return typeof email === "string" && email.trim() ? email.trim() : null;
+  }
+  // v1
+  if ("data" in resumeData && resumeData.data) {
+    const email = resumeData.data.contact?.email;
+    return typeof email === "string" && email.trim() ? email.trim() : null;
+  }
+  return null;
+}
+
 /* ─── The hook ────────────────────────────────────────────── */
 
 export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
@@ -56,40 +83,74 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   const isSavingRef = useRef(false);
 
   /* ── Fetch data from server and hydrate stores ─────────── */
-  const loadFromServer = useCallback(async () => {
-    try {
-      const res = await fetch("/api/user/data");
-      if (!res.ok) return;
-      const data: ServerData = await res.json();
+  const loadFromServer = useCallback(
+    async (expectedEmail: string | null) => {
+      try {
+        const res = await fetch("/api/user/data", { cache: "no-store" });
+        if (!res.ok) return;
+        const data: ServerData = await res.json();
 
-      // Hydrate resume store if server has data
-      if (data.resumeData) {
-        const rd = data.resumeData;
-        if ("resumes" in rd && rd.resumes?.length) {
-          // v2 multi-CV payload
-          useResumeStore.setState({
-            resumes: rd.resumes,
-            activeResumeId: rd.activeResumeId,
-            _resumeDataMap: rd._resumeDataMap,
-            data: rd._resumeDataMap[rd.activeResumeId] ?? rd.data,
-          });
-        } else if ("data" in rd && rd.data) {
-          // v1 single-CV payload — wrap into multi-CV
-          const id = "resume-default";
-          useResumeStore.setState({
-            resumes: [{ id, name: "Min CV", createdAt: new Date().toISOString() }],
-            activeResumeId: id,
-            _resumeDataMap: { [id]: rd.data },
-            data: rd.data,
-          });
+        // Sjekk om server-data tilhører den brukeren vi tror er innlogget.
+        // Hvis mismatch (f.eks. impersonation-cookie tapt, eller target's
+        // UserData-rad ble korrumpert), IKKE setState — det ville skrevet
+        // feil bruker sin CV inn i editoren.
+        const serverEmail = data.debug?.sessionEmail ?? null;
+        if (expectedEmail && serverEmail && expectedEmail !== serverEmail) {
+          console.warn(
+            "[CloudSync] Session-email mismatch, hopper over hydrering.",
+            { expected: expectedEmail, server: serverEmail, debug: data.debug },
+          );
+          useResumeStore.getState().setLoaded(true);
+          loadedRef.current = true;
+          return;
         }
-      }
 
-      loadedRef.current = true;
-    } catch (err) {
-      console.error("[CloudSync] Failed to load:", err);
-    }
-  }, []);
+        // Sjekk om CV-en i raden tilhører serverens session-bruker. Hvis
+        // contact.email ≠ session-email betyr det at raden er korrumpert
+        // av tidligere impersonation-bug. Loggfør og hopp over hydrering.
+        const cvEmail = extractCvEmail(data.resumeData);
+        if (serverEmail && cvEmail && cvEmail !== serverEmail) {
+          console.warn(
+            "[CloudSync] CV-data tilhører feil bruker, hopper over hydrering.",
+            { sessionEmail: serverEmail, cvEmail, debug: data.debug },
+          );
+          useResumeStore.getState().setLoaded(true);
+          loadedRef.current = true;
+          return;
+        }
+
+        if (data.resumeData) {
+          const rd = data.resumeData;
+          if ("resumes" in rd && rd.resumes?.length) {
+            // v2 multi-CV payload
+            useResumeStore.setState({
+              resumes: rd.resumes,
+              activeResumeId: rd.activeResumeId,
+              _resumeDataMap: rd._resumeDataMap,
+              data: rd._resumeDataMap[rd.activeResumeId] ?? rd.data,
+            });
+          } else if ("data" in rd && rd.data) {
+            // v1 single-CV payload — wrap into multi-CV
+            const id = "resume-default";
+            useResumeStore.setState({
+              resumes: [{ id, name: "Min CV", createdAt: new Date().toISOString() }],
+              activeResumeId: id,
+              _resumeDataMap: { [id]: rd.data },
+              data: rd.data,
+            });
+          }
+        }
+
+        useResumeStore.getState().setLoaded(true);
+        loadedRef.current = true;
+      } catch (err) {
+        console.error("[CloudSync] Failed to load:", err);
+        useResumeStore.getState().setLoaded(true);
+        loadedRef.current = true;
+      }
+    },
+    [],
+  );
 
   /* ── Save current state to server ──────────────────────── */
   const saveToServer = useCallback(async () => {
@@ -130,9 +191,10 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   useEffect(() => {
     if (!enabled) return;
     if (user) {
-      loadFromServer();
+      loadFromServer(user.email ?? null);
     } else {
       loadedRef.current = false;
+      useResumeStore.getState().setLoaded(false);
     }
   }, [enabled, user, loadFromServer]);
 

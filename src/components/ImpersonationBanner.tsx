@@ -32,15 +32,8 @@ export function ImpersonationBanner() {
       await fetch("/api/admin/impersonate", { method: "DELETE" });
       // Cookien er nå borte, så session.userId er admin igjen. Et pending
       // save eller beforeunload herfra ville skrevet target's in-memory CV
-      // inn i ADMINS rad. Suspend før vi tømmer storage og hard-naver.
+      // inn i ADMINS rad. Suspend før hard-nav.
       suspendCloudSync();
-      // Tøm Zustand-persist slik at admins egen CV hentes fra server igjen
-      // (i stedet for å re-hydrere målbrukerens CV som lå i localStorage).
-      try {
-        localStorage.removeItem("cv-maker-storage");
-      } catch {
-        // ignore
-      }
       window.location.href = "/admin/brukere";
     } catch {
       setStopping(false);
