@@ -6,6 +6,7 @@ import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, C
 import { LivePreview, PrintOutput } from "./LivePreview";
 import { useResumeStore, type ResumeEntry } from "@/store/useResumeStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useCloudSyncStore } from "@/store/useCloudSyncStore";
 import { ImportCVModal } from "./ImportCVModal";
 import { AvatarCropper } from "./AvatarCropper";
 import {
@@ -78,9 +79,7 @@ export function ResumeEditor() {
               <FileUp className="size-3.5" />
               Importer PDF
             </button>
-            <div className="hidden md:block text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
-              Lagres automatisk
-            </div>
+            <SaveStatusIndicator />
           </div>
         </div>
 
@@ -190,6 +189,57 @@ export function ResumeEditor() {
       </div>
     </>
   );
+}
+
+function SaveStatusIndicator() {
+  const status = useCloudSyncStore((s) => s.status);
+  const lastSavedAt = useCloudSyncStore((s) => s.lastSavedAt);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Tick hvert 10. sek så "Lagret X sek siden" oppdaterer seg uten render-loop.
+  useEffect(() => {
+    if (status !== "saved" || lastSavedAt == null) return;
+    const id = setInterval(() => setNow(Date.now()), 10_000);
+    return () => clearInterval(id);
+  }, [status, lastSavedAt]);
+
+  const label =
+    status === "saving"
+      ? "Lagrer…"
+      : status === "dirty"
+        ? "Endringer ulagret"
+        : status === "error"
+          ? "Lagring feilet, prøver igjen"
+          : status === "saved" && lastSavedAt != null
+            ? `Lagret ${formatAgo(now - lastSavedAt)}`
+            : "Lagres automatisk";
+
+  const dot =
+    status === "saving"
+      ? "bg-amber-500 animate-pulse"
+      : status === "dirty"
+        ? "bg-amber-400"
+        : status === "error"
+          ? "bg-red-500"
+          : status === "saved"
+            ? "bg-emerald-500"
+            : "bg-[#14110e]/25 dark:bg-[#f0ece6]/25";
+
+  return (
+    <div className="hidden md:flex items-center gap-1.5 text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
+      <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot}`} />
+      {label}
+    </div>
+  );
+}
+
+function formatAgo(ms: number): string {
+  const sec = Math.max(1, Math.round(ms / 1000));
+  if (sec < 60) return `${sec} sek siden`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} min siden`;
+  const hr = Math.round(min / 60);
+  return `${hr} t siden`;
 }
 
 function ContactForm() {

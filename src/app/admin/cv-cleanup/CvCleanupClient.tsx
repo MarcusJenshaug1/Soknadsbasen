@@ -15,12 +15,35 @@ type CorruptRow = {
 type ListResponse = { count: number; rows: CorruptRow[] };
 type CleanupResponse = { count: number; reset: number; affected: CorruptRow[] };
 
+type InspectPayload = {
+  user: { id: string; email: string; name: string | null };
+  resumeData: unknown;
+  coverLetterData: unknown;
+  updatedAt: string | null;
+};
+
 export function CvCleanupClient() {
   const [rows, setRows] = useState<CorruptRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<CleanupResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inspect, setInspect] = useState<InspectPayload | null>(null);
+  const [inspectLoading, setInspectLoading] = useState<string | null>(null);
+
+  async function openInspect(userId: string) {
+    setInspectLoading(userId);
+    try {
+      const res = await fetch(`/api/admin/cv-cleanup/${userId}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as InspectPayload;
+      setInspect(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kunne ikke hente CV");
+    } finally {
+      setInspectLoading(null);
+    }
+  }
 
   async function fetchRows() {
     setLoading(true);
@@ -136,7 +159,7 @@ export function CvCleanupClient() {
         {rows && rows.length > 0 ? (
           <div className="divide-y divide-black/6">
             {rows.map((r) => (
-              <div key={r.userId} className="px-5 py-3 grid grid-cols-[1fr_1fr_auto] gap-4 items-baseline">
+              <div key={r.userId} className="px-5 py-3 grid grid-cols-[1fr_1fr_auto_auto] gap-4 items-baseline">
                 <div className="min-w-0">
                   <div className="text-[13px] font-medium truncate">
                     {r.userName ?? r.userEmail}
@@ -159,6 +182,14 @@ export function CvCleanupClient() {
                     year: "numeric",
                   })}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => openInspect(r.userId)}
+                  disabled={inspectLoading === r.userId}
+                  className="px-3 py-1.5 rounded-full border border-black/15 text-[11px] hover:bg-black/5 disabled:opacity-40 shrink-0"
+                >
+                  {inspectLoading === r.userId ? "Henter…" : "Vis CV"}
+                </button>
               </div>
             ))}
           </div>
@@ -169,11 +200,98 @@ export function CvCleanupClient() {
         )}
       </div>
 
+      {inspect && (
+        <InspectModal data={inspect} onClose={() => setInspect(null)} />
+      )}
+
       <p className="text-[11px] text-ink/45 leading-[1.5] max-w-2xl">
         Reset setter <code>resumeData</code> til <code>{`'{}'`}</code>. <code>coverLetterData</code>{" "}
         beholdes (har ikke samme korrupsjons-vektor). Target-brukere må bygge CV fra null
         ved neste login.
       </p>
+    </div>
+  );
+}
+
+function InspectModal({
+  data,
+  onClose,
+}: {
+  data: InspectPayload;
+  onClose: () => void;
+}) {
+  const json = JSON.stringify(data.resumeData, null, 2);
+
+  async function copyToClipboard() {
+    try {
+      await navigator.clipboard.writeText(json);
+    } catch {
+      // ignore
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Full CV-data"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-[900px] max-h-[88vh] overflow-hidden rounded-2xl bg-bg shadow-2xl border border-black/10 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 px-6 py-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-ink/45 mb-1">
+              UserData-rad
+            </div>
+            <h2 className="text-[16px] font-medium tracking-tight text-ink truncate">
+              {data.user.email}
+            </h2>
+            <p className="text-[11px] text-ink/55 mt-0.5">
+              Eier-userId: <code>{data.user.id}</code>
+              {data.updatedAt && (
+                <>
+                  {" · Sist oppdatert "}
+                  {new Date(data.updatedAt).toLocaleString("nb-NO")}
+                </>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={copyToClipboard}
+              className="px-3 py-1.5 rounded-full border border-black/15 text-[11px] hover:bg-black/5"
+            >
+              Kopier JSON
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Lukk"
+              className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-ink/60 hover:text-ink transition-colors"
+            >
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {data.resumeData == null ? (
+            <p className="text-[13px] text-ink/55 italic">
+              Ingen resumeData lagret (raden er allerede ryddet eller har aldri hatt CV).
+            </p>
+          ) : (
+            <pre className="text-[11px] leading-[1.5] font-mono whitespace-pre-wrap break-words bg-panel/50 rounded-xl p-4">
+              {json}
+            </pre>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

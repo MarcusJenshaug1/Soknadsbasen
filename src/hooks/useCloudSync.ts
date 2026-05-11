@@ -6,13 +6,18 @@
  *
  * Strategy:
  *  - On login / session restore → fetch from server, overwrite local state
- *  - On every store change → debounced save to server
- *  - On logout → (optional) clear local data or keep as cache
+ *  - On every store change → debounced save to server (500ms = realtime feel)
+ *  - On logout → clear loaded flag
+ *  - beforeunload → sendBeacon for last-chance save
+ *
+ * Status (saving/saved/error) lever i useCloudSyncStore for å ikke trigge
+ * subscribe-loop tilbake til selve CV-stateen.
  */
 
 import { useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useResumeStore } from "@/store/useResumeStore";
+import { useCloudSyncStore } from "@/store/useCloudSyncStore";
 import type { ResumeData, ResumeEntry } from "@/store/useResumeStore";
 
 /* ─── Types ───────────────────────────────────────────────── */
@@ -42,7 +47,9 @@ interface ServerData {
 
 /* ─── Constants ───────────────────────────────────────────── */
 
-const SAVE_DEBOUNCE_MS = 2_000; // Wait 2s after last change before saving
+// 500ms gir realtime-følelse uten å hamre serveren ved kjapp typing.
+// Marcus mistet arbeid med 2s debounce + nav-før-timer.
+const SAVE_DEBOUNCE_MS = 500;
 
 /* ─── Module-level suspend flag ───────────────────────────── */
 
@@ -87,7 +94,11 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     async (expectedEmail: string | null) => {
       try {
         const res = await fetch("/api/user/data", { cache: "no-store" });
-        if (!res.ok) return;
+        if (!res.ok) {
+          useResumeStore.getState().setLoaded(true);
+          loadedRef.current = true;
+          return;
+        }
         const data: ServerData = await res.json();
 
         // Sjekk om server-data tilhører den brukeren vi tror er innlogget.
@@ -143,6 +154,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
 
         useResumeStore.getState().setLoaded(true);
         loadedRef.current = true;
+        useCloudSyncStore.getState().setStatus("idle");
       } catch (err) {
         console.error("[CloudSync] Failed to load:", err);
         useResumeStore.getState().setLoaded(true);
@@ -157,6 +169,9 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     if (suspended) return;
     if (isSavingRef.current) return;
     isSavingRef.current = true;
+    const sync = useCloudSyncStore.getState();
+    sync.setStatus("saving");
+    sync.setLastError(null);
 
     try {
       const rs = useResumeStore.getState();
@@ -167,13 +182,29 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         data: rs.data,
       };
 
-      await fetch("/api/user/data", {
+      const res = await fetch("/api/user/data", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeData }),
       });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const code = payload?.error?.code ?? `http_${res.status}`;
+        useCloudSyncStore.getState().setLastError(code);
+        useCloudSyncStore.getState().setStatus("error");
+        console.warn("[CloudSync] Save failed:", code, payload);
+        return;
+      }
+
+      useCloudSyncStore.getState().setLastSavedAt(Date.now());
+      useCloudSyncStore.getState().setStatus("saved");
     } catch (err) {
       console.error("[CloudSync] Failed to save:", err);
+      useCloudSyncStore.getState().setLastError(
+        err instanceof Error ? err.message : "network",
+      );
+      useCloudSyncStore.getState().setStatus("error");
     } finally {
       isSavingRef.current = false;
     }
@@ -183,6 +214,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   const debouncedSave = useCallback(() => {
     if (suspended) return;
     if (!loadedRef.current) return; // Don't save before initial load
+    useCloudSyncStore.getState().setStatus("dirty");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(saveToServer, SAVE_DEBOUNCE_MS);
   }, [saveToServer]);
@@ -236,5 +268,5 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [user]);
+  }, [enabled, user]);
 }
