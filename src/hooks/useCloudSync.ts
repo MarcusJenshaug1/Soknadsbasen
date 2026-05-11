@@ -415,13 +415,13 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     window.addEventListener("focusin", focusHandler);
     window.addEventListener("focusout", blurHandler);
 
-    // Mouse-broadcast throttlet til 50ms (20fps). Sender viewport-%-
+    // Mouse-broadcast throttlet til 30ms (~33fps). Sender viewport-%-
     // koordinater så ulike skjermstørrelser ser hverandres cursors
     // proporsjonalt.
     let lastCursorSent = 0;
     const cursorHandler = (ev: MouseEvent) => {
       const now = Date.now();
-      if (now - lastCursorSent < 50) return;
+      if (now - lastCursorSent < 30) return;
       lastCursorSent = now;
       const xPct = ev.clientX / window.innerWidth;
       const yPct = ev.clientY / window.innerHeight;

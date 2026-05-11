@@ -327,6 +327,12 @@ function CollaboratorBar() {
 
 function LiveCursorsLayer() {
   const collaborators = useCloudSyncStore((s) => s.collaborators);
+
+  // Mal collab-cursor-bordere på input-feltene via DOM-manipulasjon
+  // (utenfor React-render-treet for å unngå render-storm + å slippe å
+  // wrappe hvert input i en custom komponent).
+  useFieldHighlights(collaborators);
+
   if (collaborators.length === 0) return null;
 
   return (
@@ -337,28 +343,31 @@ function LiveCursorsLayer() {
           <div
             key={c.clientId}
             data-cursor-id={c.clientId}
-            className="absolute top-0 left-0 transition-[transform] duration-[80ms] ease-linear pointer-events-none opacity-0"
+            className="absolute top-0 left-0 transition-transform duration-[40ms] ease-linear pointer-events-none opacity-0"
             style={{
               transform:
-                "translate(calc(var(--cursor-x, -100px)), calc(var(--cursor-y, -100px)))",
+                "translate(var(--cursor-x, -100px), var(--cursor-y, -100px))",
               willChange: "transform",
             }}
           >
+            {/* SVG-tippen er på (0,0) så translate(x,y) lander spissen
+                eksakt på avsenderens cursor-koordinat. */}
             <svg
               width="14"
               height="18"
               viewBox="0 0 14 18"
               className="drop-shadow"
+              style={{ display: "block" }}
             >
               <path
-                d="M1 1 L13 9 L7 10 L4 16 Z"
+                d="M0 0 L12 8 L6 9 L3 15 Z"
                 fill={color}
                 stroke="white"
                 strokeWidth="1"
               />
             </svg>
             <span
-              className="ml-3 -mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap shadow"
+              className="absolute left-3 top-3 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-white whitespace-nowrap shadow"
               style={{ background: color }}
             >
               {c.name?.split(" ")[0] || c.email.split("@")[0]}
@@ -368,6 +377,143 @@ function LiveCursorsLayer() {
       })}
     </div>
   );
+}
+
+/**
+ * Maler colored border + small badge på inputet som hver collaborator har
+ * fokus på. Reverse-lookup fra focusLabel via aria-label/label-text/placeholder.
+ * Kjører i useEffect så den ryddes opp ved unmount.
+ */
+function useFieldHighlights(
+  collaborators: ReturnType<typeof useCloudSyncStore.getState>["collaborators"],
+) {
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    type Cleanup = () => void;
+    const cleanups: Cleanup[] = [];
+
+    for (const c of collaborators) {
+      if (!c.focusLabel) continue;
+      const found = findInputByLabel(c.focusLabel);
+      if (!found) continue;
+      const el: HTMLElement = found;
+      const color = colorForClientId(c.clientId);
+      const prevBoxShadow = el.style.boxShadow;
+      const prevTransition = el.style.transition;
+      el.style.boxShadow = `0 0 0 2px ${color}, 0 4px 12px ${hexAlpha(color, 0.22)}`;
+      el.style.transition = "box-shadow 120ms ease";
+
+      // Liten flytende navn-badge over feltet
+      const badge = document.createElement("div");
+      badge.setAttribute("data-collab-badge", c.clientId);
+      badge.textContent =
+        (c.name?.split(" ")[0] || c.email.split("@")[0]) +
+        (c.impersonating ? " (admin)" : "");
+      Object.assign(badge.style, {
+        position: "fixed",
+        pointerEvents: "none",
+        padding: "2px 8px",
+        borderRadius: "9999px",
+        background: color,
+        color: "white",
+        fontSize: "10px",
+        fontWeight: "600",
+        whiteSpace: "nowrap",
+        zIndex: "70",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      } satisfies Partial<CSSStyleDeclaration>);
+
+      function positionBadge() {
+        const rect = el.getBoundingClientRect();
+        badge.style.left = `${Math.round(rect.left)}px`;
+        badge.style.top = `${Math.round(rect.top - 22)}px`;
+      }
+      positionBadge();
+      document.body.appendChild(badge);
+
+      // Hold badge-en låst til input-rect på resize/scroll
+      const reposition = () => positionBadge();
+      window.addEventListener("scroll", reposition, true);
+      window.addEventListener("resize", reposition);
+
+      cleanups.push(() => {
+        el.style.boxShadow = prevBoxShadow;
+        el.style.transition = prevTransition;
+        badge.remove();
+        window.removeEventListener("scroll", reposition, true);
+        window.removeEventListener("resize", reposition);
+      });
+    }
+
+    return () => {
+      for (const c of cleanups) c();
+    };
+  }, [collaborators]);
+}
+
+/**
+ * Finn input/textarea/select som matcher en label-streng. Speilbilde av
+ * resolveFieldLabel i useCloudSync.
+ */
+function findInputByLabel(
+  label: string,
+): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null {
+  const trimmed = label.trim();
+  if (!trimmed) return null;
+
+  // 1. aria-label exact match
+  const aria = document.querySelector<HTMLElement>(
+    `input[aria-label="${cssEscape(trimmed)}"], textarea[aria-label="${cssEscape(trimmed)}"], select[aria-label="${cssEscape(trimmed)}"]`,
+  );
+  if (aria) return aria as HTMLInputElement;
+
+  // 2. <label> text exact match → for-id / wrapped / sibling
+  const labels = Array.from(document.querySelectorAll<HTMLLabelElement>("label"));
+  for (const l of labels) {
+    const t = l.textContent?.trim();
+    if (t !== trimmed) continue;
+    const forId = l.getAttribute("for");
+    if (forId) {
+      const target = document.getElementById(forId);
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return target;
+      }
+    }
+    const wrapped = l.querySelector<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >("input, textarea, select");
+    if (wrapped) return wrapped;
+    // Søsken-input i samme container (ContactForm-mønster)
+    const sibling = l.parentElement?.querySelector<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >("input, textarea, select");
+    if (sibling) return sibling;
+  }
+
+  // 3. placeholder exact match
+  const ph = document.querySelector<HTMLElement>(
+    `input[placeholder="${cssEscape(trimmed)}"], textarea[placeholder="${cssEscape(trimmed)}"]`,
+  );
+  if (ph) return ph as HTMLInputElement;
+
+  return null;
+}
+
+function cssEscape(value: string): string {
+  if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
+  return value.replace(/(["\\\]:.])/g, "\\$1");
+}
+
+function hexAlpha(hex: string, alpha: number): string {
+  const a = Math.round(alpha * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${hex}${a}`;
 }
 
 function SaveStatusIndicator() {
