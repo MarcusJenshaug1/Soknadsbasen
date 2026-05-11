@@ -12,6 +12,8 @@ import { cn } from "@/lib/cn";
 import { AiTools } from "./AiTools";
 import { AtsCheck } from "./AtsCheck";
 import { InterviewStages, type Stage } from "./InterviewStages";
+import { InviteButton } from "@/components/collab/InviteButton";
+import { OwnerCollabBridge } from "@/components/collab/OwnerCollabBridge";
 
 type Task = {
   id: string;
@@ -335,6 +337,11 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               <span className="hidden sm:inline">Kalender</span>
             </a>
           )}
+          <InviteButton
+            resourceKind="application"
+            resourceId={app.id}
+            resourceTitle={`Søknad: ${app.title}`}
+          />
           <button
             onClick={toggleArchive}
             className="px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] text-[#14110e]/75 dark:text-[#f0ece6]/75 hover:bg-black/5 dark:hover:bg-white/5"
@@ -349,6 +356,8 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           </button>
         </div>
       </div>
+
+      <OwnerCollabBridge resourceKind="application" resourceId={app.id} />
 
       {error && (
         <div className="px-4 py-2.5 rounded-2xl bg-accent/10 border border-accent/30 text-[12px] text-accent">

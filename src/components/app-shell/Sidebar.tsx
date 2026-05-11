@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/store/useAuthStore";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { NotificationBell } from "./NotificationBell";
+import { PendingSuggestionsBell } from "@/components/collab/PendingSuggestionsBell";
 import type { OrgContext } from "@/lib/auth";
 
 type NavItem = { href: string; label: string; gated: boolean; dot?: boolean };
@@ -113,7 +114,10 @@ export function Sidebar({
         </div>
         {hasAccess && (
           <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-2">
-            <NotificationBell />
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <PendingSuggestionsBell />
+            </div>
             <SessionSwitcher />
           </div>
         )}

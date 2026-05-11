@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import { SectionLabel } from "@/components/ui/Pill";
 import { AiDraftButton } from "./AiDraftButton";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { InviteButton } from "@/components/collab/InviteButton";
+import { OwnerCollabBridge } from "@/components/collab/OwnerCollabBridge";
 
 const LexicalEditor = dynamic(
   () => import("@/components/forms/LexicalEditor").then((m) => m.LexicalEditor),
@@ -161,6 +163,12 @@ export function BrevEditor({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[11px] text-ink/45">{savedLabel}</span>
+          <InviteButton
+            resourceKind="letter"
+            resourceId={application.id}
+            resourceTitle={`Søknadsbrev: ${application.title}`}
+            variant="compact"
+          />
           <button
             onClick={copyLetter}
             className="px-3 py-1.5 rounded-full bg-[#D5592E] text-bg text-[11px] font-medium hover:bg-[#a94424] transition-colors"
@@ -169,6 +177,8 @@ export function BrevEditor({
           </button>
         </div>
       </div>
+
+      <OwnerCollabBridge resourceKind="letter" resourceId={application.id} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left: meta */}
