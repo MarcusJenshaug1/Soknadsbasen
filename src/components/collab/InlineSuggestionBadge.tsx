@@ -20,6 +20,11 @@ type Anchor = {
   width: number;
 };
 
+// Stabil ref til tom array. Uten denne returnerte `?? []` en ny `[]` per
+// render → useSyncExternalStore (Zustand) tolket det som tearing og fyrte
+// re-render → infinite loop (React #185, "Maximum update depth exceeded").
+const EMPTY_PENDING: readonly PendingSuggestion[] = [];
+
 export function InlineSuggestionBadge({
   resourceKind,
   resourceId,
@@ -27,11 +32,9 @@ export function InlineSuggestionBadge({
   resourceKind: "cv" | "letter" | "application";
   resourceId: string;
 }) {
-  // Selecter henter pending forslag for denne ressursen — referansestabil
-  // til faktisk endring (samme array fra map til vi setter nytt).
   const pending = useCollabStore((s) => {
     const key = `${resourceKind}:${resourceId}`;
-    return s.pendingByResource[key] ?? [];
+    return s.pendingByResource[key] ?? EMPTY_PENDING;
   });
 
   if (pending.length === 0) return null;
