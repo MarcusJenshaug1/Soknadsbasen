@@ -1,7 +1,61 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { UserRole } from "@prisma/client";
 import { supabaseServer } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+
+export const IMPERSONATION_COOKIE = "sb-impersonate";
+
+export interface ImpersonationContext {
+  sessionId: string;
+  adminId: string;
+  adminEmail: string;
+  targetId: string;
+}
+
+/**
+ * If an impersonation cookie is present and still valid (open + not expired
+ * + admin still admin), returns the impersonation context. Otherwise null.
+ * Cached per request — single Prisma roundtrip even if called from many places.
+ */
+export const getImpersonationContext = cache(
+  async (): Promise<ImpersonationContext | null> => {
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get(IMPERSONATION_COOKIE)?.value;
+    if (!sessionId) return null;
+
+    const session = await prisma.impersonationSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        adminUserId: true,
+        targetUserId: true,
+        expiresAt: true,
+        endedAt: true,
+        adminUser: {
+          select: { id: true, email: true, role: true, isAdmin: true },
+        },
+      },
+    });
+
+    if (!session || session.endedAt) return null;
+    if (session.expiresAt <= new Date()) return null;
+
+    const admin = session.adminUser;
+    const stillAdmin =
+      admin.role === "admin" ||
+      admin.isAdmin === true ||
+      admin.email === process.env.ADMIN_EMAIL;
+    if (!stillAdmin) return null;
+
+    return {
+      sessionId: session.id,
+      adminId: session.adminUserId,
+      adminEmail: admin.email,
+      targetId: session.targetUserId,
+    };
+  },
+);
 
 export interface SessionPayload {
   userId: string;
@@ -88,12 +142,26 @@ export const getSupabaseAuthUser = cache(
  * `getSessionWithAccess()` (som garanterer at user-raden finnes i Prisma).
  */
 export const getSessionUserId = cache(async (): Promise<string | null> => {
+  const imp = await getImpersonationContext();
+  if (imp) return imp.targetId;
   const user = await getSupabaseAuthUser();
   return user?.id ?? null;
 });
 
 // Deduped per request via React cache — flere layout/page-kall = 1 I/O.
 export const getSession = cache(async (): Promise<SessionPayload | null> => {
+  const imp = await getImpersonationContext();
+  if (imp) {
+    const target = await prisma.user.findUnique({
+      where: { id: imp.targetId },
+      select: { id: true, email: true, name: true },
+    });
+    if (target) {
+      return { userId: target.id, email: target.email, name: target.name };
+    }
+    // Target gone — fall through to real session so the admin doesn't get stuck.
+  }
+
   const user = await getSupabaseAuthUser();
   if (!user) return null;
 
@@ -133,11 +201,13 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
 // Bruk denne i /app/layout og /app/(gated)/layout — sparer 1 DB-kall per nav.
 export const getSessionWithAccess = cache(
   async (): Promise<SessionWithAccess | null> => {
-    const user = await getSupabaseAuthUser();
-    if (!user) return null;
+    const imp = await getImpersonationContext();
+    const user = imp ? null : await getSupabaseAuthUser();
+    const lookupId = imp?.targetId ?? user?.id;
+    if (!lookupId) return null;
 
     let profile = await prisma.user.findUnique({
-      where: { id: user.id },
+      where: { id: lookupId },
       select: {
         id: true,
         email: true,
@@ -168,6 +238,11 @@ export const getSessionWithAccess = cache(
     });
 
     if (!profile) {
+      // Impersonation target missing — pointer is stale. Caller will fall
+      // back to the real session on the next render (cookie still in place,
+      // but layout sees null and redirects, then admin can stop impersonating).
+      if (imp || !user) return null;
+
       if (user.email) {
         await prisma.user.deleteMany({ where: { email: user.email } });
       }
@@ -201,10 +276,14 @@ export const getSessionWithAccess = cache(
     const orgAccess =
       !!activeMembership && ACTIVE_STATUSES.has(activeMembership.org.status);
 
-    const isInternalAdmin =
+    // Under impersonation the admin should NOT see admin-only UI as the
+    // target user. Force isInternalAdmin=false even if the target happens
+    // to also be an admin — banner is the only way back.
+    const targetIsInternalAdmin =
       profile.role === "admin" || profile.email === process.env.ADMIN_EMAIL || profile.isAdmin;
+    const isInternalAdmin = imp ? false : targetIsInternalAdmin;
     const isSalesRep =
-      profile.role === "selger" && profile.salesRepProfile?.status === "active";
+      !imp && profile.role === "selger" && profile.salesRepProfile?.status === "active";
     const hasAccess = personalAccess || orgAccess || isInternalAdmin || isSalesRep;
 
     const org: OrgContext | null = activeMembership

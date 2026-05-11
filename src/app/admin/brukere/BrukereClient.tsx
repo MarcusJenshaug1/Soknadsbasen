@@ -238,6 +238,28 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+
+  async function impersonate(user: User) {
+    setImpersonatingId(user.id);
+    try {
+      const res = await fetch("/api/admin/impersonate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: user.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Klarte ikke starte impersonering: ${data.error ?? res.status}`);
+        setImpersonatingId(null);
+        return;
+      }
+      window.location.href = "/app";
+    } catch {
+      alert("Klarte ikke starte impersonering");
+      setImpersonatingId(null);
+    }
+  }
 
   async function search(e: React.FormEvent) {
     e.preventDefault();
@@ -436,6 +458,14 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
                       {togglingId === u.id ? "…" : u.isAdmin ? "Fjern admin" : "Gi admin"}
                     </button>
                   )}
+                  <button
+                    onClick={() => impersonate(u)}
+                    disabled={impersonatingId === u.id}
+                    title="Åpne Søknadsbasen som denne brukeren"
+                    className="text-[11px] px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                  >
+                    {impersonatingId === u.id ? "…" : "Logg inn som"}
+                  </button>
                 </div>
               </div>
 

@@ -49,7 +49,29 @@ model User {
   leads                Lead[]
   crmActivitiesCreated CrmActivity[]      @relation("CrmActivityCreator")
 
+  impersonationsStarted ImpersonationSession[] @relation("ImpersonationAdmin")
+  impersonationsTarget  ImpersonationSession[] @relation("ImpersonationTarget")
+
   @@index([role])
+}
+
+/// Admin impersonation: lets an internal admin browse Søknadsbasen as a target user.
+/// Cookie `sb-impersonate` points to the row id. Lookup happens in src/lib/auth.ts.
+model ImpersonationSession {
+  id           String    @id @default(cuid())
+  adminUserId  String    @db.Uuid
+  targetUserId String    @db.Uuid
+  startedAt    DateTime  @default(now())
+  expiresAt    DateTime
+  endedAt      DateTime?
+  ipAddress    String?
+  userAgent    String?
+
+  adminUser  User @relation("ImpersonationAdmin", fields: [adminUserId], references: [id], onDelete: Cascade)
+  targetUser User @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId, endedAt])
+  @@index([targetUserId, endedAt])
 }
 
 model Subscription {
