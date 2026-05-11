@@ -59,10 +59,14 @@ type PresenceMeta = {
 
 /* ─── Constants ───────────────────────────────────────────── */
 
-const SAVE_DEBOUNCE_MS = 200;
-// Fallback-polling 5 sek hvis realtime-broadcast dør. Mer aggressiv enn før
-// fordi Marcus så 10-sek lag — broadcast er ikke 100 % pålitelig på free-tier.
-const POLL_INTERVAL_MS = 5_000;
+// Save og broadcast er frikoblet. Broadcast fyrer raskt for collab-feel,
+// save går saktere for å spare DB-skriving.
+const BROADCAST_DEBOUNCE_MS = 50;
+const SAVE_DEBOUNCE_MS = 500;
+// Polling er fallback hvis Realtime-channel skulle dø. Når broadcast ikke
+// lenger venter på save kan vi heve intervallet — vi får sub-200ms via
+// broadcast i hovedflyten.
+const POLL_INTERVAL_MS = 15_000;
 // Klient-id sendt med broadcast så vi kan ignorere våre egne ekko.
 const CLIENT_ID = `cli-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -126,6 +130,48 @@ function resolveFieldLabel(
   return null;
 }
 
+/**
+ * Smelter sammen innkommende remote-state med lokal state og BEVARER
+ * verdien i feltet brukeren har fokus på akkurat nå. Forhindrer at
+ * remote-broadcast overskriver karakteren bruker nettopp skrev.
+ *
+ * Forventer fieldId på formatet `section.field`, f.eks. `contact.firstName`.
+ * For andre nivåer (eksempel `experience.0.title`) faller den tilbake til
+ * å returnere incoming uendret — feltet vil bli overskrevet og bruker må
+ * skrive på nytt. Det er sjeldent siden de fleste data-cv-field-attributene
+ * er på 2 nivåer.
+ */
+function mergeKeepingFocusedField(
+  current: ResumeData,
+  incoming: ResumeData,
+  fieldId: string,
+): ResumeData {
+  const parts = fieldId.split(".");
+  if (parts.length !== 2) return incoming;
+  const [section, key] = parts;
+  const cur = current as unknown as Record<string, unknown>;
+  const inc = incoming as unknown as Record<string, unknown>;
+  if (!(section in inc) || !(section in cur)) return incoming;
+  const curSec = cur[section];
+  const incSec = inc[section];
+  if (
+    typeof curSec !== "object" ||
+    curSec === null ||
+    typeof incSec !== "object" ||
+    incSec === null
+  ) {
+    return incoming;
+  }
+  const mergedSection = {
+    ...(incSec as Record<string, unknown>),
+    [key]: (curSec as Record<string, unknown>)[key],
+  };
+  return {
+    ...incoming,
+    [section]: mergedSection,
+  } as ResumeData;
+}
+
 /* ─── The hook ────────────────────────────────────────────── */
 
 export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
@@ -133,6 +179,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   const impersonatedBy = useAuthStore((s) => s.impersonatedBy);
   const loadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const broadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -253,26 +300,9 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       useCloudSyncStore.getState().setLastSavedAt(Date.now());
       useCloudSyncStore.getState().setStatus("saved");
 
-      // Kringkast FULL state-payload til andre klienter, ikke bare en
-      // "noe har skjedd"-notification. Sparer dem fra å gjøre en GET-
-      // roundtrip — payload kommer rett inn i editoren via setState.
-      // Supabase Realtime Broadcast har ~64 KB max per melding, og en
-      // typisk CV-payload er 5-50 KB.
-      const ch = channelRef.current;
-      if (ch) {
-        try {
-          const result = await ch.send({
-            type: "broadcast",
-            event: "cv-updated",
-            payload: { from: CLIENT_ID, at: Date.now(), state: resumeData },
-          });
-          if (result !== "ok") {
-            console.warn("[CloudSync] Broadcast result:", result);
-          }
-        } catch (err) {
-          console.warn("[CloudSync] Broadcast threw:", err);
-        }
-      }
+      // Broadcast er FRIKOBLET fra save og fyrer på sin egen 50ms-debounce
+      // i debouncedBroadcast. Vi venter ikke på Prisma-roundtripen for
+      // collab-sync. Save-en her er bare persistensen.
     } catch (err) {
       console.error("[CloudSync] Failed to save:", err);
       useCloudSyncStore.getState().setLastError(
@@ -284,7 +314,34 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     }
   }, []);
 
-  /* ── Debounced save ────────────────────────────────────── */
+  /* ── Broadcast: rask collab-sync, IKKE knyttet til save ── */
+  const broadcastChange = useCallback(() => {
+    if (suspended) return;
+    if (isHydrating) return;
+    if (!loadedRef.current) return;
+    const ch = channelRef.current;
+    if (!ch) return;
+    const rs = useResumeStore.getState();
+    const resumeData: ResumePayloadV2 = {
+      resumes: rs.resumes,
+      activeResumeId: rs.activeResumeId,
+      _resumeDataMap: { ...rs._resumeDataMap, [rs.activeResumeId]: rs.data },
+      data: rs.data,
+    };
+    ch.send({
+      type: "broadcast",
+      event: "cv-updated",
+      payload: { from: CLIENT_ID, at: Date.now(), state: resumeData },
+    }).catch(() => {});
+  }, []);
+
+  const debouncedBroadcast = useCallback(() => {
+    if (suspended || isHydrating || !loadedRef.current) return;
+    if (broadcastTimerRef.current) clearTimeout(broadcastTimerRef.current);
+    broadcastTimerRef.current = setTimeout(broadcastChange, BROADCAST_DEBOUNCE_MS);
+  }, [broadcastChange]);
+
+  /* ── Debounced save: persistens til Postgres, går saktere ── */
   const debouncedSave = useCallback(() => {
     if (suspended) return;
     if (isHydrating) return;
@@ -305,12 +362,15 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     }
   }, [enabled, user, loadFromServer]);
 
-  /* ── Subscribe to store changes → auto-save ────────────── */
+  /* ── Subscribe to store changes → broadcast OG auto-save ── */
   useEffect(() => {
     if (!enabled || !user) return;
-    const unsubResume = useResumeStore.subscribe(debouncedSave);
+    const unsubResume = useResumeStore.subscribe(() => {
+      debouncedBroadcast();
+      debouncedSave();
+    });
     return () => unsubResume();
-  }, [enabled, user, debouncedSave]);
+  }, [enabled, user, debouncedBroadcast, debouncedSave]);
 
   /* ── Supabase Realtime Broadcast + Presence for live collab ─── */
   useEffect(() => {
@@ -381,29 +441,51 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
           | undefined;
         if (!payload || payload.from === CLIENT_ID) return; // eget ekko
 
-        // Hvis avsenderen sendte med full state-payload kan vi applye
-        // direkte uten å gjøre en ekstra GET-roundtrip. Sub-100ms sync.
+        // Hvis avsenderen sendte full state-payload kan vi applye direkte
+        // uten å gjøre en ekstra GET-roundtrip. Tidligere droppet vi hele
+        // applikasjonen hvis vi var dirty/saving — det skapte 10-sek lag
+        // fordi droppen aldri ble fanget før polling. Nå MERGER vi inn alle
+        // felter remote har endret, men BEHOLDER vår lokale verdi i feltet
+        // vi har fokus på akkurat nå (så et tastetrykk vi nettopp gjorde
+        // ikke blir overskrevet).
         if (payload.state) {
-          const status = useCloudSyncStore.getState().status;
-          // Hvis vi skriver akkurat nå, dropp setState — vi vil ikke
-          // overskrive ulagrede lokale endringer. Polling/neste broadcast
-          // henter oss inn igjen når vi er ferdige.
-          if (status === "dirty" || status === "saving") return;
           const rd = payload.state;
+          const focusedEl = document.activeElement as HTMLElement | null;
+          const focusedFieldId =
+            focusedEl?.getAttribute("data-cv-field") ?? null;
+
           isHydrating = true;
           try {
+            const incomingActive =
+              rd._resumeDataMap[rd.activeResumeId] ?? rd.data;
+            const currentActive = useResumeStore.getState().data;
+            const merged = focusedFieldId
+              ? mergeKeepingFocusedField(
+                  currentActive,
+                  incomingActive,
+                  focusedFieldId,
+                )
+              : incomingActive;
             useResumeStore.setState({
               resumes: rd.resumes,
               activeResumeId: rd.activeResumeId,
-              _resumeDataMap: rd._resumeDataMap,
-              data: rd._resumeDataMap[rd.activeResumeId] ?? rd.data,
+              _resumeDataMap: {
+                ...rd._resumeDataMap,
+                [rd.activeResumeId]: merged,
+              },
+              data: merged,
             });
           } finally {
             isHydrating = false;
           }
-          useCloudSyncStore.getState().setLastSavedAt(Date.now());
-          // Status er allerede ikke "dirty"/"saving" pga early-return over.
-          useCloudSyncStore.getState().setStatus("saved");
+          // Bare oppdater status hvis vi ikke har en lokal save på gang —
+          // ellers ville indikatoren feilaktig vist "saved" mens vi
+          // faktisk har ulagrede lokale endringer.
+          const currentStatus = useCloudSyncStore.getState().status;
+          if (currentStatus !== "dirty" && currentStatus !== "saving") {
+            useCloudSyncStore.getState().setLastSavedAt(Date.now());
+            useCloudSyncStore.getState().setStatus("saved");
+          }
           return;
         }
 
