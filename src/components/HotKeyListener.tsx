@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
+import { AppLoader } from "@/components/app-shell/AppLoader";
 import { RoleSwitchDialog } from "./RoleSwitchDialog";
 import type { UserRoles } from "@/lib/auth";
 
@@ -12,13 +13,16 @@ interface DialogOption {
 }
 
 export function HotKeyListener() {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
   const rolesCache = useRef<UserRoles | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [dialogOptions, setDialogOptions] = useState<DialogOption[]>([]);
+  const [navigating, setNavigating] = useState(false);
 
-  // Fetch roles once on mount
+  // Fetch roles once on mount og prefetch tilgjengelige targets slik at
+  // Ctrl+Shift+A-bytte gar mest mulig direkte gjennom Next sin RSC-cache.
   useEffect(() => {
     if (!user) return;
 
@@ -26,7 +30,16 @@ export function HotKeyListener() {
       try {
         const response = await fetch("/api/auth/user-roles");
         if (response.ok) {
-          rolesCache.current = await response.json();
+          const roles = (await response.json()) as UserRoles;
+          rolesCache.current = roles;
+          if (roles.isInternalAdmin) router.prefetch("/admin");
+          if (roles.isInternalAdmin || roles.orgMemberships.length > 0)
+            router.prefetch("/app");
+          if (roles.isInternalAdmin || roles.isSalesRep)
+            router.prefetch("/selger");
+          roles.orgMemberships.forEach((org) => {
+            router.prefetch(`/org/${org.slug}`);
+          });
         }
       } catch (error) {
         console.error("Failed to fetch user roles:", error);
@@ -34,7 +47,7 @@ export function HotKeyListener() {
     };
 
     fetchRoles();
-  }, [user]);
+  }, [user, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -122,7 +135,8 @@ export function HotKeyListener() {
 
     // Single option = direct redirect
     if (options.length === 1) {
-      window.location.href = options[0].href;
+      setNavigating(true);
+      window.location.assign(options[0].href);
       return;
     }
 
@@ -134,10 +148,14 @@ export function HotKeyListener() {
   if (!user || !rolesCache.current) return null;
 
   return (
-    <RoleSwitchDialog
-      options={dialogOptions}
-      isOpen={showDialog}
-      onClose={() => setShowDialog(false)}
-    />
+    <>
+      {navigating && <AppLoader />}
+      <RoleSwitchDialog
+        options={dialogOptions}
+        isOpen={showDialog}
+        onClose={() => setShowDialog(false)}
+        onNavigate={() => setNavigating(true)}
+      />
+    </>
   );
 }

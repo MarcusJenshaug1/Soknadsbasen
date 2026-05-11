@@ -12,6 +12,8 @@ interface RoleSwitchDialogProps {
   options: DialogOption[];
   isOpen: boolean;
   onClose: () => void;
+  /** Kalles før window.location-nav slik at en overlay-loader kan mountes. */
+  onNavigate?: () => void;
 }
 
 function getIcon(label: string) {
@@ -32,6 +34,7 @@ export function RoleSwitchDialog({
   options,
   isOpen,
   onClose,
+  onNavigate,
 }: RoleSwitchDialogProps) {
   if (!isOpen || options.length === 0) return null;
 
@@ -50,7 +53,8 @@ export function RoleSwitchDialog({
 
   const handleOptionClick = (href: string) => {
     onClose();
-    window.location.href = href;
+    onNavigate?.();
+    window.location.assign(href);
   };
 
   // Group options by category
