@@ -15,7 +15,7 @@ type PromoCode = {
     amount_off: number | null;
     duration: string;
     duration_in_months: number | null;
-  };
+  } | null;
 };
 
 export function PromoClient() {
@@ -41,12 +41,14 @@ export function PromoClient() {
   }
 
   function formatDiscount(c: PromoCode["coupon"]) {
+    if (!c) return "—";
     if (c.percent_off) return `${c.percent_off}%`;
     if (c.amount_off) return `${(c.amount_off / 100).toFixed(0)} kr`;
     return "—";
   }
 
   function formatDuration(c: PromoCode["coupon"]) {
+    if (!c) return "—";
     if (c.duration === "once") return "Én gang";
     if (c.duration === "forever") return "For alltid";
     if (c.duration === "repeating") return `${c.duration_in_months} md`;
