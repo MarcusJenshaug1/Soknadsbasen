@@ -253,15 +253,18 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       useCloudSyncStore.getState().setLastSavedAt(Date.now());
       useCloudSyncStore.getState().setStatus("saved");
 
-      // Kringkast til andre klienter på samme userId at CV-en er oppdatert.
-      // self: false i config gjør at vi ikke får vårt eget ekko.
+      // Kringkast FULL state-payload til andre klienter, ikke bare en
+      // "noe har skjedd"-notification. Sparer dem fra å gjøre en GET-
+      // roundtrip — payload kommer rett inn i editoren via setState.
+      // Supabase Realtime Broadcast har ~64 KB max per melding, og en
+      // typisk CV-payload er 5-50 KB.
       const ch = channelRef.current;
       if (ch) {
         try {
           const result = await ch.send({
             type: "broadcast",
             event: "cv-updated",
-            payload: { from: CLIENT_ID, at: Date.now() },
+            payload: { from: CLIENT_ID, at: Date.now(), state: resumeData },
           });
           if (result !== "ok") {
             console.warn("[CloudSync] Broadcast result:", result);
@@ -369,11 +372,42 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
 
     channel
       .on("broadcast", { event: "cv-updated" }, (msg) => {
-        const from = (msg.payload as { from?: string } | undefined)?.from;
-        if (from === CLIENT_ID) return; // eget ekko
-        // Ikke skip basert på dirty/saving — loadFromServer har sin egen
-        // statusAfter-guard og dropper bare setState hvis vi skriver, men
-        // selve fetchet skal alltid skje så vi vet hva server har.
+        const payload = msg.payload as
+          | {
+              from?: string;
+              at?: number;
+              state?: ResumePayloadV2;
+            }
+          | undefined;
+        if (!payload || payload.from === CLIENT_ID) return; // eget ekko
+
+        // Hvis avsenderen sendte med full state-payload kan vi applye
+        // direkte uten å gjøre en ekstra GET-roundtrip. Sub-100ms sync.
+        if (payload.state) {
+          const status = useCloudSyncStore.getState().status;
+          // Hvis vi skriver akkurat nå, dropp setState — vi vil ikke
+          // overskrive ulagrede lokale endringer. Polling/neste broadcast
+          // henter oss inn igjen når vi er ferdige.
+          if (status === "dirty" || status === "saving") return;
+          const rd = payload.state;
+          isHydrating = true;
+          try {
+            useResumeStore.setState({
+              resumes: rd.resumes,
+              activeResumeId: rd.activeResumeId,
+              _resumeDataMap: rd._resumeDataMap,
+              data: rd._resumeDataMap[rd.activeResumeId] ?? rd.data,
+            });
+          } finally {
+            isHydrating = false;
+          }
+          useCloudSyncStore.getState().setLastSavedAt(Date.now());
+          // Status er allerede ikke "dirty"/"saving" pga early-return over.
+          useCloudSyncStore.getState().setStatus("saved");
+          return;
+        }
+
+        // Fallback (gamle klienter / payload uten state): refetch.
         loadFromServer(user.email ?? null);
       })
       .on("broadcast", { event: "cursor" }, (msg) => {
