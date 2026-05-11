@@ -13,7 +13,7 @@ type CorruptRow = {
 };
 
 type ListResponse = { count: number; rows: CorruptRow[] };
-type CleanupResponse = { count: number; reset: number; affectedUserIds: string[] };
+type CleanupResponse = { count: number; reset: number; affected: CorruptRow[] };
 
 export function CvCleanupClient() {
   const [rows, setRows] = useState<CorruptRow[] | null>(null);
@@ -76,8 +76,30 @@ export function CvCleanupClient() {
   return (
     <div className="space-y-6">
       {result && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800">
-          Resettet resumeData på {result.reset} av {result.count} rader.
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 space-y-3">
+          <div className="text-[13px] text-emerald-800 font-medium">
+            Resettet resumeData på {result.reset} av {result.count} rader.
+          </div>
+          {result.affected.length > 0 && (
+            <details className="text-[12px] text-emerald-900">
+              <summary className="cursor-pointer hover:underline">
+                Vis hvilke brukere som ble ryddet ({result.affected.length})
+              </summary>
+              <ul className="mt-2 space-y-1.5 pl-4">
+                {result.affected.map((r) => (
+                  <li key={r.userId} className="leading-[1.5]">
+                    <span className="font-medium">{r.userEmail}</span>
+                    <span className="text-emerald-700/70"> ← hadde CV fra </span>
+                    <span className="font-medium">{r.cvEmail}</span>
+                    <span className="text-emerald-700/60">
+                      {" "}
+                      ({r.cvFirstName} {r.cvLastName})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 

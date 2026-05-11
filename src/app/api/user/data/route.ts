@@ -1,6 +1,9 @@
 import { getSession, getImpersonationContext } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// `debug.sessionEmail` brukes av useCloudSync som ground-truth for å fange
+// cross-user CV-leak. Ikke fjern uten å oppdatere klient-sjekken samtidig.
+
 /* ─── GET: Load user data from DB ─────────────────────────── */
 
 export async function GET() {
@@ -9,20 +12,13 @@ export async function GET() {
     return Response.json({ error: "Ikke autentisert" }, { status: 401 });
   }
 
-  const imp = await getImpersonationContext();
-
   const row = await prisma.userData.findUnique({
     where: { userId: session.userId },
   });
 
-  // Debug-felter brukt midlertidig for impersonation-bugjakt. Når Marcus har
-  // bekreftet at impersonering fungerer skal disse fjernes.
-  const debug = {
-    sessionUserId: session.userId,
-    sessionEmail: session.email,
-    impTargetId: imp?.targetId ?? null,
-    impAdminId: imp?.adminId ?? null,
-  };
+  // Server-echo brukt av useCloudSync som ground-truth for å hindre at
+  // cross-user CV-leak hydreres inn i editoren. Permanent defense, ikke fjern.
+  const debug = { sessionEmail: session.email };
 
   if (!row) {
     return Response.json({ resumeData: null, coverLetterData: null, debug });

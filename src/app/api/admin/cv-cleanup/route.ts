@@ -38,7 +38,7 @@ export async function DELETE() {
   const rows = await findCorruptRows();
 
   if (rows.length === 0) {
-    return NextResponse.json({ count: 0, reset: 0 });
+    return NextResponse.json({ count: 0, reset: 0, affected: [] });
   }
 
   const userIds = rows.map((r) => r.userId);
@@ -52,13 +52,14 @@ export async function DELETE() {
   });
 
   console.warn(
-    `[cv-cleanup] admin=${guard.email} resettet ${result.count} korrupte CV-rader`,
+    `[cv-cleanup] admin=${guard.email} resettet ${result.count} korrupte CV-rader:`,
+    rows.map((r) => `${r.userEmail} (cv-eier var ${r.cvEmail})`).join(", "),
   );
 
   return NextResponse.json({
     count: rows.length,
     reset: result.count,
-    affectedUserIds: userIds,
+    affected: rows,
   });
 }
 

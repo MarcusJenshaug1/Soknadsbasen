@@ -31,12 +31,12 @@ interface ResumePayloadV1 {
 
 interface ServerData {
   resumeData: ResumePayloadV2 | ResumePayloadV1 | null;
-  /** Diagnostikk-felter fra serveren — brukes til mismatch-warning. */
+  /**
+   * Server-echo med sessionens faktiske email. Brukes som ground-truth
+   * for å detektere cross-user CV-leak.
+   */
   debug?: {
-    sessionUserId?: string;
     sessionEmail?: string;
-    impTargetId?: string | null;
-    impAdminId?: string | null;
   };
 }
 

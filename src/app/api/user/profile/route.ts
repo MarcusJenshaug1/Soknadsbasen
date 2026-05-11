@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession, getImpersonationContext } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { supabaseServer, supabaseAdmin } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -13,7 +13,6 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
   }
-  const imp = await getImpersonationContext();
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: { id: true, email: true, name: true, avatarUrl: true },
@@ -21,15 +20,7 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Bruker ikke funnet" }, { status: 404 });
   }
-  // Debug-felter for impersonation-bugjakt, fjernes etter Marcus' bekreftelse.
-  return NextResponse.json({
-    user,
-    debug: {
-      sessionUserId: session.userId,
-      impTargetId: imp?.targetId ?? null,
-      impAdminId: imp?.adminId ?? null,
-    },
-  });
+  return NextResponse.json({ user });
 }
 
 /**
