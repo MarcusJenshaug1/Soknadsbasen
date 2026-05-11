@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
+import { AppLoader } from "@/components/app-shell/AppLoader";
 import { Logo } from "@/components/ui/Logo";
 import { SectionLabel } from "@/components/ui/Pill";
 import {
@@ -27,8 +28,16 @@ const label =
 /**
  * Single-column auth screen with a toggle between login and register.
  * `focus` sets the initial mode; URL stays on the route the user navigated to.
+ * `redirect` er målet etter login (settes fra /logg-inn via en isolert
+ * useSearchParams-leser, slik at AuthSplit ikke selv suspender på hydrering).
  */
-export function AuthSplit({ focus }: { focus: Mode }) {
+export function AuthSplit({
+  focus,
+  redirect = "/app",
+}: {
+  focus: Mode;
+  redirect?: string;
+}) {
   const [mode, setMode] = useState<Mode>(focus);
 
   return (
@@ -45,7 +54,7 @@ export function AuthSplit({ focus }: { focus: Mode }) {
           <Toggle mode={mode} setMode={setMode} />
           <div className="mt-10">
             {mode === "login" ? (
-              <LoginForm />
+              <LoginForm redirect={redirect} />
             ) : (
               <RegisterForm onDone={() => setMode("login")} />
             )}
@@ -113,31 +122,39 @@ function Toggle({
   );
 }
 
-function LoginForm() {
+function LoginForm({ redirect }: { redirect: string }) {
   const router = useRouter();
-  const search = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Forhåndshent redirect-route slik at Next har RSC-strømmen klar når
+  // window.location.assign trigger full nav. Marginal gevinst, gratis.
+  useEffect(() => {
+    router.prefetch(redirect);
+  }, [router, redirect]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     const res = await login(email, password);
-    setSubmitting(false);
     if (!res.ok) {
+      setSubmitting(false);
       setError(res.error ?? "Kunne ikke logge inn");
       return;
     }
-    const redirect = search.get("redirect") || "/app";
-    router.replace(redirect);
+    // La overlay-en stå mens browseren tar over med full nav.
+    // window.location.assign trigger native loading-state i tab-en og
+    // gir en clean overgang inn i /app sin egen loading.tsx (AppLoader).
+    window.location.assign(redirect);
   }
 
   return (
     <div>
+      {submitting && <AppLoader />}
       <SectionLabel className="mb-4">Logg inn</SectionLabel>
       <h1 className="text-[36px] md:text-[40px] leading-[1] tracking-[-0.03em] font-medium mb-3">
         Velkommen tilbake.

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AuthSplit } from "@/components/auth/AuthSplit";
+import { LoginRedirectReader } from "@/components/auth/LoginRedirectReader";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
@@ -10,8 +11,8 @@ export const metadata = buildMetadata({
 
 export default function LoggInnPage() {
   return (
-    <Suspense fallback={null}>
-      <AuthSplit focus="login" />
+    <Suspense fallback={<AuthSplit focus="login" redirect="/app" />}>
+      <LoginRedirectReader />
     </Suspense>
   );
 }
