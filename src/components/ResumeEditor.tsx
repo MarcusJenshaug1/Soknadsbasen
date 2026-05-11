@@ -7,6 +7,8 @@ import { LivePreview, PrintOutput } from "./LivePreview";
 import { useResumeStore, type ResumeEntry } from "@/store/useResumeStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCloudSyncStore } from "@/store/useCloudSyncStore";
+import { InviteButton } from "@/components/collab/InviteButton";
+import { OwnerCollabBridge } from "@/components/collab/OwnerCollabBridge";
 import { ImportCVModal } from "./ImportCVModal";
 import { AvatarCropper } from "./AvatarCropper";
 import {
@@ -42,6 +44,7 @@ export function ResumeEditor() {
   // serveren returnerer mismatch/feil). Persist-laget er fjernet, så
   // første render har bare default-state inntil server har svart.
   const isLoaded = useResumeStore((s) => s.isLoaded);
+  const userId = useAuthStore((s) => s.user?.id);
 
   // Speil currentStep til useCloudSyncStore så Realtime Presence kan
   // kringkaste hvilken seksjon jeg er på til andre collaborators.
@@ -88,9 +91,18 @@ export function ResumeEditor() {
               <FileUp className="size-3.5" />
               Importer PDF
             </button>
+            {userId && (
+              <InviteButton
+                resourceKind="cv"
+                resourceId={userId}
+                resourceTitle="Din CV"
+              />
+            )}
             <SaveStatusIndicator />
           </div>
         </div>
+
+        {userId && <OwnerCollabBridge resourceKind="cv" resourceId={userId} />}
 
         {/* Step tabs */}
         <div className="px-5 md:px-10 pb-4 overflow-x-auto no-scrollbar">
