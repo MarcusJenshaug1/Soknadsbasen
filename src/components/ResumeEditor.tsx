@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool } from "lucide-react";
 import { LivePreview, PrintOutput } from "./LivePreview";
@@ -235,8 +235,12 @@ function StepTab({
   active: boolean;
   onClick: () => void;
 }) {
-  const collaboratorsHere = useCloudSyncStore((s) =>
-    s.collaborators.filter((c) => c.step === index),
+  // VIKTIG: select hele lista, IKKE .filter() i selector — ny array hver
+  // render trigger Zustand re-render-loop (Maximum update depth #185).
+  const allCollaborators = useCloudSyncStore((s) => s.collaborators);
+  const collaboratorsHere = useMemo(
+    () => allCollaborators.filter((c) => c.step === index),
+    [allCollaborators, index],
   );
 
   return (
