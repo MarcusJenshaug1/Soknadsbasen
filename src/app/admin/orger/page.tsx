@@ -29,6 +29,7 @@ export default async function AdminOrgerPage() {
         slug: true,
         name: true,
         displayName: true,
+        logoUrl: true,
         status: true,
         stripeSubscriptionId: true,
         createdAt: true,
@@ -79,9 +80,18 @@ export default async function AdminOrgerPage() {
               href={`/admin/orger/${o.slug}`}
               className="flex items-center gap-4 px-4 py-3 bg-bg hover:bg-black/[0.015] transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-black/8 flex items-center justify-center text-[11px] font-semibold text-ink/60 shrink-0">
-                {o.displayName.slice(0, 2).toUpperCase()}
-              </div>
+              {o.logoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={o.logoUrl}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-contain bg-bg border border-black/8 shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-black/8 flex items-center justify-center text-[11px] font-semibold text-ink/60 shrink-0">
+                  {o.displayName.slice(0, 2).toUpperCase()}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium">{o.displayName}</div>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
