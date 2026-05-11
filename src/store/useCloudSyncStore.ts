@@ -24,6 +24,9 @@ export type Collaborator = {
   step: number;
   /** Label/placeholder på inputet collaborator har fokus på. Null hvis ingen. */
   focusLabel: string | null;
+  /** Stabil identifikator (data-cv-field) for DOM-matching. Foretrukket
+   * over label-streng-matching siden label-tekst kan kollidere. */
+  focusFieldId: string | null;
   /** True hvis dette er admin som impersonerer (egen indikator i UI). */
   impersonating: boolean;
   joinedAt: number;

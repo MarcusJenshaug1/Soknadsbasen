@@ -394,8 +394,8 @@ function useFieldHighlights(
     const cleanups: Cleanup[] = [];
 
     for (const c of collaborators) {
-      if (!c.focusLabel) continue;
-      const found = findInputByLabel(c.focusLabel);
+      if (!c.focusLabel && !c.focusFieldId) continue;
+      const found = findInputForCollaborator(c.focusFieldId, c.focusLabel);
       if (!found) continue;
       const el: HTMLElement = found;
       const color = colorForClientId(c.clientId);
@@ -450,6 +450,30 @@ function useFieldHighlights(
       for (const c of cleanups) c();
     };
   }, [collaborators]);
+}
+
+/**
+ * Finn input som tilhører en collaborators fokus-felt. Foretrekker stabil
+ * data-cv-field-id; faller tilbake til label-streng-matching.
+ */
+function findInputForCollaborator(
+  fieldId: string | null,
+  label: string | null,
+): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null {
+  if (fieldId) {
+    const byField = document.querySelector<HTMLElement>(
+      `[data-cv-field="${cssEscape(fieldId)}"]`,
+    );
+    if (
+      byField instanceof HTMLInputElement ||
+      byField instanceof HTMLTextAreaElement ||
+      byField instanceof HTMLSelectElement
+    ) {
+      return byField;
+    }
+  }
+  if (label) return findInputByLabel(label);
+  return null;
 }
 
 /**
@@ -589,32 +613,32 @@ function ContactForm() {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-sm font-medium text-ink/80">Fornavn *</label>
-          <input type="text" className={inputClass} placeholder="Ola" value={data.firstName} onChange={(e) => updateContact({ firstName: e.target.value })} />
+          <input data-cv-field="contact.firstName" type="text" className={inputClass} placeholder="Ola" value={data.firstName} onChange={(e) => updateContact({ firstName: e.target.value })} />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-ink/80">Etternavn *</label>
-          <input type="text" className={inputClass} placeholder="Nordmann" value={data.lastName} onChange={(e) => updateContact({ lastName: e.target.value })} />
+          <input data-cv-field="contact.lastName" type="text" className={inputClass} placeholder="Nordmann" value={data.lastName} onChange={(e) => updateContact({ lastName: e.target.value })} />
         </div>
         <div className="space-y-1 col-span-2">
           <label className="text-sm font-medium text-ink/80">E-post *</label>
-          <input type="email" className={inputClass} placeholder="ola.nordmann@epost.no" value={data.email} onChange={(e) => updateContact({ email: e.target.value })} />
+          <input data-cv-field="contact.email" type="email" className={inputClass} placeholder="ola.nordmann@epost.no" value={data.email} onChange={(e) => updateContact({ email: e.target.value })} />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-ink/80">Telefon</label>
-          <input type="tel" className={inputClass} placeholder="+47 000 00 000" value={data.phone} onChange={(e) => updateContact({ phone: e.target.value })} />
+          <input data-cv-field="contact.phone" type="tel" className={inputClass} placeholder="+47 000 00 000" value={data.phone} onChange={(e) => updateContact({ phone: e.target.value })} />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-ink/80">Sted</label>
-          <input type="text" className={inputClass} placeholder="Oslo, Norge" value={data.location} onChange={(e) => updateContact({ location: e.target.value })} />
+          <input data-cv-field="contact.location" type="text" className={inputClass} placeholder="Oslo, Norge" value={data.location} onChange={(e) => updateContact({ location: e.target.value })} />
           <p className="text-xs text-ink/55 mt-1">Anbefalt: Kun By/Land.</p>
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-ink/80">LinkedIn</label>
-          <input type="url" className={inputClass} placeholder="https://linkedin.com/in/..." value={data.linkedin} onChange={(e) => updateContact({ linkedin: e.target.value })} />
+          <input data-cv-field="contact.linkedin" type="url" className={inputClass} placeholder="https://linkedin.com/in/..." value={data.linkedin} onChange={(e) => updateContact({ linkedin: e.target.value })} />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-ink/80">Nettside / Portefølje</label>
-          <input type="url" className={inputClass} placeholder="https://..." value={data.website} onChange={(e) => updateContact({ website: e.target.value })} />
+          <input data-cv-field="contact.website" type="url" className={inputClass} placeholder="https://..." value={data.website} onChange={(e) => updateContact({ website: e.target.value })} />
         </div>
 
         <div className="space-y-1 col-span-2 mt-2 p-5 border rounded-2xl bg-surface border-black/8 dark:border-white/8">

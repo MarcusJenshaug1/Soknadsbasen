@@ -52,15 +52,17 @@ type PresenceMeta = {
   avatarUrl: string | null;
   step: number;
   focusLabel: string | null;
+  focusFieldId: string | null;
   impersonating: boolean;
   joinedAt: number;
 };
 
 /* ─── Constants ───────────────────────────────────────────── */
 
-const SAVE_DEBOUNCE_MS = 500;
-// Fallback-polling 30 sek hvis realtime-broadcast dør. Hovedsynk skjer via broadcast.
-const POLL_INTERVAL_MS = 30_000;
+const SAVE_DEBOUNCE_MS = 200;
+// Fallback-polling 5 sek hvis realtime-broadcast dør. Mer aggressiv enn før
+// fordi Marcus så 10-sek lag — broadcast er ikke 100 % pålitelig på free-tier.
+const POLL_INTERVAL_MS = 5_000;
 // Klient-id sendt med broadcast så vi kan ignorere våre egne ekko.
 const CLIENT_ID = `cli-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -79,13 +81,18 @@ let isHydrating = false;
 /* ─── Helpers ─────────────────────────────────────────────── */
 
 /**
- * Plukk en lesbar label fra et fokusert input. Prøver i rekkefølge:
- * 1. aria-label
- * 2. Tilknyttet <label for="id">
- * 3. Nærmeste forelder-<label> som wrapper inputet
- * 4. placeholder
- * Returnerer null hvis ingenting funnet.
+ * Plukk ut info om et fokusert felt — både stabil id (data-cv-field) og
+ * menneske-lesbar label. fieldId brukes for DOM-matching på mottakersiden,
+ * label vises i tooltip.
  */
+function resolveFieldInfo(
+  el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+): { label: string | null; fieldId: string | null } {
+  const fieldId = el.getAttribute("data-cv-field");
+  const label = resolveFieldLabel(el);
+  return { label, fieldId };
+}
+
 function resolveFieldLabel(
   el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
 ): string | null {
@@ -251,15 +258,16 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       const ch = channelRef.current;
       if (ch) {
         try {
-          await ch.send({
+          const result = await ch.send({
             type: "broadcast",
             event: "cv-updated",
             payload: { from: CLIENT_ID, at: Date.now() },
           });
+          if (result !== "ok") {
+            console.warn("[CloudSync] Broadcast result:", result);
+          }
         } catch (err) {
-          // Broadcast feilet — vi har fortsatt lagret til DB, så ingen kritisk feil.
-          // Polling fanger opp om broadcast forsvinner.
-          console.debug("[CloudSync] Broadcast failed (non-fatal):", err);
+          console.warn("[CloudSync] Broadcast threw:", err);
         }
       }
     } catch (err) {
@@ -330,6 +338,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
           avatarUrl: meta.avatarUrl ?? null,
           step: meta.step,
           focusLabel: meta.focusLabel ?? null,
+          focusFieldId: meta.focusFieldId ?? null,
           impersonating: meta.impersonating,
           joinedAt: meta.joinedAt,
         });
@@ -338,8 +347,9 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     }
 
     // Lokal focus-state holdes i en let så vi kan re-tracke med oppdatert
-    // focusLabel uten å trigge subscribe-loops.
+    // info uten å trigge subscribe-loops.
     let currentFocusLabel: string | null = null;
+    let currentFocusFieldId: string | null = null;
 
     function buildMeta(): PresenceMeta {
       const identity = impersonatedBy ?? user!;
@@ -351,6 +361,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         avatarUrl: identity.avatarUrl ?? null,
         step: useCloudSyncStore.getState().currentStep,
         focusLabel: currentFocusLabel,
+        focusFieldId: currentFocusFieldId,
         impersonating: !!impersonatedBy,
         joinedAt: Date.now(),
       };
@@ -360,8 +371,9 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       .on("broadcast", { event: "cv-updated" }, (msg) => {
         const from = (msg.payload as { from?: string } | undefined)?.from;
         if (from === CLIENT_ID) return; // eget ekko
-        const status = useCloudSyncStore.getState().status;
-        if (status === "dirty" || status === "saving") return;
+        // Ikke skip basert på dirty/saving — loadFromServer har sin egen
+        // statusAfter-guard og dropper bare setState hvis vi skriver, men
+        // selve fetchet skal alltid skje så vi vet hva server har.
         loadFromServer(user.email ?? null);
       })
       .on("broadcast", { event: "cursor" }, (msg) => {
@@ -404,12 +416,15 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         !(target instanceof HTMLSelectElement)
       )
         return;
-      currentFocusLabel = resolveFieldLabel(target);
+      const info = resolveFieldInfo(target);
+      currentFocusLabel = info.label;
+      currentFocusFieldId = info.fieldId;
       channel.track(buildMeta()).catch(() => {});
     };
     const blurHandler = () => {
-      if (currentFocusLabel === null) return;
+      if (currentFocusLabel === null && currentFocusFieldId === null) return;
       currentFocusLabel = null;
+      currentFocusFieldId = null;
       channel.track(buildMeta()).catch(() => {});
     };
     window.addEventListener("focusin", focusHandler);
@@ -466,6 +481,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         avatarUrl: identity.avatarUrl ?? null,
         step: state.currentStep,
         focusLabel: null,
+        focusFieldId: null,
         impersonating: !!impersonatedBy,
         joinedAt: Date.now(),
       } satisfies PresenceMeta);
