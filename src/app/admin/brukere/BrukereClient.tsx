@@ -254,6 +254,14 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
         setImpersonatingId(null);
         return;
       }
+      // Zustand-persist cacher CV-en i localStorage. Tøm før hard-nav slik at
+      // ResumeEditor henter målbrukerens UserData fra server i stedet for
+      // å re-hydrere admins egen CV.
+      try {
+        localStorage.removeItem("cv-maker-storage");
+      } catch {
+        // ignore — vil bare bety at gammel cache står igjen
+      }
       window.location.href = "/app";
     } catch {
       alert("Klarte ikke starte impersonering");

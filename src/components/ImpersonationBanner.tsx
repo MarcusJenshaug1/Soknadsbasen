@@ -29,7 +29,13 @@ export function ImpersonationBanner() {
     setStopping(true);
     try {
       await fetch("/api/admin/impersonate", { method: "DELETE" });
-      // Hard nav for å nullstille all server-rendret cache som ser målbruker.
+      // Tøm Zustand-persist slik at admins egen CV hentes fra server igjen
+      // (i stedet for å re-hydrere målbrukerens CV som lå i localStorage).
+      try {
+        localStorage.removeItem("cv-maker-storage");
+      } catch {
+        // ignore
+      }
       window.location.href = "/admin/brukere";
     } catch {
       setStopping(false);
