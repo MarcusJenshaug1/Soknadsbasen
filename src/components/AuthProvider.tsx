@@ -4,8 +4,15 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCloudSync } from "@/hooks/useCloudSync";
+import { useYjsSync } from "@/hooks/useYjsSync";
 import { clearLegacyResumeStorage } from "@/store/useResumeStore";
 import { SupabaseErrorSilencer } from "./SupabaseErrorSilencer";
+
+// Når NEXT_PUBLIC_HOCUSPOCUS_URL er satt går vi over til Yjs-basert
+// collab (sub-100ms via WebSocket). Uten URL faller appen tilbake til
+// Supabase Realtime Broadcast (current useCloudSync). Bytt env-variabel
+// for å aktivere etter Hocuspocus er deployet på Hetzner.
+const USE_YJS = !!process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;
 
 const AUTH_ROUTES = [
   "/logg-inn",
@@ -38,8 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearLegacyResumeStorage();
   }, []);
 
-  // Cloud sync — hopper over på auth-ruter siden ingen sesjon er aktiv.
-  useCloudSync({ enabled: !isAuthRoute });
+  // Sync — hopper over på auth-ruter siden ingen sesjon er aktiv.
+  // Nøyaktig én sync-stack kjører om gangen. Når NEXT_PUBLIC_HOCUSPOCUS_URL
+  // er satt overtar useYjsSync (WebSocket-basert CRDT, sub-100ms).
+  // Persistens håndteres da av Hocuspocus-serveren i samme Postgres-rad,
+  // så ikke-collab-konsumenter (PDF, AI, share) ikke merker noen forskjell.
+  useCloudSync({ enabled: !isAuthRoute && !USE_YJS });
+  useYjsSync({ enabled: !isAuthRoute && USE_YJS });
 
   return (
     <>

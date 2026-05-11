@@ -62,3 +62,7 @@ perf-baseline.md
 perf-plan.md
 perf-results.md
 CLAUDE.local.md
+
+# Hocuspocus sub-prosjekt (deployes uavhengig til Hetzner)
+hocuspocus-server/dist/
+hocuspocus-server/node_modules/
