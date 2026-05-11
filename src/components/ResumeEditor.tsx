@@ -43,6 +43,13 @@ export function ResumeEditor() {
   // første render har bare default-state inntil server har svart.
   const isLoaded = useResumeStore((s) => s.isLoaded);
 
+  // Speil currentStep til useCloudSyncStore så Realtime Presence kan
+  // kringkaste hvilken seksjon jeg er på til andre collaborators.
+  const setSyncStep = useCloudSyncStore((s) => s.setCurrentStep);
+  useEffect(() => {
+    setSyncStep(currentStep);
+  }, [currentStep, setSyncStep]);
+
   const nextStep = () => setCurrentStep((p) => Math.min(p + 1, STEPS.length - 1));
   const prevStep = () => setCurrentStep((p) => Math.max(p - 1, 0));
 
@@ -71,6 +78,7 @@ export function ResumeEditor() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <CollaboratorBar />
             <CVSwitcher />
             <button
               onClick={() => setShowImport(true)}
@@ -87,18 +95,13 @@ export function ResumeEditor() {
         <div className="px-5 md:px-10 pb-4 overflow-x-auto no-scrollbar">
           <div className="inline-flex gap-1 bg-panel rounded-full p-1 whitespace-nowrap">
             {STEPS.map((step, index) => (
-              <button
+              <StepTab
                 key={step.id}
+                index={index}
+                title={step.title}
+                active={currentStep === index}
                 onClick={() => setCurrentStep(index)}
-                className={`px-3 md:px-4 py-1.5 rounded-full text-[11px] md:text-[12px] transition-colors ${
-                  currentStep === index
-                    ? "bg-bg text-ink font-medium"
-                    : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink"
-                }`}
-              >
-                <span className="mr-1.5 text-[#14110e]/40 dark:text-[#f0ece6]/40">{index + 1}</span>
-                {step.title}
-              </button>
+              />
             ))}
           </div>
         </div>
@@ -188,6 +191,118 @@ export function ResumeEditor() {
         </footer>
       </div>
     </>
+  );
+}
+
+/* ─── Live collaboration: presence-bar + step-tab markers ─── */
+
+// Tildelt-farger per clientId (stabil mapping så samme bruker har samme
+// farge på tvers av step-tab og chip i bar-en).
+const COLLAB_COLORS = [
+  "#D5592E", // accent oransje
+  "#2563eb", // blå
+  "#16a34a", // grønn
+  "#9333ea", // lilla
+  "#db2777", // rosa
+  "#0891b2", // cyan
+];
+
+function colorForClientId(clientId: string): string {
+  let hash = 0;
+  for (let i = 0; i < clientId.length; i++) {
+    hash = (hash * 31 + clientId.charCodeAt(i)) | 0;
+  }
+  return COLLAB_COLORS[Math.abs(hash) % COLLAB_COLORS.length];
+}
+
+function initialsOf(name: string | null, email: string): string {
+  const base = (name?.trim() || email).trim();
+  const parts = base.split(/\s+|@/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return base.slice(0, 2).toUpperCase();
+}
+
+function StepTab({
+  index,
+  title,
+  active,
+  onClick,
+}: {
+  index: number;
+  title: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const collaboratorsHere = useCloudSyncStore((s) =>
+    s.collaborators.filter((c) => c.step === index),
+  );
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative px-3 md:px-4 py-1.5 rounded-full text-[11px] md:text-[12px] transition-colors ${
+        active
+          ? "bg-bg text-ink font-medium"
+          : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink"
+      }`}
+    >
+      <span className="mr-1.5 text-[#14110e]/40 dark:text-[#f0ece6]/40">
+        {index + 1}
+      </span>
+      {title}
+      {collaboratorsHere.length > 0 && (
+        <span className="absolute -top-1 -right-1 inline-flex items-center gap-0.5">
+          {collaboratorsHere.slice(0, 3).map((c) => (
+            <span
+              key={c.clientId}
+              title={`${c.name ?? c.email} ${c.impersonating ? "(admin)" : ""} er her`}
+              className="w-2 h-2 rounded-full ring-2 ring-bg"
+              style={{ background: colorForClientId(c.clientId) }}
+            />
+          ))}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function CollaboratorBar() {
+  const collaborators = useCloudSyncStore((s) => s.collaborators);
+  if (collaborators.length === 0) return null;
+
+  return (
+    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+      </span>
+      <span className="text-[11px] text-emerald-800 dark:text-emerald-200 font-medium">
+        Live
+      </span>
+      <div className="flex -space-x-1.5 ml-1">
+        {collaborators.slice(0, 3).map((c) => {
+          const color = colorForClientId(c.clientId);
+          const stepLabel = STEPS[c.step]?.title ?? "ukjent";
+          return (
+            <span
+              key={c.clientId}
+              title={`${c.name ?? c.email}${c.impersonating ? " (admin)" : ""} redigerer ${stepLabel}`}
+              className="w-6 h-6 rounded-full ring-2 ring-bg flex items-center justify-center text-[9px] font-semibold text-white"
+              style={{ background: color }}
+            >
+              {initialsOf(c.name, c.email)}
+            </span>
+          );
+        })}
+      </div>
+      {collaborators.length > 3 && (
+        <span className="text-[11px] text-emerald-700 dark:text-emerald-300">
+          +{collaborators.length - 3}
+        </span>
+      )}
+    </div>
   );
 }
 

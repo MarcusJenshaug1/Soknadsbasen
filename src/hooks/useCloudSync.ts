@@ -43,6 +43,17 @@ interface ServerData {
   debug?: { sessionEmail?: string };
 }
 
+/** Payload som hver klient kringkaster i presence-state på cv-kanalen. */
+type PresenceMeta = {
+  clientId: string;
+  userId: string;
+  email: string;
+  name: string | null;
+  step: number;
+  impersonating: boolean;
+  joinedAt: number;
+};
+
 /* ─── Constants ───────────────────────────────────────────── */
 
 const SAVE_DEBOUNCE_MS = 500;
@@ -67,6 +78,7 @@ let isHydrating = false;
 
 export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
   const user = useAuthStore((s) => s.user);
+  const impersonatedBy = useAuthStore((s) => s.impersonatedBy);
   const loadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
@@ -244,34 +256,100 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
     return () => unsubResume();
   }, [enabled, user, debouncedSave]);
 
-  /* ── Supabase Realtime Broadcast for live collab ───────── */
+  /* ── Supabase Realtime Broadcast + Presence for live collab ─── */
   useEffect(() => {
     if (!enabled || !user?.id) return;
 
     const supabase = supabaseBrowser();
     const channel = supabase.channel(`cv:${user.id}`, {
-      config: { broadcast: { self: false } },
+      config: {
+        broadcast: { self: false },
+        presence: { key: CLIENT_ID },
+      },
     });
+
+    // Hjelper: bygg en liste av alle andre klienter, gruppert per clientId.
+    function refreshCollaborators() {
+      const state = channel.presenceState<PresenceMeta>();
+      const list: import("@/store/useCloudSyncStore").Collaborator[] = [];
+      for (const key in state) {
+        const entries = state[key];
+        if (!entries?.length) continue;
+        const meta = entries[0]; // siste track-call vinner
+        if (meta.clientId === CLIENT_ID) continue; // ikke vis seg selv
+        list.push({
+          clientId: meta.clientId,
+          userId: meta.userId,
+          email: meta.email,
+          name: meta.name,
+          step: meta.step,
+          impersonating: meta.impersonating,
+          joinedAt: meta.joinedAt,
+        });
+      }
+      useCloudSyncStore.getState().setCollaborators(list);
+    }
 
     channel
       .on("broadcast", { event: "cv-updated" }, (msg) => {
         const from = (msg.payload as { from?: string } | undefined)?.from;
-        if (from === CLIENT_ID) return; // eget ekko, hopp over
-        // Skip refetch hvis bruker skriver — loadFromServer har sin egen
-        // dirty-guard, så dette er bare for å kutte unødvendig fetch.
+        if (from === CLIENT_ID) return; // eget ekko
         const status = useCloudSyncStore.getState().status;
         if (status === "dirty" || status === "saving") return;
         loadFromServer(user.email ?? null);
       })
-      .subscribe();
+      .on("presence", { event: "sync" }, refreshCollaborators)
+      .on("presence", { event: "join" }, refreshCollaborators)
+      .on("presence", { event: "leave" }, refreshCollaborators)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          // Vis admins faktiske identitet hvis vi impersonerer, ellers vis user
+          const identity = impersonatedBy ?? user;
+          const meta: PresenceMeta = {
+            clientId: CLIENT_ID,
+            userId: user.id,
+            email: identity.email,
+            name: identity.name,
+            step: useCloudSyncStore.getState().currentStep,
+            impersonating: !!impersonatedBy,
+            joinedAt: Date.now(),
+          };
+          await channel.track(meta);
+        }
+      });
 
     channelRef.current = channel;
 
     return () => {
       channelRef.current = null;
+      useCloudSyncStore.getState().setCollaborators([]);
       supabase.removeChannel(channel);
     };
-  }, [enabled, user?.id, user?.email, loadFromServer]);
+    // impersonatedBy er med i deps så channel re-trackes når admin går inn/ut
+    // av impersonering. user?.id holder seg gjennom hard-nav.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, user?.id, user?.email, impersonatedBy?.id, loadFromServer]);
+
+  /* ── Re-track presence når currentStep endres ──────────── */
+  useEffect(() => {
+    if (!enabled || !user?.id) return;
+    const unsub = useCloudSyncStore.subscribe((state, prev) => {
+      if (state.currentStep === prev.currentStep) return;
+      const ch = channelRef.current;
+      if (!ch) return;
+      const identity = impersonatedBy ?? user;
+      ch.track({
+        clientId: CLIENT_ID,
+        userId: user.id,
+        email: identity.email,
+        name: identity.name,
+        step: state.currentStep,
+        impersonating: !!impersonatedBy,
+        joinedAt: Date.now(),
+      } satisfies PresenceMeta);
+    });
+    return () => unsub();
+  }, [enabled, user, impersonatedBy]);
 
   /* ── Fallback polling 30s hvis broadcast skulle dø ───────── */
   useEffect(() => {

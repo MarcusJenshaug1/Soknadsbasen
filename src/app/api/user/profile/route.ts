@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, getImpersonationContext } from "@/lib/auth";
 import { supabaseServer, supabaseAdmin } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -13,14 +13,29 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
   }
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { id: true, email: true, name: true, avatarUrl: true },
-  });
+  const imp = await getImpersonationContext();
+  const [user, admin] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true, email: true, name: true, avatarUrl: true },
+    }),
+    imp
+      ? prisma.user.findUnique({
+          where: { id: imp.adminId },
+          select: { id: true, email: true, name: true, avatarUrl: true },
+        })
+      : Promise.resolve(null),
+  ]);
   if (!user) {
     return NextResponse.json({ error: "Bruker ikke funnet" }, { status: 404 });
   }
-  return NextResponse.json({ user });
+  return NextResponse.json({
+    user,
+    // Når admin impersonerer er `user` target. `impersonatedBy` lar
+    // klienten vite hvem den faktiske admin-en er, slik at presence
+    // og UI kan skille de to.
+    impersonatedBy: admin,
+  });
 }
 
 /**
