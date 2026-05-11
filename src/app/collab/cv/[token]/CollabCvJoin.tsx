@@ -42,12 +42,19 @@ export function CollabCvJoin({
         body: JSON.stringify({ token, displayName: name }),
       });
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
+        const payload = (await res.json().catch(() => ({}))) as {
+          error?: { code?: string; message?: string } | string;
+        };
         if (res.status === 404 || res.status === 410) {
           setKicked(true);
           return;
         }
-        throw new Error(payload.error ?? `HTTP ${res.status}`);
+        // Støtt både ny ({ code, message }) og gammel (string) error-shape.
+        const msg =
+          typeof payload.error === "string"
+            ? payload.error
+            : payload.error?.message ?? `HTTP ${res.status}`;
+        throw new Error(msg);
       }
       const data = (await res.json()) as JoinResponse;
       setJoin(data);
