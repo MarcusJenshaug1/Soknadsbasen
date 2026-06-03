@@ -238,6 +238,13 @@ Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved n
           .replace(/^```(?:markdown|md)?\s*/i, "")
           .replace(/```\s*$/i, "")
           .trim();
+        if (!cleaned) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ error: "Tomt svar fra AI. Prøv igjen." })}\n\n`),
+          );
+          controller.close();
+          return;
+        }
         const html = marked.parse(cleaned, { async: false }) as string;
         const warnings = validateCoverLetter(cleaned, app.companyName);
         controller.enqueue(
