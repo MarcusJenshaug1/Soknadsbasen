@@ -70,6 +70,15 @@ const POLL_INTERVAL_MS = 15_000;
 // Klient-id sendt med broadcast så vi kan ignorere våre egne ekko.
 const CLIENT_ID = `cli-${Math.random().toString(36).slice(2, 10)}`;
 
+// Broadcast og presence er best-effort: feiler de (nettverksblipp, død
+// kanal) skal ikke UI-en krasje. Vi svelger derfor feilen, men logger i dev
+// så den er synlig under debugging i stedet for å forsvinne i stillhet.
+function logSyncError(context: string, err: unknown) {
+  if (process.env.NODE_ENV !== "production") {
+    console.debug(`[cloud-sync] ${context}`, err);
+  }
+}
+
 /* ─── Module-level flags ──────────────────────────────────── */
 
 let suspended = false;
@@ -332,7 +341,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       type: "broadcast",
       event: "cv-updated",
       payload: { from: CLIENT_ID, at: Date.now(), state: resumeData },
-    }).catch(() => {});
+    }).catch((err) => logSyncError("broadcast cv-updated", err));
   }, []);
 
   const debouncedBroadcast = useCallback(() => {
@@ -535,13 +544,13 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       const info = resolveFieldInfo(target);
       currentFocusLabel = info.label;
       currentFocusFieldId = info.fieldId;
-      channel.track(buildMeta()).catch(() => {});
+      channel.track(buildMeta()).catch((err) => logSyncError("presence track (focus)", err));
     };
     const blurHandler = () => {
       if (currentFocusLabel === null && currentFocusFieldId === null) return;
       currentFocusLabel = null;
       currentFocusFieldId = null;
-      channel.track(buildMeta()).catch(() => {});
+      channel.track(buildMeta()).catch((err) => logSyncError("presence track (blur)", err));
     };
     window.addEventListener("focusin", focusHandler);
     window.addEventListener("focusout", blurHandler);
@@ -562,7 +571,7 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
           event: "cursor",
           payload: { clientId: CLIENT_ID, xPct, yPct },
         })
-        .catch(() => {});
+        .catch((err) => logSyncError("broadcast cursor", err));
     };
     window.addEventListener("mousemove", cursorHandler);
 
