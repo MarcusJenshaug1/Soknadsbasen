@@ -14,6 +14,53 @@ const SECURITY_HEADERS = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
 
+// Next standalone-tracing kopierer kun package.json (ikke lib-filene) for
+// serverExternalPackages som puppeteer-core, så /api/pdf krasjet med
+// MODULE_NOT_FOUND på Coolify. Vi inkluderer derfor hele puppeteer-core sin
+// dep-closure eksplisitt (utledet fra package-lock). Mangler en transitiv dep?
+// Container-feilen navngir den — legg den til her.
+const PDF_TRACE_INCLUDES = [
+  "./node_modules/@sparticuz/chromium/bin/**",
+  "./node_modules/puppeteer-core/**",
+  "./node_modules/@puppeteer/**",
+  "./node_modules/@types/yauzl/**",
+  "./node_modules/agent-base/**",
+  "./node_modules/bare-fs/**",
+  "./node_modules/bare-path/**",
+  "./node_modules/chromium-bidi/**",
+  "./node_modules/cliui/**",
+  "./node_modules/debug/**",
+  "./node_modules/devtools-protocol/**",
+  "./node_modules/escalade/**",
+  "./node_modules/extract-zip/**",
+  "./node_modules/get-caller-file/**",
+  "./node_modules/get-stream/**",
+  "./node_modules/http-proxy-agent/**",
+  "./node_modules/https-proxy-agent/**",
+  "./node_modules/lru-cache/**",
+  "./node_modules/mitt/**",
+  "./node_modules/ms/**",
+  "./node_modules/pac-proxy-agent/**",
+  "./node_modules/progress/**",
+  "./node_modules/proxy-agent/**",
+  "./node_modules/proxy-from-env/**",
+  "./node_modules/pump/**",
+  "./node_modules/require-directory/**",
+  "./node_modules/semver/**",
+  "./node_modules/socks-proxy-agent/**",
+  "./node_modules/string-width/**",
+  "./node_modules/tar-fs/**",
+  "./node_modules/tar-stream/**",
+  "./node_modules/typed-query-selector/**",
+  "./node_modules/webdriver-bidi-protocol/**",
+  "./node_modules/ws/**",
+  "./node_modules/y18n/**",
+  "./node_modules/yargs/**",
+  "./node_modules/yargs-parser/**",
+  "./node_modules/yauzl/**",
+  "./node_modules/zod/**",
+];
+
 const nextConfig: NextConfig = {
   // Slankt selvstendig serveroutput for Docker/Coolify (.next/standalone).
   output: "standalone",
@@ -27,8 +74,8 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["pdfjs-dist", "puppeteer", "puppeteer-core", "@sparticuz/chromium"],
   outputFileTracingIncludes: {
-    "/api/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
-    "/api/cv/share/[token]/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/pdf": PDF_TRACE_INCLUDES,
+    "/api/cv/share/[token]/pdf": PDF_TRACE_INCLUDES,
   },
   images: {
     remotePatterns: [

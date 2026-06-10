@@ -3,10 +3,12 @@ import dynamic from "next/dynamic";
 import { useResumeStore, SECTION_LABELS, type ResumeData, type SectionKey } from "@/store/useResumeStore";
 import { TEMPLATES, COLOR_PALETTES, FONT_PAIRS, getTemplate } from "@/lib/design-tokens";
 import { analyzeAtsMatch } from "@/lib/ats";
-import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp, Share2 } from "lucide-react";
+import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp, Share2, History, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Modal } from "@/components/ui/Modal";
 import { ShareCVModal } from "@/components/cv/ShareCVModal";
 import { AtsCertifiedBadge } from "@/components/cv/AtsCertifiedBadge";
+import { TemplateRenderer } from "@/components/templates";
 
 const LexicalEditor = dynamic(
   () => import("./LexicalEditor").then((m) => m.LexicalEditor),
@@ -712,6 +714,7 @@ export function DesignExportForm() {
   const [versions, setVersions] = useState<Array<{ id: string; versionNum: number; templateId: string; createdAt: string; content: ResumeData }>>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [versionActionLoading, setVersionActionLoading] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<{ id: string; versionNum: number; templateId: string; createdAt: string; content: ResumeData } | null>(null);
   const [activeTab, setActiveTab] = useState<"design" | "optimaliser" | "eksport">("design");
   const [moreExportOpen, setMoreExportOpen] = useState(false);
 
@@ -1126,8 +1129,8 @@ export function DesignExportForm() {
       <div className="space-y-4 p-5 rounded-2xl border border-black/8 dark:border-white/8 bg-surface">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h4 className="text-sm font-semibold text-ink/80 flex items-center gap-2"><Download className="size-4" /> Dokumentversjoner</h4>
-            <p className="text-xs text-ink/55 mt-1">Lagre snapshots av {activeResumeMeta?.name ?? "aktiv CV"} før du gjør større endringer, og gjenopprett en eldre versjon ved behov.</p>
+            <h4 className="text-sm font-semibold text-ink/80 flex items-center gap-2"><History className="size-4" /> Lagrede versjoner</h4>
+            <p className="text-xs text-ink/55 mt-1">Lag manuelle snapshots av {activeResumeMeta?.name ?? "aktiv CV"} før du gjør større endringer. Du kan forhåndsvise hvordan en versjon ser ut, og rulle tilbake til den når som helst.</p>
           </div>
           <button
             type="button"
@@ -1173,13 +1176,23 @@ export function DesignExportForm() {
                   <div className="text-sm font-semibold text-ink">Versjon {version.versionNum}</div>
                   <div className="text-xs text-ink/55">{new Date(version.createdAt).toLocaleString("nb-NO")} · Mal: {getTemplate(version.templateId).name}</div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => replaceData(version.content)}
-                  className="self-start md:self-auto px-3 py-2 rounded-lg border border-black/8 dark:border-white/8 bg-surface text-sm font-medium text-ink/80 hover:bg-panel"
-                >
-                  Gjenopprett denne
-                </button>
+                <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewVersion(version)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-black/8 dark:border-white/8 bg-surface text-sm font-medium text-ink/80 hover:bg-panel"
+                  >
+                    <Eye className="size-4" />
+                    Forhåndsvis
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => replaceData(version.content)}
+                    className="px-3 py-2 rounded-lg border border-black/8 dark:border-white/8 bg-surface text-sm font-medium text-ink/80 hover:bg-panel"
+                  >
+                    Gjenopprett denne
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1358,6 +1371,62 @@ export function DesignExportForm() {
       {/* ── /Eksport & del ─────────────────────────────────── */}
 
       <ShareCVModal open={shareOpen} onClose={() => setShareOpen(false)} />
+
+      <Modal
+        open={previewVersion !== null}
+        onClose={() => setPreviewVersion(null)}
+        ariaLabel={previewVersion ? `Forhåndsvisning av versjon ${previewVersion.versionNum}` : "Forhåndsvisning av versjon"}
+        panelClassName="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-black/8 dark:border-white/8 bg-panel shadow-xl"
+      >
+        {previewVersion && (
+          <>
+            <div className="flex items-start justify-between gap-4 border-b border-black/8 dark:border-white/8 px-5 py-4">
+              <div>
+                <h4 className="text-sm font-semibold text-ink flex items-center gap-2">
+                  <Eye className="size-4" /> Forhåndsvisning · Versjon {previewVersion.versionNum}
+                </h4>
+                <p className="text-xs text-ink/55 mt-1">
+                  {new Date(previewVersion.createdAt).toLocaleString("nb-NO")} · Mal: {getTemplate(previewVersion.templateId).name}. Dette er kun en forhåndsvisning, ingenting endres før du gjenoppretter.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewVersion(null)}
+                aria-label="Lukk forhåndsvisning"
+                className="shrink-0 p-2 -m-2 rounded-lg text-ink/55 hover:text-ink hover:bg-surface"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="overflow-auto px-5 py-5 bg-neutral-100 dark:bg-neutral-900">
+              <div className="mx-auto max-w-2xl bg-surface shadow-sm pointer-events-none select-none" aria-hidden>
+                <TemplateRenderer data={previewVersion.content} />
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-black/8 dark:border-white/8 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setPreviewVersion(null)}
+                className="px-4 py-2 rounded-xl border border-black/8 dark:border-white/8 bg-surface text-sm font-medium text-ink/80 hover:bg-panel"
+              >
+                Lukk
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  replaceData(previewVersion.content);
+                  setPreviewVersion(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-accent text-bg text-sm font-semibold hover:bg-accent-hover"
+              >
+                Gjenopprett denne versjonen
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

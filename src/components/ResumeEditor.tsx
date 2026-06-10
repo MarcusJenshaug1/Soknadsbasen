@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool } from "lucide-react";
+import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool, MessageSquare, X } from "lucide-react";
 import { LivePreview, PrintOutput } from "./LivePreview";
 import { useResumeStore, type ResumeEntry } from "@/store/useResumeStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCloudSyncStore } from "@/store/useCloudSyncStore";
 import { InviteButton } from "@/components/collab/InviteButton";
 import { OwnerCollabBridge } from "@/components/collab/OwnerCollabBridge";
+import { SuggestionsInbox } from "@/components/collab/SuggestionsInbox";
+import { Modal } from "@/components/ui/Modal";
 import { ImportCVModal } from "./ImportCVModal";
 import { AvatarCropper } from "./AvatarCropper";
 import {
@@ -98,6 +100,7 @@ export function ResumeEditor() {
                 resourceTitle="Din CV"
               />
             )}
+            {userId && <SuggestionsButton resourceId={userId} />}
             <SaveStatusIndicator />
           </div>
         </div>
@@ -636,6 +639,105 @@ function formatAgo(ms: number): string {
   if (min < 60) return `${min} min siden`;
   const hr = Math.round(min / 60);
   return `${hr} t siden`;
+}
+
+/* ── Forslag-innboks (eier) ──────────────────────────────── */
+
+/**
+ * "Forslag"-knapp i topp-stripen med teller for antall ventende collab-
+ * forslag. Henter telleren ved mount + hver gang innboksen åpnes, og åpner
+ * SuggestionsInbox i en delt Modal.
+ */
+function SuggestionsButton({ resourceId }: { resourceId: string }) {
+  const [open, setOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Lett teller-fetch ved mount (samme GET som innboksen bruker). Innboksen
+  // selv oppdaterer telleren via onCountChange når den er åpen.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(
+      `/api/collab/suggest?resourceKind=cv&resourceId=${encodeURIComponent(resourceId)}`,
+      { cache: "no-store" },
+    )
+      .then((res) => (res.ok ? res.json() : { suggestions: [] }))
+      .then((data: { suggestions?: { status?: string }[] }) => {
+        if (cancelled) return;
+        const count = (data.suggestions ?? []).filter(
+          (s) => s.status === "pending",
+        ).length;
+        setPendingCount(count);
+      })
+      .catch(() => {
+        // Teller er best-effort, knappen vises uansett.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resourceId]);
+
+  // Etter en accept har serveren allerede skrevet endringen til eierens lagrede
+  // CV-JSON. useCloudSync eksponerer ingen loadFromServer/reload utad (den er
+  // intern i hooken og returnerer void), så en full reload er den robuste måten
+  // å re-hydrere useResumeStore på uten å duplisere fetch-/hydrerings-logikken.
+  const handleApplied = useCallback(() => {
+    window.location.reload();
+  }, []);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="relative inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-black/10 dark:border-white/10 text-[12px] text-ink hover:border-black/30 dark:hover:border-white/30 transition-colors"
+      >
+        <MessageSquare className="size-3.5" />
+        Forslag
+        {pendingCount > 0 && (
+          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-bg text-[10px] font-semibold leading-none">
+            {pendingCount}
+          </span>
+        )}
+      </button>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        ariaLabel="Forslag fra hjelpere"
+        panelClassName="w-full max-w-[600px] max-h-[88vh] overflow-y-auto rounded-2xl bg-bg shadow-2xl border border-black/10 dark:border-white/10"
+      >
+        <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 dark:border-white/8 px-6 py-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-accent mb-1">
+              Forslag fra hjelpere
+            </div>
+            <h2 className="text-[18px] md:text-[20px] font-medium tracking-tight text-ink">
+              Din CV
+            </h2>
+            <p className="text-[12px] text-ink/60 mt-1 leading-[1.5]">
+              Godta for å bruke endringen i CV-en, eller avslå for å forkaste den.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Lukk"
+            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60 hover:text-ink transition-colors shrink-0"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {open && (
+          <SuggestionsInbox
+            resourceId={resourceId}
+            onApplied={handleApplied}
+            onCountChange={setPendingCount}
+          />
+        )}
+      </Modal>
+    </>
+  );
 }
 
 function ContactForm() {
