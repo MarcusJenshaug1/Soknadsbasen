@@ -71,12 +71,14 @@ const POLL_INTERVAL_MS = 15_000;
 const CLIENT_ID = `cli-${Math.random().toString(36).slice(2, 10)}`;
 
 // Broadcast og presence er best-effort: feiler de (nettverksblipp, død
-// kanal) skal ikke UI-en krasje. Vi svelger derfor feilen, men logger i dev
-// så den er synlig under debugging i stedet for å forsvinne i stillhet.
+// kanal) skal ikke UI-en krasje. Men feilen skal heller ikke forsvinne i
+// stillhet — vi warner én gang per kontekst (cursor-broadcast kan feile
+// ~33x/s når kanalen er nede, så uten dedup ville konsollen flommet over).
+const loggedSyncContexts = new Set<string>();
 function logSyncError(context: string, err: unknown) {
-  if (process.env.NODE_ENV !== "production") {
-    console.debug(`[cloud-sync] ${context}`, err);
-  }
+  if (loggedSyncContexts.has(context)) return;
+  loggedSyncContexts.add(context);
+  console.warn(`[cloud-sync] ${context}`, err);
 }
 
 /* ─── Module-level flags ──────────────────────────────────── */
@@ -523,9 +525,11 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
       .on("presence", { event: "sync" }, refreshCollaborators)
       .on("presence", { event: "join" }, refreshCollaborators)
       .on("presence", { event: "leave" }, refreshCollaborators)
-      .subscribe(async (status) => {
+      .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          await channel.track(buildMeta());
+          channel
+            .track(buildMeta())
+            .catch((err) => logSyncError("presence track (subscribe)", err));
         }
       });
 
@@ -609,7 +613,9 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         focusFieldId: null,
         impersonating: !!impersonatedBy,
         joinedAt: Date.now(),
-      } satisfies PresenceMeta);
+      } satisfies PresenceMeta).catch((err) =>
+        logSyncError("presence re-track (step)", err),
+      );
     });
     return () => unsub();
   }, [enabled, user, impersonatedBy]);
