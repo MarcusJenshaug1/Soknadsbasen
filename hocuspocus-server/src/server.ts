@@ -15,7 +15,7 @@
  */
 
 import "dotenv/config";
-import { Server } from "@hocuspocus/server";
+import { Hocuspocus } from "@hocuspocus/server";
 import { Database } from "@hocuspocus/extension-database";
 import { Logger } from "@hocuspocus/extension-logger";
 import { PrismaClient } from "@prisma/client";
@@ -25,7 +25,7 @@ import {
   applyResumeToYDoc,
   yDocToResumePayload,
   type ResumePayloadV2,
-} from "../../src/lib/yjs/mapper.js";
+} from "./shared/mapper.js";
 
 const PORT = Number(process.env.PORT ?? 1234);
 const SUPABASE_URL = required("SUPABASE_URL");
@@ -41,7 +41,7 @@ interface AuthContext {
   isImpersonating: boolean;
 }
 
-const server = new Server({
+const server = new Hocuspocus({
   port: PORT,
   // Hocuspocus debouncer for onStoreDocument-callbacks. Vi vil ikke
   // skrive til Postgres på hvert tastetrykk; 2 sek er en god balanse

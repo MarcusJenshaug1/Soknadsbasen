@@ -1,0 +1,5 @@
+node_modules
+dist
+.env
+# Kopieres fra ../prisma/schema.prisma ved build (enkelt sannhets-punkt i app-roten)
+prisma

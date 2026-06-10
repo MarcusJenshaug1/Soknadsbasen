@@ -6,10 +6,14 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
+    "copy-schema": "mkdir -p prisma && cp ../prisma/schema.prisma prisma/schema.prisma",
+    "prisma:generate": "npm run copy-schema && prisma generate",
+    "predev": "npm run prisma:generate",
     "dev": "tsx watch src/server.ts",
+    "prebuild": "npm run prisma:generate",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "npm run prisma:generate && tsc --noEmit"
   },
   "dependencies": {
     "@hocuspocus/extension-database": "^2.15.0",
