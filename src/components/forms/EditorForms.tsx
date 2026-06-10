@@ -712,6 +712,8 @@ export function DesignExportForm() {
   const [versions, setVersions] = useState<Array<{ id: string; versionNum: number; templateId: string; createdAt: string; content: ResumeData }>>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [versionActionLoading, setVersionActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"design" | "optimaliser" | "eksport">("design");
+  const [moreExportOpen, setMoreExportOpen] = useState(false);
 
   const currentTemplate = getTemplate(data.templateId);
   const activeResumeMeta = resumes.find((resume) => resume.id === activeResumeId);
@@ -804,12 +806,45 @@ export function DesignExportForm() {
     setSectionOrder(next);
   }
 
+  const TABS = [
+    { key: "design" as const, label: "Design", icon: Layout },
+    { key: "optimaliser" as const, label: "Optimaliser", icon: Target },
+    { key: "eksport" as const, label: "Eksport & del", icon: Download },
+  ];
+
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h3 className="text-xl font-semibold">Design & Eksport</h3>
-        <p className="text-sm text-ink/55">Velg mal, farger og skrifttype. CV-en oppdateres i sanntid.</p>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold">Design &amp; eksport</h3>
+          <p className="text-sm text-ink/55">Velg mal, optimaliser mot stillingen, og last ned eller del CV-en.</p>
+        </div>
+        <div role="tablist" aria-label="Design og eksport" className="flex gap-1 p-1 rounded-xl bg-surface border border-black/8 dark:border-white/8">
+          {TABS.map(({ key, label, icon: Icon }) => {
+            const isActive = activeTab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(key)}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-accent text-bg"
+                    : "text-ink/60 hover:text-ink hover:bg-panel"
+                }`}
+              >
+                <Icon className="size-4" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* ── Design ─────────────────────────────────────────── */}
+      <div className={activeTab === "design" ? "space-y-8" : "hidden"}>
 
       {/* Template selection */}
       <div className="space-y-3">
@@ -957,6 +992,12 @@ export function DesignExportForm() {
         </div>
       </div>
 
+      </div>
+      {/* ── /Design ────────────────────────────────────────── */}
+
+      {/* ── Optimaliser ────────────────────────────────────── */}
+      <div className={activeTab === "optimaliser" ? "space-y-8" : "hidden"}>
+
       {/* ATS analysis */}
       <div className="space-y-4 p-5 rounded-2xl border border-success/30 bg-success/10">
         <div className="space-y-1">
@@ -1075,6 +1116,12 @@ export function DesignExportForm() {
         )}
       </div>
 
+      </div>
+      {/* ── /Optimaliser ───────────────────────────────────── */}
+
+      {/* ── Eksport & del ──────────────────────────────────── */}
+      <div className={activeTab === "eksport" ? "space-y-8" : "hidden"}>
+
       {/* Version history */}
       <div className="space-y-4 p-5 rounded-2xl border border-black/8 dark:border-white/8 bg-surface">
         <div className="flex items-start justify-between gap-4">
@@ -1141,160 +1188,175 @@ export function DesignExportForm() {
 
       {/* Export */}
       <div className="space-y-4 p-6 rounded-2xl border-2 border-dashed border-accent/40 bg-accent/8 dark:bg-accent/10">
-        <h4 className="text-base font-bold text-ink flex items-center gap-2"><Download className="size-5" /> Eksporter</h4>
+        <h4 className="text-base font-bold text-ink flex items-center gap-2"><Download className="size-5" /> Eksporter &amp; del</h4>
         <p className="text-sm text-ink/55">
-          Bruk nettleserens print-funksjon for å lagre som PDF. Fjern &quot;Headers and footers&quot; og sett marginer til &quot;None&quot;.
+          Last ned en ferdig PDF uten print-dialog, eller del CV-en via en lenke rekrutterer kan åpne uten konto.
         </p>
+
+        {/* Primary: server-side PDF download */}
         <button
-          onClick={() => {
-            const el = document.getElementById("cv-print-output");
-            el?.classList.remove("continuous");
-            const prev = document.title;
-            const { contact, role } = useResumeStore.getState().data;
-            const name = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
-            document.title = ["CV", name, role].filter(Boolean).join(" – ");
-            const restore = () => { document.title = prev; window.removeEventListener("afterprint", restore); };
-            window.addEventListener("afterprint", restore);
-            requestAnimationFrame(() => window.print());
+          disabled={pdfLoading}
+          onClick={async () => {
+            setPdfLoading(true);
+            try {
+              const res = await fetch("/api/pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ data: useResumeStore.getState().data }),
+              });
+              if (!res.ok) throw new Error("PDF-generering feilet");
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              const disposition = res.headers.get("content-disposition") ?? "";
+              const match = disposition.match(/filename="?(.+?)"?$/);
+              a.download = match?.[1] ? decodeURIComponent(match[1]) : "CV.pdf";
+              a.href = url;
+              a.click();
+              URL.revokeObjectURL(url);
+              setPdfDownloaded(true);
+            } catch (err) {
+              console.error(err);
+              alert("Kunne ikke generere PDF. Prøv igjen.");
+            } finally {
+              setPdfLoading(false);
+            }
           }}
-          className="w-full py-3 bg-accent text-bg font-semibold rounded-xl hover:bg-accent-hover transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 bg-accent text-bg font-semibold rounded-xl shadow-lg hover:bg-accent-hover transition-all flex items-center justify-center gap-2 disabled:opacity-60"
         >
-          <Download className="size-4" /> Lagre som PDF (A4-sider)
+          <Download className="size-4" />
+          {pdfLoading ? "Genererer…" : "Last ned PDF"}
         </button>
+        {pdfDownloaded && (
+          <div>
+            <AtsCertifiedBadge variant="post-export" />
+          </div>
+        )}
+
+        {/* Secondary: share via link */}
         <button
-          onClick={() => {
-            const el = document.getElementById("cv-print-output");
-            if (!el) return;
-
-            el.classList.add("continuous");
-
-            // ── Measure real content height ──
-            // 1. Show element off-screen at print width
-            el.style.cssText = "display:block !important;position:fixed;left:-9999px;top:0;width:210mm;visibility:hidden;z-index:-1;";
-
-            // 2. Collapse ALL constraints on .a4-page so content flows naturally
-            const pages = el.querySelectorAll<HTMLElement>(".a4-page");
-            const savedStyles: string[] = [];
-            pages.forEach((p, i) => {
-              savedStyles[i] = p.getAttribute("style") || "";
-              p.style.cssText = "width:210mm;min-height:0 !important;height:auto !important;overflow:visible !important;padding:15mm !important;";
-            });
-
-            // 3. Also collapse the table wrapper
-            const table = el.querySelector<HTMLElement>(".print-table");
-            const thead = el.querySelector<HTMLElement>(".print-table thead");
-            const tfoot = el.querySelector<HTMLElement>(".print-table tfoot");
-            if (table) table.style.cssText = "display:block !important;";
-            if (thead) thead.style.cssText = "display:none !important;";
-            if (tfoot) tfoot.style.cssText = "display:none !important;";
-            const tbodyCells = el.querySelectorAll<HTMLElement>(".print-table tbody, .print-table tbody tr, .print-table tbody td");
-            tbodyCells.forEach((c) => { c.style.cssText = "display:block !important;"; });
-
-            // 4. Force reflow and measure
-            void el.offsetHeight;
-            const contentHeight = el.scrollHeight;
-
-            // 5. Restore everything
-            pages.forEach((p, i) => {
-              p.setAttribute("style", savedStyles[i]);
-            });
-            if (table) table.style.cssText = "";
-            if (thead) thead.style.cssText = "";
-            if (tfoot) tfoot.style.cssText = "";
-            tbodyCells.forEach((c) => { c.style.cssText = ""; });
-            el.style.cssText = "";
-
-            // 6. Inject @page with measured height + small buffer
-            const pageH = contentHeight + 20;
-            const style = document.createElement("style");
-            style.id = "cv-continuous-page-size";
-            style.textContent = [
-              `@media print {`,
-              `  @page { size: 210mm ${pageH}px !important; margin: 0 !important; }`,
-              `  .a4-page { min-height: 0 !important; overflow: visible !important; height: auto !important; }`,
-              `}`,
-            ].join("\n");
-            document.head.appendChild(style);
-
-            const cleanup = () => {
-              el.classList.remove("continuous");
-              style.remove();
-              window.removeEventListener("afterprint", cleanup);
-            };
-            window.addEventListener("afterprint", cleanup);
-
-            const prev = document.title;
-            const { contact, role } = useResumeStore.getState().data;
-            const name = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
-            document.title = ["CV", name, role].filter(Boolean).join(" – ");
-            const restoreTitle = () => { document.title = prev; window.removeEventListener("afterprint", restoreTitle); };
-            window.addEventListener("afterprint", restoreTitle);
-
-            requestAnimationFrame(() => window.print());
-          }}
+          onClick={() => setShareOpen(true)}
           className="w-full py-3 bg-surface text-accent font-semibold rounded-xl border-2 border-accent hover:bg-accent/8 transition-all flex items-center justify-center gap-2"
         >
-          <Download className="size-4" /> Lagre som PDF (én lang side)
+          <Share2 className="size-4" />
+          Del via lenke
         </button>
 
-        {/* Server-side PDF generation */}
+        {/* More export options (browser print dialog variants) */}
         <div className="border-t border-accent/30 pt-4 mt-2">
-          <p className="text-xs text-accent/70 mb-2">
-            Automatisk PDF uten print-dialog — genereres på serveren.
-          </p>
           <button
-            disabled={pdfLoading}
-            onClick={async () => {
-              setPdfLoading(true);
-              try {
-                const res = await fetch("/api/pdf", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ data: useResumeStore.getState().data }),
-                });
-                if (!res.ok) throw new Error("PDF-generering feilet");
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                const disposition = res.headers.get("content-disposition") ?? "";
-                const match = disposition.match(/filename="?(.+?)"?$/);
-                a.download = match?.[1] ? decodeURIComponent(match[1]) : "CV.pdf";
-                a.href = url;
-                a.click();
-                URL.revokeObjectURL(url);
-                setPdfDownloaded(true);
-              } catch (err) {
-                console.error(err);
-                alert("Kunne ikke generere PDF. Prøv igjen.");
-              } finally {
-                setPdfLoading(false);
-              }
-            }}
-            className="w-full py-3 bg-success text-bg font-semibold rounded-xl shadow-lg hover:bg-success/90 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            type="button"
+            onClick={() => setMoreExportOpen((open) => !open)}
+            aria-expanded={moreExportOpen}
+            className="w-full flex items-center justify-between text-sm font-medium text-accent hover:text-accent-hover transition-colors"
           >
-            <Download className="size-4" />
-            {pdfLoading ? "Genererer…" : "Last ned PDF (automatisk)"}
+            <span>Flere eksportvalg</span>
+            {moreExportOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </button>
-          {pdfDownloaded && (
-            <div className="mt-3">
-              <AtsCertifiedBadge variant="post-export" />
+          {moreExportOpen && (
+            <div className="space-y-3 pt-4">
+              <p className="text-xs text-accent/70">
+                Bruk nettleserens print-funksjon for å lagre som PDF. Fjern &quot;Headers and footers&quot; og sett marginer til &quot;None&quot;.
+              </p>
+              <button
+                onClick={() => {
+                  const el = document.getElementById("cv-print-output");
+                  el?.classList.remove("continuous");
+                  const prev = document.title;
+                  const { contact, role } = useResumeStore.getState().data;
+                  const name = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
+                  document.title = ["CV", name, role].filter(Boolean).join(" – ");
+                  const restore = () => { document.title = prev; window.removeEventListener("afterprint", restore); };
+                  window.addEventListener("afterprint", restore);
+                  requestAnimationFrame(() => window.print());
+                }}
+                className="w-full py-3 bg-surface text-accent font-semibold rounded-xl border-2 border-accent hover:bg-accent/8 transition-all flex items-center justify-center gap-2"
+              >
+                <Download className="size-4" /> Lagre som PDF (A4-sider)
+              </button>
+              <button
+                onClick={() => {
+                  const el = document.getElementById("cv-print-output");
+                  if (!el) return;
+
+                  el.classList.add("continuous");
+
+                  // ── Measure real content height ──
+                  // 1. Show element off-screen at print width
+                  el.style.cssText = "display:block !important;position:fixed;left:-9999px;top:0;width:210mm;visibility:hidden;z-index:-1;";
+
+                  // 2. Collapse ALL constraints on .a4-page so content flows naturally
+                  const pages = el.querySelectorAll<HTMLElement>(".a4-page");
+                  const savedStyles: string[] = [];
+                  pages.forEach((p, i) => {
+                    savedStyles[i] = p.getAttribute("style") || "";
+                    p.style.cssText = "width:210mm;min-height:0 !important;height:auto !important;overflow:visible !important;padding:15mm !important;";
+                  });
+
+                  // 3. Also collapse the table wrapper
+                  const table = el.querySelector<HTMLElement>(".print-table");
+                  const thead = el.querySelector<HTMLElement>(".print-table thead");
+                  const tfoot = el.querySelector<HTMLElement>(".print-table tfoot");
+                  if (table) table.style.cssText = "display:block !important;";
+                  if (thead) thead.style.cssText = "display:none !important;";
+                  if (tfoot) tfoot.style.cssText = "display:none !important;";
+                  const tbodyCells = el.querySelectorAll<HTMLElement>(".print-table tbody, .print-table tbody tr, .print-table tbody td");
+                  tbodyCells.forEach((c) => { c.style.cssText = "display:block !important;"; });
+
+                  // 4. Force reflow and measure
+                  void el.offsetHeight;
+                  const contentHeight = el.scrollHeight;
+
+                  // 5. Restore everything
+                  pages.forEach((p, i) => {
+                    p.setAttribute("style", savedStyles[i]);
+                  });
+                  if (table) table.style.cssText = "";
+                  if (thead) thead.style.cssText = "";
+                  if (tfoot) tfoot.style.cssText = "";
+                  tbodyCells.forEach((c) => { c.style.cssText = ""; });
+                  el.style.cssText = "";
+
+                  // 6. Inject @page with measured height + small buffer
+                  const pageH = contentHeight + 20;
+                  const style = document.createElement("style");
+                  style.id = "cv-continuous-page-size";
+                  style.textContent = [
+                    `@media print {`,
+                    `  @page { size: 210mm ${pageH}px !important; margin: 0 !important; }`,
+                    `  .a4-page { min-height: 0 !important; overflow: visible !important; height: auto !important; }`,
+                    `}`,
+                  ].join("\n");
+                  document.head.appendChild(style);
+
+                  const cleanup = () => {
+                    el.classList.remove("continuous");
+                    style.remove();
+                    window.removeEventListener("afterprint", cleanup);
+                  };
+                  window.addEventListener("afterprint", cleanup);
+
+                  const prev = document.title;
+                  const { contact, role } = useResumeStore.getState().data;
+                  const name = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
+                  document.title = ["CV", name, role].filter(Boolean).join(" – ");
+                  const restoreTitle = () => { document.title = prev; window.removeEventListener("afterprint", restoreTitle); };
+                  window.addEventListener("afterprint", restoreTitle);
+
+                  requestAnimationFrame(() => window.print());
+                }}
+                className="w-full py-3 bg-surface text-accent font-semibold rounded-xl border-2 border-accent hover:bg-accent/8 transition-all flex items-center justify-center gap-2"
+              >
+                <Download className="size-4" /> Lagre som PDF (én lang side)
+              </button>
             </div>
           )}
         </div>
-
-        <div className="border-t border-accent/30 pt-4 mt-2">
-          <p className="text-xs text-accent/70 mb-2">
-            Del CV-en din via en lenke som rekrutterer kan åpne uten konto.
-          </p>
-          <button
-            onClick={() => setShareOpen(true)}
-            className="w-full py-3 bg-surface text-accent font-semibold rounded-xl border-2 border-accent hover:bg-accent/8 transition-all flex items-center justify-center gap-2"
-          >
-            <Share2 className="size-4" />
-            Del CV via lenke
-          </button>
-        </div>
       </div>
+
+      </div>
+      {/* ── /Eksport & del ─────────────────────────────────── */}
+
       <ShareCVModal open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );

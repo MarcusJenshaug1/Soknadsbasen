@@ -125,9 +125,18 @@ function initials(name: string) {
 
 const SOURCES = ["LinkedIn", "FINN.no", "Webcruiter", "Direkte kontakt", "Referanse", "Annet"];
 
+const DETAIL_TABS = [
+  { id: "oversikt", label: "Oversikt" },
+  { id: "forberedelse", label: "Forberedelse" },
+  { id: "aktivitet", label: "Aktivitet og notater" },
+] as const;
+
+type DetailTabId = (typeof DETAIL_TABS)[number]["id"];
+
 export function ApplicationDetail({ initial }: { initial: Application }) {
   const router = useRouter();
   const [app, setApp] = useState(initial);
+  const [activeTab, setActiveTab] = useState<DetailTabId>("oversikt");
   const [savingField, setSavingField] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -426,15 +435,55 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
         )}
       </Card>
 
-      {["interview", "offer", "accepted"].includes(app.status) && (
-        <InterviewStages
-          applicationId={app.id}
-          initial={app.interviewStages}
-        />
-      )}
+      {/* Tematiske faner reduserer scroll-byrden uten å fjerne funksjonalitet */}
+      <div
+        role="tablist"
+        aria-label="Seksjoner"
+        className="flex flex-wrap gap-1 p-1 bg-panel rounded-full w-fit"
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+          e.preventDefault();
+          const idx = DETAIL_TABS.findIndex((t) => t.id === activeTab);
+          const next =
+            e.key === "ArrowRight"
+              ? (idx + 1) % DETAIL_TABS.length
+              : (idx - 1 + DETAIL_TABS.length) % DETAIL_TABS.length;
+          setActiveTab(DETAIL_TABS[next].id);
+        }}
+      >
+        {DETAIL_TABS.map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`tab-${tab.id}`}
+              aria-selected={active}
+              aria-controls={`panel-${tab.id}`}
+              tabIndex={active ? 0 : -1}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-4 py-2 rounded-full text-[12px] transition-colors",
+                active
+                  ? "bg-surface text-ink font-medium shadow-sm"
+                  : "text-ink/60 hover:text-ink",
+              )}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left: details + notes */}
+      {/* Oversikt */}
+      <div
+        role="tabpanel"
+        id="panel-oversikt"
+        aria-labelledby="tab-oversikt"
+        hidden={activeTab !== "oversikt"}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
         <div className="md:col-span-2 space-y-6">
           <Card>
             <SectionLabel className="mb-4">Stilling</SectionLabel>
@@ -488,17 +537,6 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
             </div>
           </Card>
 
-          <AtsCheck
-            applicationId={app.id}
-            jobTitle={app.title}
-            companyName={app.companyName}
-            jobUrl={app.jobUrl}
-            jobDescription={app.jobDescription}
-            onJobDescriptionUpdate={(next) =>
-              setApp((a) => ({ ...a, jobDescription: next }))
-            }
-          />
-
           <Card>
             <SectionLabel className="mb-4">Kontakt</SectionLabel>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -520,6 +558,28 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               />
             </div>
           </Card>
+        </div>
+      </div>
+
+      {/* Forberedelse */}
+      <div
+        role="tabpanel"
+        id="panel-forberedelse"
+        aria-labelledby="tab-forberedelse"
+        hidden={activeTab !== "forberedelse"}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <div className="md:col-span-2 space-y-6">
+          <AtsCheck
+            applicationId={app.id}
+            jobTitle={app.title}
+            companyName={app.companyName}
+            jobUrl={app.jobUrl}
+            jobDescription={app.jobDescription}
+            onJobDescriptionUpdate={(next) =>
+              setApp((a) => ({ ...a, jobDescription: next }))
+            }
+          />
 
           <Card>
             <SectionLabel className="mb-4">Jobbeskrivelse</SectionLabel>
@@ -532,20 +592,76 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               }
             />
           </Card>
-
-          <Card>
-            <SectionLabel className="mb-4">Notater</SectionLabel>
-            <Textarea
-              value={app.notes ?? ""}
-              placeholder="Egne refleksjoner, intervjuforberedelse, research …"
-              rows={6}
-              onCommit={(v) => patch("notes", { notes: v || null })}
-            />
-          </Card>
         </div>
 
-        {/* Right: tasks + activity */}
         <div className="md:col-span-1 space-y-6">
+          <Card>
+            <AiTools applicationId={app.id} />
+          </Card>
+
+          <Card>
+            <SectionLabel className="mb-3">Søknadsbrev</SectionLabel>
+            {app.coverLetter?.body?.trim() ? (
+              <>
+                <p className="text-[12px] text-ink/60 mb-3">
+                  Oppdatert{" "}
+                  {new Date(app.coverLetter.updatedAt).toLocaleDateString(
+                    "nb-NO",
+                    { day: "numeric", month: "short", year: "numeric" },
+                  )}
+                </p>
+                <Link
+                  href={`/app/brev/${app.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
+                >
+                  Endre søknadsbrev
+                  <IconArrowRight size={14} />
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-[12px] text-ink/60 mb-3">
+                  Ingen brev skrevet ennå.
+                </p>
+                <Link
+                  href={`/app/brev/${app.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
+                >
+                  Opprett søknadsbrev
+                  <IconArrowRight size={14} />
+                </Link>
+              </>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Aktivitet og notater */}
+      <div
+        role="tabpanel"
+        id="panel-aktivitet"
+        aria-labelledby="tab-aktivitet"
+        hidden={activeTab !== "aktivitet"}
+        className="space-y-6"
+      >
+        {["interview", "offer", "accepted"].includes(app.status) && (
+          <InterviewStages
+            applicationId={app.id}
+            initial={app.interviewStages}
+          />
+        )}
+
+        <Card>
+          <SectionLabel className="mb-4">Notater</SectionLabel>
+          <Textarea
+            value={app.notes ?? ""}
+            placeholder="Egne refleksjoner, intervjuforberedelse, research …"
+            rows={6}
+            onCommit={(v) => patch("notes", { notes: v || null })}
+          />
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <div className="flex items-center justify-between mb-4">
               <SectionLabel>Oppgaver</SectionLabel>
@@ -767,45 +883,6 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 </li>
               )}
             </ul>
-          </Card>
-
-          <Card>
-            <AiTools applicationId={app.id} />
-          </Card>
-
-          <Card>
-            <SectionLabel className="mb-3">Søknadsbrev</SectionLabel>
-            {app.coverLetter?.body?.trim() ? (
-              <>
-                <p className="text-[12px] text-ink/60 mb-3">
-                  Oppdatert{" "}
-                  {new Date(app.coverLetter.updatedAt).toLocaleDateString(
-                    "nb-NO",
-                    { day: "numeric", month: "short", year: "numeric" },
-                  )}
-                </p>
-                <Link
-                  href={`/app/brev/${app.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
-                >
-                  Endre søknadsbrev
-                  <IconArrowRight size={14} />
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="text-[12px] text-ink/60 mb-3">
-                  Ingen brev skrevet ennå.
-                </p>
-                <Link
-                  href={`/app/brev/${app.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
-                >
-                  Opprett søknadsbrev
-                  <IconArrowRight size={14} />
-                </Link>
-              </>
-            )}
           </Card>
         </div>
       </div>

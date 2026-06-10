@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { JoinNameModal } from "@/components/collab/JoinNameModal";
 import { KickedModal } from "@/components/collab/KickedModal";
+import { AnonResumeEditor } from "./AnonResumeEditor";
 
 type JoinResponse = {
   jwt: string;
@@ -116,25 +117,8 @@ export function CollabCvJoin({
     );
   }
 
-  // Etter join: foreløpig en venter-side med info. Faktisk anon-editor
-  // mountes her når Hocuspocus er live + AnonResumeEditor er skrevet.
+  // Etter join: mount medhjelper-visningen — read-only CV-snapshot + forslag.
   return (
-    <div className="min-h-dvh flex items-center justify-center p-6 text-center">
-      <div className="max-w-lg">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-accent mb-2">
-          Koblet til
-        </div>
-        <h1 className="text-[22px] font-medium tracking-tight mb-3">
-          Velkommen, {join.ownerLabel ?? "hjelper"}!
-        </h1>
-        <p className="text-[14px] text-ink/65 leading-[1.55] mb-6">
-          Du er nå koblet til {ownerDisplayName} sin CV. Live-redigering for
-          medhjelpere er ikke åpnet ennå — du får beskjed når den er klar.
-        </p>
-        <p className="text-[12px] text-ink/45">
-          Sesjon-id: <code>{join.sessionId.slice(0, 8)}…</code>
-        </p>
-      </div>
-    </div>
+    <AnonResumeEditor jwt={join.jwt} ownerDisplayName={ownerDisplayName} />
   );
 }
