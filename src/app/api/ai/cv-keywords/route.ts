@@ -79,6 +79,7 @@ REGLER:
 
   try {
     const raw = await claudeGenerate(userPrompt, {
+      model: "claude-haiku-4-5",
       system,
       temperature: 0.1,
       maxOutputTokens: 1500,

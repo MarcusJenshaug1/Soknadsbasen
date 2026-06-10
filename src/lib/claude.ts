@@ -11,9 +11,14 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 
-// Default Opus 4.8. Overstyrbar via env uten kodeendring — f.eks. til
-// claude-haiku-4-5 for de billige ekstraksjons-rutene hvis kostnad blir et tema.
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8";
+// Sonnet 4.6 dekker de generative behovene (søknadsbrev, profil, tips) til en
+// brøkdel av Opus-prisen; de mekaniske ekstraksjons-rutene sender model:
+// "claude-haiku-4-5" eksplisitt. ANTHROPIC_MODEL overstyrer alt globalt (nyttig
+// som kostnads-bryter eller for testing).
+const DEFAULT_MODEL = "claude-sonnet-4-6";
+function resolveModel(opts: ClaudeOptions): string {
+  return process.env.ANTHROPIC_MODEL ?? opts.model ?? DEFAULT_MODEL;
+}
 const DEFAULT_MAX_TOKENS = 2048;
 
 // maxRetries: 4 speiler den gamle eksponentielle backoffen; SDK-en retrier
@@ -21,6 +26,8 @@ const DEFAULT_MAX_TOKENS = 2048;
 const client = new Anthropic({ maxRetries: 4 });
 
 export type ClaudeOptions = {
+  /** Modell-ID. Default Sonnet 4.6; mekaniske ruter sender Haiku. */
+  model?: string;
   system?: string;
   /**
    * Beholdt for kildekompatibilitet med de gamle Gemini-kallene. Opus 4.8
@@ -66,7 +73,7 @@ export async function claudeGenerate(
   let message: Anthropic.Message;
   try {
     message = await client.messages.create({
-      model: MODEL,
+      model: resolveModel(opts),
       max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
       system: buildSystem(opts),
       messages: [{ role: "user", content: userPrompt }],
@@ -97,7 +104,7 @@ export async function claudeStream(
       let emittedText = false;
       try {
         const stream = client.messages.stream({
-          model: MODEL,
+          model: resolveModel(opts),
           max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
           system: buildSystem(opts),
           messages: [{ role: "user", content: userPrompt }],
