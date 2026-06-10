@@ -72,10 +72,10 @@ COPY --from=build /app/prisma ./prisma
 # bare package.json for serverExternalPackages, ikke lib-filene — så vi
 # installerer det komplett (med alle deps) i et tmp-tre og legger det over
 # i app-node_modules. Uten dette feiler /api/pdf med MODULE_NOT_FOUND.
-RUN cd /tmp && npm init -y >/dev/null 2>&1 \
+RUN mkdir -p /tmp/pp && cd /tmp/pp && npm init -y >/dev/null 2>&1 \
  && npm install puppeteer-core@24.42.0 --no-audit --no-fund >/dev/null 2>&1 \
- && cp -r /tmp/node_modules/. ./node_modules/ \
- && rm -rf /tmp/node_modules /tmp/package.json && npm cache clean --force
+ && cp -r /tmp/pp/node_modules/. /app/node_modules/ \
+ && rm -rf /tmp/pp && npm cache clean --force
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { applySuggestionToResume } from "@/lib/collab/applySuggestion";
 
 /**
  * POST /api/collab/suggest/[id]/resolve
@@ -50,6 +51,9 @@ export async function POST(
     select: {
       id: true,
       status: true,
+      fieldPath: true,
+      afterValue: true,
+      resourceKind: true,
       invite: { select: { ownerId: true } },
     },
   });
@@ -61,6 +65,30 @@ export async function POST(
       { error: "Forslaget er allerede behandlet" },
       { status: 409 },
     );
+  }
+
+  // Server-drevet apply: for CV anvendes den godkjente endringen direkte i
+  // eierens lagrede CV, så forslaget får effekt uavhengig av om eier har
+  // editoren åpen. (Tidligere markerte ruten kun status, og endringen ble
+  // aldri synlig for eier.)
+  if (action === "accept" && suggestion.resourceKind === "cv") {
+    const userData = await prisma.userData.findUnique({
+      where: { userId: session.userId },
+      select: { resumeData: true },
+    });
+    if (userData) {
+      const next = applySuggestionToResume(
+        userData.resumeData,
+        suggestion.fieldPath,
+        suggestion.afterValue,
+      );
+      if (next) {
+        await prisma.userData.update({
+          where: { userId: session.userId },
+          data: { resumeData: next },
+        });
+      }
+    }
   }
 
   const updated = await prisma.collabSuggestion.update({

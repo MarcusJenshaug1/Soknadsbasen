@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { IconCalendar } from "@/components/ui/Icons";
+import { Bell } from "lucide-react";
 
 type Notif = {
   id: string;
@@ -63,7 +63,7 @@ export function NotificationBell() {
         className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
         aria-label="Varsler"
       >
-        <IconCalendar size={18} className="text-[#14110e]/60 dark:text-[#f0ece6]/60" />
+        <Bell size={18} className="text-ink/60" />
         {unread > 0 && (
           <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-accent" />
         )}
@@ -74,14 +74,14 @@ export function NotificationBell() {
           <div className="px-4 py-3 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
             <span className="text-[12px] font-medium">Varsler</span>
             {unread > 0 && (
-              <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">{unread} ulest</span>
+              <span className="text-[11px] text-ink/45">{unread} ulest</span>
             )}
           </div>
 
           {!loaded ? (
-            <div className="px-4 py-6 text-[12px] text-[#14110e]/45 dark:text-[#f0ece6]/45 text-center">Laster …</div>
+            <div className="px-4 py-6 text-[12px] text-ink/45 text-center">Laster …</div>
           ) : notifs.length === 0 ? (
-            <div className="px-4 py-6 text-[12px] text-[#14110e]/45 dark:text-[#f0ece6]/45 text-center">
+            <div className="px-4 py-6 text-[12px] text-ink/45 text-center">
               Ingen varsler ennå
             </div>
           ) : (
@@ -92,11 +92,11 @@ export function NotificationBell() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-[13px] font-medium leading-snug">{n.title}</div>
-                        <div className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-0.5 leading-snug">
+                        <div className="text-[12px] text-ink/60 mt-0.5 leading-snug">
                           {n.body}
                         </div>
                       </div>
-                      <span className="text-[10px] text-[#14110e]/35 dark:text-[#f0ece6]/35 shrink-0 mt-0.5">
+                      <span className="text-[10px] text-ink/35 shrink-0 mt-0.5">
                         {formatAge(n.sentAt)}
                       </span>
                     </div>
