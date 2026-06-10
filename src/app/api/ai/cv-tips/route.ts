@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 import { parseActiveResume } from "@/lib/resume-server";
 
@@ -160,7 +160,7 @@ REGLER:
     : `=== KANDIDATENS CV ===\n${cvText}\n=== SLUTT ===`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.3,
       maxOutputTokens: 2000,

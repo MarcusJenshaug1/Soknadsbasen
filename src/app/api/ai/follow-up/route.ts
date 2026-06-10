@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 
 marked.setOptions({ gfm: true, breaks: false });
@@ -62,7 +62,7 @@ Regler:
   }${app.applicationDate ? `\nSøknadsdato: ${app.applicationDate.toISOString().slice(0, 10)}` : ""}`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.7,
       maxOutputTokens: 1000,

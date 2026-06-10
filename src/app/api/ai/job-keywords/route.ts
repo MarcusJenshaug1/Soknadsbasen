@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 import { extractJobKeywords } from "@/lib/jobs/format";
 
@@ -97,7 +97,7 @@ REGLER:
     .join("\n");
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.1,
       maxOutputTokens: 800,

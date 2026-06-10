@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
 
@@ -78,7 +78,7 @@ REGLER:
   const userPrompt = `=== CV ===\n${summary}\n=== SLUTT ===`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.1,
       maxOutputTokens: 1500,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 
 function isAdmin(email: string) {
   return email === process.env.ADMIN_EMAIL;
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     .join("\n\n");
 
   try {
-    const reply = await geminiGenerate(prompt, {
+    const reply = await claudeGenerate(prompt, {
       system: `Du er en profesjonell e-postassistent for Søknadsbasen, en norsk jobbsøk-plattform.
 Skriv svar på norsk. Vær kortfattet, vennlig og profesjonell.
 Skriv bare selve e-postteksten — ingen emnejlinje, ingen avsender, ingen forklaring.

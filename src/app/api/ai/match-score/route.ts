@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 import { parseActiveResume } from "@/lib/resume-server";
 
@@ -83,7 +83,7 @@ Regler:
   const userPrompt = `STILLING\nTittel: ${app.title}\nSelskap: ${app.companyName}\n\nStillingstekst:\n${app.jobDescription.slice(0, 4000)}\n\n---\n\nKANDIDAT\n${cvSummary}`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.2,
       maxOutputTokens: 1000,

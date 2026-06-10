@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 
 /**
@@ -53,7 +53,7 @@ REGLER:
   const userPrompt = `Stilling: ${app.title}\nSelskap: ${app.companyName}\n\n=== STILLINGSTEKST ===\n${app.jobDescription.slice(0, 6000)}\n=== SLUTT ===`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.1,
       maxOutputTokens: 800,

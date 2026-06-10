@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 
 marked.setOptions({ gfm: true, breaks: false });
@@ -13,7 +13,7 @@ export const maxDuration = 60;
  * POST /api/ai/parse-cv
  * Body: FormData with field `file` (PDF).
  *
- * Extracts raw text from the PDF, sends it to Gemini with a strict schema +
+ * Extracts raw text from the PDF, sends it to Claude with a strict schema +
  * anti-hallucination system prompt, returns a partial ResumeData JSON.
  *
  * Critical rule: the model may ONLY return data that is literally present in
@@ -133,7 +133,7 @@ ${truncated}
   let json: unknown;
   let rawResponse = "";
   try {
-    rawResponse = await geminiGenerate(userPrompt, {
+    rawResponse = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.1,
       maxOutputTokens: 8192,
@@ -145,15 +145,15 @@ ${truncated}
     convertDescriptionsToHtml(json as Record<string, unknown>);
   } catch (err) {
     console.error(
-      "[parse-cv] gemini/parse failed:",
+      "[parse-cv] claude/parse failed:",
       err,
-      "\n--- Gemini raw (first 500 chars) ---\n",
+      "\n--- Claude raw (first 500 chars) ---\n",
       rawResponse.slice(0, 500),
     );
     return NextResponse.json(
       {
         error:
-          err instanceof Error && err.message.startsWith("Gemini")
+          err instanceof Error && err.message.startsWith("Claude")
             ? err.message
             : "AI kunne ikke tolke CVen. Prøv en annen fil eller fyll ut manuelt.",
       },
