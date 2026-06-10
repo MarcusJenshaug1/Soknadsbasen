@@ -18,6 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useSearchParams } from "next/navigation";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import {
   PIPELINE_COLUMNS,
@@ -117,7 +118,10 @@ export function PipelineView({
   readOnly?: boolean;
 }) {
   const [apps, setApps] = useState(initialApplications);
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  // Selskaper-flaten lenker hit med ?company=<navn> — forhåndsfyll søket så
+  // lenken faktisk filtrerer på selskapet (filteret matcher companyName).
+  const [search, setSearch] = useState(() => searchParams.get("company") ?? "");
   const [view, setView] = useState<"pipeline" | "liste" | "tidslinje">("pipeline");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

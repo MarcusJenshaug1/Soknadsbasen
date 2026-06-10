@@ -449,6 +449,8 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               ? (idx + 1) % DETAIL_TABS.length
               : (idx - 1 + DETAIL_TABS.length) % DETAIL_TABS.length;
           setActiveTab(DETAIL_TABS[next].id);
+          // Flytt fokus til den nye fanen (WAI-ARIA: fokus følger valgt fane).
+          document.getElementById(`tab-${DETAIL_TABS[next].id}`)?.focus();
         }}
       >
         {DETAIL_TABS.map((tab) => {

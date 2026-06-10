@@ -12,7 +12,8 @@ const FOCUSABLE =
  * aria-modal, Escape-til-lukk, focus-trap, scroll-lock og fokus-retur — slik at
  * hver konsument slipper å reimplementere dette. Konsumenten beholder sin egen
  * indre markup (header/X/innhold) via children og styler panelet via
- * `panelClassName`.
+ * `panelClassName`. Sett `data-autofocus` på et element for å fokusere det ved
+ * åpning (ellers fokuseres første fokuserbare element).
  */
 export function Modal({
   open,
@@ -25,26 +26,34 @@ export function Modal({
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  /** Tilgjengelig navn når panelet ikke har en synlig <h2 id>. */
   ariaLabel?: string;
   panelClassName?: string;
   closeOnBackdrop?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  // onClose holdes i en ref så fokus-/scroll-effekten kun avhenger av [open].
+  // Ellers re-kjører effekten hver gang en konsument sender en ny onClose-
+  // identitet (inline-arrow), og cleanup/re-run stjeler fokus ut av input-felt
+  // ved hvert tastetrykk.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
 
+    const preferred = panel?.querySelector<HTMLElement>("[data-autofocus]");
     const focusables = panel?.querySelectorAll<HTMLElement>(FOCUSABLE);
-    (focusables && focusables.length ? focusables[0] : panel)?.focus();
+    (preferred ?? (focusables && focusables.length ? focusables[0] : panel))?.focus();
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel) return;
@@ -70,7 +79,7 @@ export function Modal({
       document.body.style.overflow = prevOverflow;
       restoreFocusRef.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

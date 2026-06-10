@@ -44,6 +44,9 @@ export function AnonResumeEditor({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
+        // Lenken kan være revokert (404/410) eller tokenet utløpt (401) —
+        // nullstill data så «Foreslå endring» disables og feil-skjermen vises.
+        if ([401, 404, 410].includes(res.status)) setData(null);
         throw new Error(body.error ?? "Kunne ikke laste CV-en");
       }
       const payload = (await res.json()) as { data: ResumeData; ownerName: string };
@@ -101,11 +104,23 @@ export function AnonResumeEditor({
             </button>
           </div>
         </div>
+        {error && data && (
+          <div
+            role="alert"
+            className="max-w-[900px] mx-auto px-4 pb-2 -mt-1 flex items-center gap-1.5 text-[12px] text-accent"
+          >
+            <AlertCircle size={13} />
+            {error} — viser sist hentede versjon.
+          </div>
+        )}
       </header>
 
-      <main className="max-w-[900px] mx-auto px-4 py-8">
+      <main className="max-w-[900px] mx-auto px-4 py-8" aria-busy={loading}>
         {loading && !data && (
-          <div className="py-24 text-center text-[13px] text-ink/55">
+          <div
+            className="py-24 text-center text-[13px] text-ink/55"
+            aria-live="polite"
+          >
             Laster {ownerName} sin CV …
           </div>
         )}
@@ -231,7 +246,7 @@ function SuggestModal({
             onChange={(e) => setText(e.target.value)}
             rows={5}
             maxLength={2000}
-            autoFocus
+            data-autofocus
             placeholder="Beskriv hva du foreslår å endre eller legge til …"
             className="w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-accent resize-none"
           />

@@ -21,8 +21,6 @@ export type NavItem = {
   group: NavGroup;
   /** Vises direkte i mobil tab-bar; resten havner under "Mer". */
   primaryTab?: boolean;
-  /** Forlater app-skallet (egen layout), f.eks. /jobb. */
-  external?: boolean;
   dot?: boolean;
 };
 
@@ -44,7 +42,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/app/selskaper", label: "Selskaper", gated: true, group: "verktoy" },
   { href: "/app/nettverk", label: "Nettverk", gated: true, group: "verktoy" },
   { href: "/app/sesjoner", label: "Sesjoner", gated: true, group: "verktoy" },
-  { href: "/jobb", label: "Stillinger", gated: false, group: "konto", external: true, dot: true },
+  { href: "/jobb", label: "Stillinger", gated: false, group: "konto", dot: true },
   { href: "/app/billing", label: "Abonnement", gated: false, group: "konto" },
 ];
 
