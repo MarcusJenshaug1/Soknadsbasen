@@ -127,12 +127,12 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
 
   if (editing) {
     return (
-      <div className="bg-surface border border-indigo-300 rounded-lg p-4 space-y-3 shadow-sm">
+      <div className="bg-surface border border-accent rounded-lg p-4 space-y-3 shadow-sm">
         <input
           type="text"
           value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
-          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent"
           placeholder="Oppgavetittel..."
           autoFocus
         />
@@ -140,7 +140,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
         <textarea
           value={editDescription}
           onChange={(e) => setEditDescription(e.target.value)}
-          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent"
           placeholder="Beskrivelse (valgfritt)..."
           rows={3}
         />
@@ -152,7 +152,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
               type="date"
               value={editDueAt}
               onChange={(e) => setEditDueAt(e.target.value)}
-              className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -161,7 +161,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
             <select
               value={editType}
               onChange={(e) => setEditType(e.target.value)}
-              className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="other">Annet</option>
               <option value="followup">Oppfølging</option>
@@ -183,7 +183,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
                 className={`
                   flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all
                   ${editPriority === p
-                    ? "bg-indigo-100 text-indigo-700 border-2 border-indigo-500"
+                    ? "bg-accent/10 text-accent border-2 border-accent"
                     : "bg-panel text-ink/70 border border-black/12 dark:border-white/12 hover:bg-panel"
                   }
                 `}
@@ -205,7 +205,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
           <button
             onClick={handleSave}
             disabled={loading || !editTitle.trim()}
-            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-accent text-bg rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             <Save className="size-4" />
             Lagre
@@ -228,10 +228,10 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
       <button
         onClick={handleToggle}
         disabled={loading}
-        className="mt-0.5 shrink-0 text-ink/40 hover:text-indigo-600 transition-colors disabled:opacity-50"
+        className="mt-0.5 shrink-0 text-ink/40 hover:text-accent transition-colors disabled:opacity-50"
       >
         {isCompleted ? (
-          <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
+          <CheckCircle2 className="size-5 text-success" />
         ) : (
           <Circle className="size-5" />
         )}
@@ -287,6 +287,7 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
               {isOverdue && <AlertCircle className="size-3" />}
               <Calendar className="size-3" />
               <span>
+                {isOverdue && "Forfalt · "}
                 {isDueToday
                   ? "I dag"
                   : isDueTomorrow
@@ -311,18 +312,20 @@ export function TaskItem({ task, onToggle, onUpdate, onDelete }: TaskItemProps) 
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         <button
           onClick={() => setEditing(true)}
           disabled={loading}
-          className="p-1.5 text-ink/40 hover:text-indigo-600 transition-colors disabled:opacity-50"
+          aria-label="Rediger oppgave"
+          className="p-2.5 text-ink/40 hover:text-accent transition-colors disabled:opacity-50"
         >
           <Edit2 className="size-4" />
         </button>
         <button
           onClick={handleDelete}
           disabled={loading}
-          className="p-1.5 text-ink/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+          aria-label="Slett oppgave"
+          className="p-2.5 text-ink/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
         >
           <Trash2 className="size-4" />
         </button>

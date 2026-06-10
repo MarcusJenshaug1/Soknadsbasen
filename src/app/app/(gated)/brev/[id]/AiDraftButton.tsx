@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 type Tone = "varm" | "formell" | "konsis";
@@ -115,7 +116,7 @@ export function AiDraftButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-bg text-[11px] font-medium hover:bg-accent-hover transition-colors"
       >
         <Spark />
         Skriv utkast med AI
@@ -126,7 +127,7 @@ export function AiDraftButton({
   return (
     <div className="flex flex-col gap-2">
       <div className="inline-flex items-center gap-2 flex-wrap">
-        <div className="inline-flex bg-[#eee9df] dark:bg-panel rounded-full p-1">
+        <div className="inline-flex bg-panel rounded-full p-1">
           {TONES.map((t) => (
             <button
               key={t.id}
@@ -147,7 +148,7 @@ export function AiDraftButton({
           type="button"
           onClick={generate}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[11px] font-medium hover:bg-[#a94424] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-bg text-[11px] font-medium hover:bg-accent-hover disabled:opacity-50"
         >
           {loading ? <><SpinnerDots /> Skriver</> : "Generer"}
         </button>
@@ -163,7 +164,13 @@ export function AiDraftButton({
           Avbryt
         </button>
         {error && (
-          <span className="text-[11px] text-[#D5592E]">{error}</span>
+          <span
+            role="alert"
+            className="inline-flex items-center gap-1 text-[11px] text-accent"
+          >
+            <AlertCircle size={12} aria-hidden="true" />
+            {error}
+          </span>
         )}
       </div>
       {warnings.length > 0 && (

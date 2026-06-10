@@ -72,6 +72,7 @@
   --color-panel: var(--panel);
   --color-ink: var(--ink);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-success: var(--success);
   --color-neutral: var(--neutral);
   --font-sans: var(--font-geist-sans);

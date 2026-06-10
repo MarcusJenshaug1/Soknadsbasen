@@ -152,7 +152,7 @@ export function TaskList({ applicationId }: TaskListProps) {
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
           placeholder="Legg til en ny oppgave..."
-          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           disabled={adding}
         />
 
@@ -161,14 +161,14 @@ export function TaskList({ applicationId }: TaskListProps) {
             type="date"
             value={newTaskDueAt}
             onChange={(e) => setNewTaskDueAt(e.target.value)}
-            className="flex-1 px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             disabled={adding}
           />
 
           <select
             value={newTaskType}
             onChange={(e) => setNewTaskType(e.target.value)}
-            className="flex-1 px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 px-3 py-2 border border-black/12 dark:border-white/12 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             disabled={adding}
           >
             <option value="other">Annet</option>
@@ -181,7 +181,7 @@ export function TaskList({ applicationId }: TaskListProps) {
           <button
             type="submit"
             disabled={!newTaskTitle.trim() || adding}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-accent text-bg rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {adding ? (
               <Loader2 className="size-4 animate-spin" />

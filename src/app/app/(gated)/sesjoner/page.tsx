@@ -29,7 +29,7 @@ export default async function SesjonerPage() {
       <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-2">
         Sesjoner
       </h1>
-      <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-8">
+      <p className="text-[13px] text-ink/60 mb-8">
         Alle søkerunder, med lenke til pipeline-arkivet.
       </p>
 
@@ -40,7 +40,7 @@ export default async function SesjonerPage() {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="text-[13px] text-[#14110e]/55 dark:text-[#f0ece6]/55 py-12 text-center">
+        <div className="text-[13px] text-ink/55 py-12 text-center">
           Ingen sesjoner ennå. Start en søknad for å opprette din første sesjon automatisk.
         </div>
       ) : (
@@ -67,17 +67,17 @@ export default async function SesjonerPage() {
                       {s.status === "ACTIVE" ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-medium">Aktiv</span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-panel text-[#14110e]/55 dark:text-[#f0ece6]/55 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-panel text-ink/55 text-[10px]">
                           {s.outcome ? OUTCOME_LABELS[s.outcome] : "Avsluttet"}
                         </span>
                       )}
                     </div>
-                    <div className="text-[12px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
+                    <div className="text-[12px] text-ink/50">
                       {start}{end ? ` – ${end}` : ""}
                       {" · "}{s._count.applications} søknader
                     </div>
                     {s.notes && (
-                      <div className="text-[12px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mt-1.5 italic">{s.notes}</div>
+                      <div className="text-[12px] text-ink/65 mt-1.5 italic">{s.notes}</div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

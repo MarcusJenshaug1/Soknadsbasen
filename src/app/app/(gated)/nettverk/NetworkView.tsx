@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SectionLabel } from "@/components/ui/Pill";
+import { AlertCircle, Phone } from "lucide-react";
 import { IconClose, IconLink, IconMail, IconPlus } from "@/components/ui/Icons";
 import { AvatarCropper } from "@/components/AvatarCropper";
 import { cn } from "@/lib/cn";
@@ -98,7 +99,8 @@ function ContactCard({
     <div className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 p-5 flex flex-col gap-3 relative group">
       <button
         onClick={() => onEdit(contact)}
-        className="absolute top-3 right-3 text-[11px] text-ink/35 hover:text-ink transition-colors opacity-0 group-hover:opacity-100"
+        aria-label={`Rediger ${contact.name}`}
+        className="absolute top-3 right-3 p-2 -m-2 text-[11px] text-ink/35 hover:text-ink transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
       >
         Rediger
       </button>
@@ -141,7 +143,7 @@ function ContactCard({
             href={`tel:${contact.phone}`}
             className="flex items-center gap-2 text-[12px] text-ink/60 hover:text-ink transition-colors"
           >
-            <span className="text-[11px] opacity-50">📞</span>
+            <Phone size={13} className="opacity-50" aria-hidden="true" />
             <span className="truncate">{contact.phone}</span>
           </a>
         )}
@@ -327,7 +329,7 @@ function ContactModal({
                 <button
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+                  className="px-3 py-1.5 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover transition-colors"
                 >
                   {form.photoUrl ? "Bytt bilde" : "Last opp"}
                 </button>
@@ -370,7 +372,14 @@ function ContactModal({
               className="w-full px-3 py-2 rounded-xl border border-black/15 dark:border-white/15 text-[13px] resize-none focus:outline-none focus:border-accent bg-surface text-ink"
             />
           </div>
-          {error && <p className="text-[12px] text-red-600">{error}</p>}
+          <div aria-live="polite">
+            {error && (
+              <p className="flex items-center gap-1.5 text-[12px] text-red-600">
+                <AlertCircle size={14} aria-hidden="true" />
+                <span>{error}</span>
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="px-6 pb-6 pt-3 border-t border-black/8 dark:border-white/8 flex items-center justify-between gap-3">
@@ -529,7 +538,7 @@ export function NetworkView({ initial }: { initial: Contact[] }) {
         </div>
         <button
           onClick={() => setModal("new")}
-          className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+          className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
         >
           <IconPlus size={14} />
           <span className="hidden sm:inline">Ny kontakt</span>
@@ -545,7 +554,7 @@ export function NetworkView({ initial }: { initial: Contact[] }) {
           </p>
           <button
             onClick={() => setModal("new")}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover"
           >
             <IconPlus size={14} />
             Legg til første kontakt
@@ -559,6 +568,7 @@ export function NetworkView({ initial }: { initial: Contact[] }) {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                aria-label="Søk i kontakter etter navn eller selskap"
                 placeholder="Søk etter navn, selskap …"
                 className="w-full max-w-xs px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[13px] focus:outline-none focus:border-accent bg-surface text-ink"
               />

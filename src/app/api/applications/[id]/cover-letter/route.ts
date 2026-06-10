@@ -87,8 +87,8 @@ export async function PUT(req: Request, ctx: Ctx) {
       greeting: body.greeting ?? null,
       body: body.body ?? null,
       closing: body.closing ?? null,
-      fontFamily: body.fontFamily ?? "inter",
-      accentColor: body.accentColor ?? "#4f46e5",
+      fontFamily: body.fontFamily ?? "geist",
+      accentColor: body.accentColor ?? "#D5592E",
       fontSize: body.fontSize ?? "medium",
     },
     update: {

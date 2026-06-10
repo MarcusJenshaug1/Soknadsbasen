@@ -64,7 +64,7 @@ export function ShareLinkWidget() {
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <h2 className="text-[15px] font-medium">Del med coach / mentor</h2>
-          <p className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 mt-0.5">
+          <p className="text-[12px] text-ink/55 mt-0.5">
             Generer en read-only lenke til din pipeline. Ingen innlogging kreves.
           </p>
         </div>
@@ -72,7 +72,7 @@ export function ShareLinkWidget() {
           <button
             onClick={revoke}
             disabled={loading}
-            className="shrink-0 text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-accent transition-colors"
+            className="shrink-0 text-[11px] text-ink/40 hover:text-accent transition-colors"
           >
             Deaktiver
           </button>
@@ -85,7 +85,7 @@ export function ShareLinkWidget() {
             <input
               readOnly
               value={`${typeof window !== "undefined" ? prettyOrigin(window.location.origin) : ""}/delt/${link.token}`}
-              className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-black/10 dark:border-white/10 text-[12px] bg-bg text-[#14110e]/70 dark:text-[#f0ece6]/70 truncate"
+              className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-black/10 dark:border-white/10 text-[12px] bg-bg text-ink/70 truncate"
             />
             <button
               onClick={copy}
@@ -93,8 +93,11 @@ export function ShareLinkWidget() {
             >
               {copied ? "Kopiert!" : "Kopier"}
             </button>
+            <span aria-live="polite" aria-atomic="true" className="sr-only">
+              {copied ? "Lenken er kopiert til utklippstavlen" : ""}
+            </span>
           </div>
-          <p className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
+          <p className="text-[11px] text-ink/40">
             Utløper {formatDate(link.expiresAt)} · Lenken gir kun lesetilgang.
           </p>
         </div>

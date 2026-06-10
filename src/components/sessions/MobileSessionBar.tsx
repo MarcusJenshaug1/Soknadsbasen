@@ -47,7 +47,7 @@ export function MobileSessionBar() {
     <div ref={ref} className="md:hidden sticky top-0 z-30 print:hidden">
       {/* Notch-bar */}
       <div className="bg-bg/95 backdrop-blur-sm border-b border-black/6 dark:border-white/6 px-4 h-9 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-[#14110e]/40 dark:text-[#f0ece6]/40 shrink-0">
+        <span className="text-[10px] uppercase tracking-wider text-ink/40 shrink-0">
           Sesjon
         </span>
         <button
@@ -80,10 +80,10 @@ export function MobileSessionBar() {
                 >
                   Avslutt sesjon
                 </button>
-                <span className="text-[#14110e]/20 dark:text-[#f0ece6]/20 text-[11px]">·</span>
+                <span className="text-ink/20 text-[11px]">·</span>
                 <button
                   onClick={() => { setNewAfterClose(true); setShowClose(true); setOpen(false); }}
-                  className="text-[11px] text-[#14110e]/50 dark:text-[#f0ece6]/50 hover:text-ink hover:underline"
+                  className="text-[11px] text-ink/50 hover:text-ink hover:underline"
                 >
                   Start ny sesjon
                 </button>
@@ -93,7 +93,7 @@ export function MobileSessionBar() {
 
           {closedSessions.length > 0 && (
             <div className="px-4 py-2 border-b border-black/6 dark:border-white/6 space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-[#14110e]/40 dark:text-[#f0ece6]/40 mb-1.5">Tidligere</div>
+              <div className="text-[10px] uppercase tracking-wider text-ink/40 mb-1.5">Tidligere</div>
               {closedSessions.map((s) => (
                 <Link
                   key={s.id}
@@ -102,7 +102,7 @@ export function MobileSessionBar() {
                   className="flex items-center justify-between py-1.5 text-[12px] hover:text-accent transition-colors"
                 >
                   <span className="truncate">{s.name}</span>
-                  <span className="text-[10px] text-[#14110e]/40 dark:text-[#f0ece6]/40 ml-2 shrink-0">
+                  <span className="text-[10px] text-ink/40 ml-2 shrink-0">
                     {s.outcome ? OUTCOME_LABELS[s.outcome] : "Avsluttet"}
                   </span>
                 </Link>
@@ -115,14 +115,14 @@ export function MobileSessionBar() {
               <Link
                 href="/app/sesjoner"
                 onClick={() => setOpen(false)}
-                className="block text-center text-[11px] text-[#14110e]/50 dark:text-[#f0ece6]/50 hover:text-ink transition-colors"
+                className="block text-center text-[11px] text-ink/50 hover:text-ink transition-colors"
               >
                 Se alle sesjoner
               </Link>
             ) : (
               <button
                 onClick={() => { setShowNew(true); setOpen(false); }}
-                className="w-full py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+                className="w-full py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover transition-colors"
               >
                 Start ny sesjon
               </button>

@@ -34,7 +34,7 @@ const SOURCES = ["LinkedIn", "FINN.no", "Webcruiter", "Direkte kontakt", "Refera
 
 const INPUT =
   "w-full bg-surface border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-accent";
-const LABEL = "text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-1.5";
+const LABEL = "text-[11px] uppercase tracking-wider text-ink/55 block mb-1.5";
 
 export function NewApplicationModal({
   open,
@@ -176,7 +176,7 @@ export function NewApplicationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-[#14110e]/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
         onClick={close}
       />
       <div className="relative bg-bg rounded-3xl w-full max-w-[680px] max-h-[88vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8">
@@ -189,7 +189,7 @@ export function NewApplicationModal({
           </div>
           <button
             onClick={close}
-            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-[#14110e]/60 dark:text-[#f0ece6]/60"
+            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60"
             aria-label="Lukk"
           >
             <IconClose size={18} />
@@ -209,7 +209,7 @@ export function NewApplicationModal({
                   "px-4 py-1.5 rounded-full text-[12px] transition-colors",
                   mode === m
                     ? "bg-bg text-ink font-medium"
-                    : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink",
+                    : "text-ink/60 hover:text-ink",
                 )}
               >
                 {m === "manual" ? "Manuelt" : m === "url" ? "Fra lenke" : "Lim inn tekst"}
@@ -240,7 +240,7 @@ export function NewApplicationModal({
           )}
 
           {error && (
-            <div className="mt-4 px-4 py-2.5 rounded-xl bg-[#D5592E]/10 border border-[#D5592E]/30 text-[12px] text-[#D5592E]">
+            <div className="mt-4 px-4 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-[12px] text-accent" role="alert" aria-live="polite">
               {error}
             </div>
           )}
@@ -257,7 +257,7 @@ export function NewApplicationModal({
             <button
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover disabled:opacity-50"
             >
               <IconPlus size={14} />
               {saving ? "Lagrer …" : "Opprett søknad"}
@@ -282,7 +282,7 @@ function UrlStep({
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-[13px] text-[#14110e]/65 dark:text-[#f0ece6]/65 leading-relaxed">
+      <p className="text-[13px] text-ink/65 leading-relaxed">
         Lim inn lenken til stillingsannonsen (FINN.no, Webcruiter, NAV, selskapets
         egen side). AI henter tittel, selskap, beskrivelse og frist. Tips: LinkedIn
         krever ofte innlogging — bruk &quot;Lim inn tekst&quot; i stedet.
@@ -300,7 +300,7 @@ function UrlStep({
       <button
         onClick={onExtract}
         disabled={extracting || !url.trim()}
-        className="w-full py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
+        className="w-full py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover disabled:opacity-50"
       >
         {extracting ? "Henter og tolker …" : "Hent fra lenke"}
       </button>
@@ -321,7 +321,7 @@ function PasteStep({
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-[13px] text-[#14110e]/65 dark:text-[#f0ece6]/65 leading-relaxed">
+      <p className="text-[13px] text-ink/65 leading-relaxed">
         Kopier hele stillingsteksten fra annonsen og lim inn her. AI trekker ut
         tittel, selskap, beskrivelse osv.
       </p>
@@ -338,7 +338,7 @@ function PasteStep({
       <button
         onClick={onExtract}
         disabled={extracting || !text.trim()}
-        className="w-full py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
+        className="w-full py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover disabled:opacity-50"
       >
         {extracting ? "Tolker …" : "Tolk teksten"}
       </button>

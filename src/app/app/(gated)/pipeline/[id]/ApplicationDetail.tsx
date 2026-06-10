@@ -285,12 +285,12 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10 space-y-8">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
+      <div className="flex items-center gap-2 text-[12px] text-ink/55">
         <Link href="/app/pipeline" className="hover:text-accent">
           Pipeline
         </Link>
         <span>/</span>
-        <span className="text-[#14110e]/70 dark:text-[#f0ece6]/70 truncate">{app.companyName}</span>
+        <span className="text-ink/70 truncate">{app.companyName}</span>
       </div>
 
       {/* Header */}
@@ -317,7 +317,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   Arkivert {formatDate(app.archivedAt)}
                 </Pill>
               )}
-              <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
+              <span className="text-[11px] text-ink/45">
                 Opprettet {formatDate(app.createdAt)}
               </span>
             </div>
@@ -325,12 +325,12 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-          <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">{saved}</span>
+          <span className="text-[11px] text-ink/45" aria-live="polite">{saved}</span>
           {(app.interviewAt || app.deadlineAt || app.followUpAt) && (
             <a
               href={`/api/applications/${app.id}/calendar`}
               download
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] text-[#14110e]/75 dark:text-[#f0ece6]/75 hover:bg-black/5 dark:hover:bg-white/5"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] text-ink/75 hover:bg-black/5 dark:hover:bg-white/5"
               title="Eksporter intervju og frister til kalender"
             >
               <IconCalendar size={14} />
@@ -344,7 +344,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           />
           <button
             onClick={toggleArchive}
-            className="px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] text-[#14110e]/75 dark:text-[#f0ece6]/75 hover:bg-black/5 dark:hover:bg-white/5"
+            className="px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[12px] text-ink/75 hover:bg-black/5 dark:hover:bg-white/5"
           >
             {app.archivedAt ? "Gjenopprett" : "Arkiver"}
           </button>
@@ -360,7 +360,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       <OwnerCollabBridge resourceKind="application" resourceId={app.id} />
 
       {error && (
-        <div className="px-4 py-2.5 rounded-2xl bg-accent/10 border border-accent/30 text-[12px] text-accent">
+        <div className="px-4 py-2.5 rounded-2xl bg-accent/10 border border-accent/30 text-[12px] text-accent" role="alert" aria-live="polite">
           {error}
         </div>
       )}
@@ -380,7 +380,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   "inline-flex items-center gap-2 px-4 py-2 rounded-full text-[12px] transition-colors",
                   active
                     ? "bg-ink text-bg"
-                    : "bg-panel text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:text-ink",
+                    : "bg-panel text-ink/70 hover:text-ink",
                 )}
               >
                 <span
@@ -396,7 +396,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           app.status === "rejected" ||
           app.status === "withdrawn") && (
           <div className="mt-4">
-            <label className="text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2">
+            <label className="text-[11px] uppercase tracking-wider text-ink/55 block mb-2">
               {app.status === "declined"
                 ? "Begrunnelse for å takke nei"
                 : app.status === "rejected"
@@ -540,7 +540,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           <Card>
             <div className="flex items-center justify-between mb-4">
               <SectionLabel>Oppgaver</SectionLabel>
-              <span className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
+              <span className="text-[11px] text-ink/45">
                 {app.tasks.filter((t) => !t.completedAt).length} aktive
               </span>
             </div>
@@ -590,20 +590,20 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 type="date"
                 value={newTaskDue}
                 onChange={(e) => setNewTaskDue(e.target.value)}
-                className="w-full bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-accent text-[#14110e]/70 dark:text-[#f0ece6]/70"
+                className="w-full bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-accent text-ink/70"
               />
               <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setNewTaskExpanded((v) => !v)}
-                  className="px-3 py-1.5 rounded-full text-[11px] text-[#14110e]/65 dark:text-[#f0ece6]/65 hover:text-ink hover:bg-black/5 dark:hover:bg-white/5"
+                  className="px-3 py-1.5 rounded-full text-[11px] text-ink/65 hover:text-ink hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   {newTaskExpanded ? "− Mindre" : "+ Mer"}
                 </button>
                 <button
                   type="submit"
                   disabled={!newTask.trim()}
-                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-40 whitespace-nowrap"
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover disabled:opacity-40 whitespace-nowrap"
                 >
                   <IconPlus size={12} />
                   Legg til
@@ -620,7 +620,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 />
               ))}
               {app.tasks.length === 0 && (
-                <li className="py-6 text-center text-[12px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
+                <li className="py-6 text-center text-[12px] text-ink/40">
                   Ingen oppgaver ennå.
                 </li>
               )}
@@ -629,7 +629,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
 
           <Card>
             <SectionLabel className="mb-3">Kommunikasjon</SectionLabel>
-            <p className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-3">
+            <p className="text-[11px] text-ink/55 mb-3">
               Logg melding du har sendt eller mottatt.
             </p>
             <form onSubmit={logCommunication} className="mb-4 space-y-2">
@@ -641,7 +641,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                     "flex-1 py-1.5 rounded-full text-[11px] transition-colors",
                     commDir === "outbound"
                       ? "bg-surface text-ink font-medium"
-                      : "text-[#14110e]/55 dark:text-[#f0ece6]/55",
+                      : "text-ink/55",
                   )}
                 >
                   Jeg sendte
@@ -653,7 +653,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                     "flex-1 py-1.5 rounded-full text-[11px] transition-colors",
                     commDir === "inbound"
                       ? "bg-surface text-ink font-medium"
-                      : "text-[#14110e]/55 dark:text-[#f0ece6]/55",
+                      : "text-ink/55",
                   )}
                 >
                   De svarte
@@ -675,7 +675,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                   type="datetime-local"
                   value={commDate}
                   onChange={(e) => setCommDate(e.target.value)}
-                  className="bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-accent text-[#14110e]/70 dark:text-[#f0ece6]/70"
+                  className="bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[12px] outline-none focus:border-accent text-ink/70"
                 />
               </div>
               <textarea
@@ -692,7 +692,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               <button
                 type="submit"
                 disabled={!commNote.trim()}
-                className="w-full inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-40"
+                className="w-full inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover disabled:opacity-40"
               >
                 Loggfør
               </button>
@@ -716,7 +716,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                               : "bg-ink",
                           )}
                         />
-                        <span className="text-[10px] uppercase tracking-[0.15em] text-[#14110e]/65 dark:text-[#f0ece6]/65">
+                        <span className="text-[10px] uppercase tracking-[0.15em] text-ink/65">
                           {a.direction === "outbound" ? "Jeg sendte" : "Svar"} ·{" "}
                           {channelLabel(a.channel)}
                         </span>
@@ -724,24 +724,24 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                       <button
                         type="button"
                         onClick={() => deleteActivity(a.id)}
-                        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-accent"
-                        aria-label="Slett"
+                        className="-m-2 p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-within:opacity-100 text-ink/40 hover:text-accent transition-opacity"
+                        aria-label="Slett kommunikasjonslogg"
                       >
                         <IconClose size={12} />
                       </button>
                     </div>
                     {a.note && (
-                      <div className="text-[12px] text-[#14110e]/85 dark:text-[#f0ece6]/85 whitespace-pre-wrap leading-[1.55]">
+                      <div className="text-[12px] text-ink/85 whitespace-pre-wrap leading-[1.55]">
                         {a.note}
                       </div>
                     )}
-                    <div className="text-[10px] text-[#14110e]/45 dark:text-[#f0ece6]/45 mt-1">
+                    <div className="text-[10px] text-ink/45 mt-1">
                       {formatDate(a.occurredAt, true)}
                     </div>
                   </li>
                 ))}
               {!app.activities.some((a) => a.type === "communication") && (
-                <li className="text-[12px] text-[#14110e]/40 dark:text-[#f0ece6]/40 text-center py-2">
+                <li className="text-[12px] text-ink/40 text-center py-2">
                   Ingen kommunikasjon loggført.
                 </li>
               )}
@@ -755,19 +755,19 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 <li key={a.id} className="flex gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-accent mt-[7px] shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-[12px] text-[#14110e]/80 dark:text-[#f0ece6]/80">
+                    <div className="text-[12px] text-ink/80">
                       {a.type === "communication"
                         ? `${a.direction === "outbound" ? "Du sendte" : "Du mottok"} — ${channelLabel(a.channel)}`
                         : (a.note ?? STATUS_LABEL[a.type as StatusKey] ?? a.type)}
                     </div>
-                    <div className="text-[11px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
+                    <div className="text-[11px] text-ink/45">
                       {formatDate(a.occurredAt, true)}
                     </div>
                   </div>
                 </li>
               ))}
               {app.activities.length === 0 && (
-                <li className="text-[12px] text-[#14110e]/40 dark:text-[#f0ece6]/40 text-center py-4">
+                <li className="text-[12px] text-ink/40 text-center py-4">
                   Ingen hendelser ennå.
                 </li>
               )}
@@ -782,7 +782,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
             <SectionLabel className="mb-3">Søknadsbrev</SectionLabel>
             {app.coverLetter?.body?.trim() ? (
               <>
-                <p className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-3">
+                <p className="text-[12px] text-ink/60 mb-3">
                   Oppdatert{" "}
                   {new Date(app.coverLetter.updatedAt).toLocaleDateString(
                     "nb-NO",
@@ -791,7 +791,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                 </p>
                 <Link
                   href={`/app/brev/${app.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
                 >
                   Endre søknadsbrev
                   <IconArrowRight size={14} />
@@ -799,12 +799,12 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
               </>
             ) : (
               <>
-                <p className="text-[12px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-3">
+                <p className="text-[12px] text-ink/60 mb-3">
                   Ingen brev skrevet ennå.
                 </p>
                 <Link
                   href={`/app/brev/${app.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 w-full px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
                 >
                   Opprett søknadsbrev
                   <IconArrowRight size={14} />
@@ -868,7 +868,7 @@ function TaskRow({
           <div
             className={cn(
               "text-[13px] leading-snug",
-              done && "line-through text-[#14110e]/40 dark:text-[#f0ece6]/40",
+              done && "line-through text-ink/40",
             )}
           >
             {task.title}
@@ -887,12 +887,12 @@ function TaskRow({
               </span>
             )}
             {type && (
-              <span className="text-[#14110e]/55 dark:text-[#f0ece6]/55">{type.label}</span>
+              <span className="text-ink/55">{type.label}</span>
             )}
             {task.dueAt && (
               <span
                 className={cn(
-                  overdue ? "text-accent" : "text-[#14110e]/50 dark:text-[#f0ece6]/50",
+                  overdue ? "text-accent" : "text-ink/50",
                 )}
               >
                 Frist{" "}
@@ -905,7 +905,7 @@ function TaskRow({
           </div>
         </button>
         {expanded && task.description && (
-          <div className="mt-2 text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 leading-[1.55] whitespace-pre-wrap">
+          <div className="mt-2 text-[12px] text-ink/70 leading-[1.55] whitespace-pre-wrap">
             {task.description}
           </div>
         )}
@@ -913,7 +913,7 @@ function TaskRow({
       <button
         type="button"
         onClick={() => onDelete(task)}
-        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-accent transition-opacity"
+        className="-m-2 p-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-within:opacity-100 text-ink/40 hover:text-accent transition-opacity"
         aria-label="Slett oppgave"
       >
         <IconClose size={14} />
@@ -953,7 +953,7 @@ function InlineCompany({
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => v !== value && onCommit(v)}
-      className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-1 bg-transparent outline-none w-full hover:bg-panel/40 focus:bg-panel/60 rounded-lg px-1 -mx-1"
+      className="text-[14px] text-ink/60 mt-1 bg-transparent outline-none w-full hover:bg-panel/40 focus:bg-panel/60 rounded-lg px-1 -mx-1"
     />
   );
 }
@@ -977,7 +977,7 @@ function TextField({
   const listId = list ? `dl-${label.replace(/\s/g, "-")}` : undefined;
   return (
     <div>
-      <label className="text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2">
+      <label className="text-[11px] uppercase tracking-wider text-ink/55 block mb-2">
         {label}
       </label>
       <input
@@ -1012,7 +1012,7 @@ function DateField({
   const [v, setV] = useState(toDateInput(value));
   return (
     <div>
-      <label className="text-[11px] uppercase tracking-wider text-[#14110e]/55 dark:text-[#f0ece6]/55 block mb-2">
+      <label className="text-[11px] uppercase tracking-wider text-ink/55 block mb-2">
         {label}
       </label>
       <input

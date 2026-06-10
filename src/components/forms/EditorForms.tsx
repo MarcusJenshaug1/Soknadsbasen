@@ -464,7 +464,13 @@ export function ExtraSectionsForm() {
                 <p className="text-xs text-ink/55">{desc}</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={visible} onChange={() => toggleVisibility(key)} />
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={visible}
+                  onChange={() => toggleVisibility(key)}
+                  aria-label={`Vis seksjonen ${SECTION_LABELS[key][data.locale]} i CV-en`}
+                />
                 <div className="w-11 h-6 bg-black/20 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent" />
               </label>
             </div>
@@ -905,7 +911,13 @@ export function DesignExportForm() {
       <div className="flex items-center justify-between p-4 rounded-xl border border-black/8 dark:border-white/8">
         <span className="text-sm font-medium text-ink/80">Vis seksjonsikoner</span>
         <label className="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" className="sr-only peer" checked={data.showSectionIcons} onChange={(e) => setShowIcons(e.target.checked)} />
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={data.showSectionIcons}
+            onChange={(e) => setShowIcons(e.target.checked)}
+            aria-label="Vis seksjonsikoner i CV-en"
+          />
           <div className="w-11 h-6 bg-black/20 dark:bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent" />
         </label>
       </div>
@@ -946,14 +958,14 @@ export function DesignExportForm() {
       </div>
 
       {/* ATS analysis */}
-      <div className="space-y-4 p-5 rounded-2xl border border-emerald-200 bg-emerald-50/40">
+      <div className="space-y-4 p-5 rounded-2xl border border-success/30 bg-success/10">
         <div className="space-y-1">
-          <h4 className="text-sm font-semibold text-emerald-900 flex items-center gap-2"><Target className="size-4" /> ATS-score & nøkkelordanalyse</h4>
-          <p className="text-xs text-emerald-800/70">Lim inn hele stillingsannonsen, eller hent direkte fra URL (FINN.no, LinkedIn, NAV, Webcruiter m.fl).</p>
+          <h4 className="text-sm font-semibold text-success flex items-center gap-2"><Target className="size-4" /> ATS-score & nøkkelordanalyse</h4>
+          <p className="text-xs text-success/70">Lim inn hele stillingsannonsen, eller hent direkte fra URL (FINN.no, LinkedIn, NAV, Webcruiter m.fl).</p>
         </div>
 
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-emerald-900/80">Hent fra URL</label>
+          <label className="block text-xs font-semibold text-success/80">Hent fra URL</label>
           <div className="flex gap-2">
             <input
               type="url"
@@ -973,7 +985,7 @@ export function DesignExportForm() {
               type="button"
               onClick={fetchJobFromUrl}
               disabled={jobUrlLoading || !jobUrl.trim()}
-              className="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+              className="shrink-0 px-4 py-2 rounded-xl bg-success text-bg text-sm font-semibold hover:bg-success/90 disabled:opacity-50"
             >
               {jobUrlLoading ? "Henter…" : "Hent"}
             </button>
@@ -982,7 +994,7 @@ export function DesignExportForm() {
             <p className="text-xs text-red-700">{jobUrlError}</p>
           )}
           {jobSource && !jobUrlError && (
-            <p className="text-xs text-emerald-800/80">
+            <p className="text-xs text-success/80">
               Hentet: <span className="font-semibold">{jobSource.title ?? "stilling"}</span>
               {jobSource.companyName ? ` hos ${jobSource.companyName}` : ""}
               {jobSource.source ? ` (${jobSource.source})` : ""}
@@ -991,7 +1003,7 @@ export function DesignExportForm() {
         </div>
 
         <div className="relative">
-          <div className="absolute -top-2 left-3 bg-emerald-50 px-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+          <div className="absolute -top-2 left-3 bg-success/10 px-2 text-[10px] font-semibold uppercase tracking-wider text-success">
             Stillingstekst
           </div>
           <textarea
@@ -1005,14 +1017,14 @@ export function DesignExportForm() {
 
         {atsAnalysis && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between rounded-2xl bg-surface border border-emerald-100 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between rounded-2xl bg-surface border border-success/20 p-4">
               <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">Matchscore</div>
-                <div className="text-3xl font-extrabold text-emerald-950">{atsAnalysis.score}%</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-success">Matchscore</div>
+                <div className="text-3xl font-extrabold text-success">{atsAnalysis.score}%</div>
               </div>
               <div className="flex-1">
-                <div className="h-3 rounded-full bg-emerald-100 overflow-hidden">
-                  <div className="h-full bg-linear-to-r from-emerald-500 to-teal-500" style={{ width: `${atsAnalysis.score}%` }} />
+                <div className="h-3 rounded-full bg-success/15 overflow-hidden">
+                  <div className="h-full bg-success" style={{ width: `${atsAnalysis.score}%` }} />
                 </div>
                 <div className="mt-2 text-xs text-ink/70">{atsAnalysis.summary[0] ?? "Legg til mer innhold for å få analyse."}</div>
               </div>
@@ -1028,7 +1040,7 @@ export function DesignExportForm() {
               <button
                 type="button"
                 onClick={() => setTemplate(atsAnalysis.recommendedTemplateId!)}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-surface px-4 py-2 text-sm font-semibold text-emerald-800 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                className="inline-flex items-center gap-2 rounded-xl border border-success/30 bg-surface px-4 py-2 text-sm font-semibold text-success hover:bg-success/10"
               >
                 <Sparkles className="size-4" />
                 Bytt til ATS-mal
@@ -1037,10 +1049,10 @@ export function DesignExportForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="rounded-xl border border-white/70 bg-surface/70 p-4 space-y-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">Treff i CV-en</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-success">Treff i CV-en</div>
                 <div className="flex flex-wrap gap-2">
                   {atsAnalysis.matchedKeywords.length > 0 ? atsAnalysis.matchedKeywords.map((keyword) => (
-                    <span key={keyword} className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium">{keyword}</span>
+                    <span key={keyword} className="px-2.5 py-1 rounded-full bg-success/15 text-success text-xs font-medium">{keyword}</span>
                   )) : <span className="text-xs text-ink/55">Ingen tydelige treff ennå.</span>}
                 </div>
               </div>
@@ -1145,7 +1157,7 @@ export function DesignExportForm() {
             window.addEventListener("afterprint", restore);
             requestAnimationFrame(() => window.print());
           }}
-          className="w-full py-3 bg-accent text-bg font-semibold rounded-xl hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 bg-accent text-bg font-semibold rounded-xl hover:bg-accent-hover transition-all flex items-center justify-center gap-2"
         >
           <Download className="size-4" /> Lagre som PDF (A4-sider)
         </button>
@@ -1220,14 +1232,14 @@ export function DesignExportForm() {
 
             requestAnimationFrame(() => window.print());
           }}
-          className="w-full py-3 bg-surface text-indigo-700 font-semibold rounded-xl border-2 border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 bg-surface text-accent font-semibold rounded-xl border-2 border-accent hover:bg-accent/8 transition-all flex items-center justify-center gap-2"
         >
           <Download className="size-4" /> Lagre som PDF (én lang side)
         </button>
 
         {/* Server-side PDF generation */}
-        <div className="border-t border-indigo-200 pt-4 mt-2">
-          <p className="text-xs text-indigo-600/70 mb-2">
+        <div className="border-t border-accent/30 pt-4 mt-2">
+          <p className="text-xs text-accent/70 mb-2">
             Automatisk PDF uten print-dialog — genereres på serveren.
           </p>
           <button
@@ -1258,7 +1270,7 @@ export function DesignExportForm() {
                 setPdfLoading(false);
               }
             }}
-            className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full py-3 bg-success text-bg font-semibold rounded-xl shadow-lg hover:bg-success/90 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <Download className="size-4" />
             {pdfLoading ? "Genererer…" : "Last ned PDF (automatisk)"}
@@ -1270,13 +1282,13 @@ export function DesignExportForm() {
           )}
         </div>
 
-        <div className="border-t border-indigo-200 pt-4 mt-2">
-          <p className="text-xs text-indigo-600/70 mb-2">
+        <div className="border-t border-accent/30 pt-4 mt-2">
+          <p className="text-xs text-accent/70 mb-2">
             Del CV-en din via en lenke som rekrutterer kan åpne uten konto.
           </p>
           <button
             onClick={() => setShareOpen(true)}
-            className="w-full py-3 bg-surface text-indigo-700 font-semibold rounded-xl border-2 border-indigo-300 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-surface text-accent font-semibold rounded-xl border-2 border-accent hover:bg-accent/8 transition-all flex items-center justify-center gap-2"
           >
             <Share2 className="size-4" />
             Del CV via lenke

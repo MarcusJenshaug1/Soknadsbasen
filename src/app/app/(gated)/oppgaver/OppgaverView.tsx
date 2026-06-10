@@ -121,13 +121,13 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
         </h1>
         <div className="text-center py-16">
           <div className="text-[18px] font-medium mb-2">Ingen oppgaver ennå.</div>
-          <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 max-w-sm mx-auto">
+          <p className="text-[13px] text-ink/60 max-w-sm mx-auto">
             Legg til oppgaver fra en søknad — forberedelse til intervju,
             oppfølgings-e-post, eller innhenting av referanser.
           </p>
           <Link
             href="/app/pipeline"
-            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830]"
+            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover"
           >
             Åpne pipeline
           </Link>
@@ -144,7 +144,7 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
           <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
             Oppgaver og frister
           </h1>
-          <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-2">
+          <p className="text-[14px] text-ink/60 mt-2">
             {active} aktive
             {overdue > 0 && (
               <span className="text-accent"> · {overdue} forfalt</span>
@@ -165,7 +165,7 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
                   style={{ background: b.hue }}
                 />
                 <SectionLabel>{b.label}</SectionLabel>
-                <span className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
+                <span className="text-[11px] text-ink/40">
                   {items.length}
                 </span>
               </div>
@@ -221,7 +221,7 @@ function TaskRow({
           <div
             className={cn(
               "text-[14px] font-medium leading-tight",
-              done && "line-through text-[#14110e]/40 dark:text-[#f0ece6]/40",
+              done && "line-through text-ink/40",
             )}
           >
             {task.title}
@@ -248,14 +248,14 @@ function TaskRow({
               </span>
             )}
             {typeLabel && (
-              <span className="text-[10px] uppercase tracking-[0.12em] text-[#14110e]/55 dark:text-[#f0ece6]/55">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-ink/55">
                 {typeLabel}
               </span>
             )}
             <span
               className={cn(
                 "text-[11px]",
-                overdue ? "text-accent" : "text-[#14110e]/50 dark:text-[#f0ece6]/50",
+                overdue ? "text-accent" : "text-ink/50",
               )}
             >
               {formatDue(task.dueAt)}
@@ -263,7 +263,7 @@ function TaskRow({
           </div>
         </button>
         {expanded && task.description && (
-          <div className="mt-2 text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 leading-[1.55] whitespace-pre-wrap">
+          <div className="mt-2 text-[12px] text-ink/70 leading-[1.55] whitespace-pre-wrap">
             {task.description}
           </div>
         )}
@@ -271,7 +271,7 @@ function TaskRow({
       <button
         type="button"
         onClick={() => onRemove(task)}
-        className="opacity-0 group-hover:opacity-100 text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-accent transition-opacity"
+        className="-m-2.5 p-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-within:opacity-100 text-ink/40 hover:text-accent transition-opacity"
         aria-label="Slett oppgave"
       >
         <IconClose size={14} />

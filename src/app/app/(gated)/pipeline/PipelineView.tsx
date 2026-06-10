@@ -33,7 +33,7 @@ const ACTIVE_COLUMNS = PIPELINE_COLUMNS.filter(
 );
 import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
-import { IconPlus, IconSearch } from "@/components/ui/Icons";
+import { IconPlus, IconSearch, IconClose } from "@/components/ui/Icons";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { cn } from "@/lib/cn";
 import { NewApplicationModal } from "./NewApplicationModal";
@@ -272,7 +272,7 @@ export function PipelineView({
           <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
             Søknadene dine
           </h1>
-          <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mt-2">
+          <p className="text-[13px] text-ink/60 mt-2">
             {apps.length} totalt ·{" "}
             {apps.filter((a) => a.status === "interview").length} intervjuer
           </p>
@@ -288,7 +288,7 @@ export function PipelineView({
                   "px-4 py-1.5 rounded-full text-[12px] transition-colors capitalize",
                   view === v
                     ? "bg-bg text-ink font-medium"
-                    : "text-[#14110e]/60 dark:text-[#f0ece6]/60 hover:text-ink",
+                    : "text-ink/60 hover:text-ink",
                 )}
               >
                 {v === "pipeline" ? "Pipeline" : v === "liste" ? "Liste" : "Tidslinje"}
@@ -304,7 +304,7 @@ export function PipelineView({
                 "px-4 py-1.5 rounded-full text-[12px] transition-colors border",
                 showCompleted
                   ? "bg-ink text-bg border-transparent"
-                  : "bg-surface text-[#14110e]/70 dark:text-[#f0ece6]/70 border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25",
+                  : "bg-surface text-ink/70 border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25",
               )}
               aria-pressed={showCompleted}
             >
@@ -320,7 +320,7 @@ export function PipelineView({
                 "px-4 py-1.5 rounded-full text-[12px] transition-colors border",
                 showArchived
                   ? "bg-ink text-bg border-transparent"
-                  : "bg-surface text-[#14110e]/70 dark:text-[#f0ece6]/70 border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25",
+                  : "bg-surface text-ink/70 border-black/10 dark:border-white/10 hover:border-black/25 dark:hover:border-white/25",
               )}
               aria-pressed={showArchived}
             >
@@ -331,7 +331,7 @@ export function PipelineView({
           <label className="relative">
             <IconSearch
               size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#14110e]/45 dark:text-[#f0ece6]/45"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/45"
             />
             <input
               value={search}
@@ -345,7 +345,7 @@ export function PipelineView({
             <button
               type="button"
               onClick={() => setNewModalOpen(true)}
-              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover transition-colors"
             >
               <IconPlus size={14} />
               Ny søknad
@@ -355,7 +355,7 @@ export function PipelineView({
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-2.5 rounded-2xl bg-[#D5592E]/10 border border-[#D5592E]/30 text-[12px] text-[#D5592E]">
+        <div className="mb-4 px-4 py-2.5 rounded-2xl bg-accent/10 border border-accent/30 text-[12px] text-accent" role="alert" aria-live="polite">
           {error}
         </div>
       )}
@@ -442,14 +442,14 @@ export function PipelineView({
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div className="bg-surface rounded-3xl p-6 max-w-sm w-full shadow-xl">
               <h2 className="text-[18px] font-medium mb-2">Slett {selected.size} søknad{selected.size !== 1 ? "er" : ""}?</h2>
-              <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-6 leading-relaxed">
+              <p className="text-[13px] text-ink/60 mb-6 leading-relaxed">
                 Dette kan ikke angres. All data, oppgaver og aktivitet slettes permanent.
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => bulkAction("delete")}
                   disabled={bulkLoading}
-                  className="flex-1 px-4 py-2.5 rounded-full bg-accent text-white text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 rounded-full bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-50"
                 >
                   {bulkLoading ? "Sletter …" : "Slett permanent"}
                 </button>
@@ -498,7 +498,7 @@ function Column({
           <span className="text-[11px] uppercase tracking-[0.2em] font-medium">
             {label}
           </span>
-          <span className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">{items.length}</span>
+          <span className="text-[11px] text-ink/40">{items.length}</span>
         </div>
       </div>
       <SortableContext
@@ -517,7 +517,7 @@ function Column({
             <ApplicationCard key={a.id} app={a} />
           ))}
           {items.length === 0 && variant === "desktop" && (
-            <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 p-6 text-center text-[12px] text-[#14110e]/40 dark:text-[#f0ece6]/40">
+            <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 p-6 text-center text-[12px] text-ink/40">
               Tom
             </div>
           )}
@@ -581,9 +581,9 @@ function ApplicationCard({
         <div className="text-[14px] font-medium leading-tight mb-1">
           {app.title}
         </div>
-        <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55">{app.companyName}</div>
+        <div className="text-[11px] text-ink/55">{app.companyName}</div>
       </PrefetchLink>
-      <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-[#14110e]/50 dark:text-[#f0ece6]/50">
+      <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-ink/50">
         <span>{next.text}</span>
         {next.days !== null && <span>{next.days}d</span>}
       </div>
@@ -603,7 +603,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
           <div className="w-16 h-20 rounded-2xl border-2 border-dashed border-black/15" />
           <button
             onClick={onCreate}
-            className="w-16 h-20 rounded-2xl border-2 border-[#D5592E] bg-[#D5592E]/10 flex items-center justify-center text-[#D5592E] hover:bg-[#D5592E]/20 transition-colors"
+            className="w-16 h-20 rounded-2xl border-2 border-accent bg-accent/10 flex items-center justify-center text-accent hover:bg-accent/20 transition-colors"
             aria-label="Ny søknad"
           >
             <IconPlus size={24} />
@@ -613,17 +613,17 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         <h2 className="text-[28px] md:text-[32px] leading-[1.05] tracking-[-0.03em] font-medium mb-3">
           Basen er tom — ennå.
         </h2>
-        <p className="text-[14px] text-[#14110e]/65 dark:text-[#f0ece6]/65 mb-8 leading-relaxed">
+        <p className="text-[14px] text-ink/65 mb-8 leading-relaxed">
           Den første søknaden er alltid tyngst. La oss legge til én sammen.
         </p>
         <div className="flex flex-col gap-2 w-full max-w-xs">
           <button
             onClick={onCreate}
-            className="px-5 py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+            className="px-5 py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors"
           >
             Legg til søknad
           </button>
-          <p className="text-[12px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
+          <p className="text-[12px] text-ink/45">
             Manuelt, fra lenke eller ved å lime inn stillingsteksten.
           </p>
         </div>
@@ -659,21 +659,21 @@ function ListView({
 
   if (!apps.length) {
     return (
-      <div className="rounded-3xl bg-panel p-12 text-center text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60">
+      <div className="rounded-3xl bg-panel p-12 text-center text-[13px] text-ink/60">
         Ingen søknader matcher søket.
       </div>
     );
   }
   return (
     <div className="rounded-3xl border border-black/8 dark:border-white/8 bg-surface overflow-hidden">
-      <div className="hidden md:grid gap-4 px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-[#14110e]/55 dark:text-[#f0ece6]/55 bg-panel/40 border-b border-black/8 dark:border-white/8"
+      <div className="hidden md:grid gap-4 px-5 py-3 text-[10px] uppercase tracking-[0.2em] text-ink/55 bg-panel/40 border-b border-black/8 dark:border-white/8"
         style={{ gridTemplateColumns: readOnly ? "3fr 2fr 2fr 2fr 2fr" : "2rem 3fr 2fr 2fr 2fr 2fr" }}>
         {!readOnly && (
           <input
             type="checkbox"
             checked={allChecked}
             onChange={() => onToggleAll(allIds)}
-            className="w-4 h-4 cursor-pointer accent-[#D5592E]"
+            className="w-4 h-4 cursor-pointer accent-accent"
             aria-label="Velg alle"
           />
         )}
@@ -698,7 +698,7 @@ function ListView({
                     checked={checked}
                     onChange={() => onToggle(a.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 cursor-pointer accent-[#D5592E] mt-1 md:mt-0 self-center"
+                    className="w-4 h-4 cursor-pointer accent-accent mt-1 md:mt-0 self-center"
                     aria-label={`Velg ${a.title}`}
                   />
                 )}
@@ -708,14 +708,14 @@ function ListView({
                 >
                   <div className="md:col-span-1 min-w-0">
                     <div className="text-[14px] font-medium leading-tight truncate">{a.title}</div>
-                    <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 truncate">{a.companyName}</div>
+                    <div className="text-[12px] text-ink/55 truncate">{a.companyName}</div>
                   </div>
                   <div className="flex md:block items-center gap-2">
                     <StatusDot status={a.status as StatusKey} />
                   </div>
-                  <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70">{formatDate(a.deadlineAt)}</div>
-                  <div className="text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70">{formatDate(a.interviewAt)}</div>
-                  <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 md:text-right">{formatDate(a.updatedAt)}</div>
+                  <div className="text-[12px] text-ink/70">{formatDate(a.deadlineAt)}</div>
+                  <div className="text-[12px] text-ink/70">{formatDate(a.interviewAt)}</div>
+                  <div className="text-[12px] text-ink/55 md:text-right">{formatDate(a.updatedAt)}</div>
                 </PrefetchLink>
               </div>
             </li>
@@ -781,7 +781,7 @@ function BulkActionBar({
       <button
         onClick={onDelete}
         disabled={loading}
-        className="px-3 py-1.5 rounded-xl bg-[#D5592E]/80 hover:bg-[#D5592E] text-[12px] transition-colors disabled:opacity-50 whitespace-nowrap"
+        className="px-3 py-1.5 rounded-xl bg-accent/80 hover:bg-accent text-[12px] transition-colors disabled:opacity-50 whitespace-nowrap"
       >
         Slett
       </button>
@@ -791,7 +791,7 @@ function BulkActionBar({
         className="px-3 py-1.5 rounded-xl bg-bg/10 hover:bg-bg/20 text-[12px] transition-colors disabled:opacity-50"
         aria-label="Fjern valg"
       >
-        ✕
+        <IconClose size={12} />
       </button>
     </div>
   );
@@ -800,7 +800,7 @@ function BulkActionBar({
 function TimelineView({ apps }: { apps: Application[] }) {
   if (!apps.length) {
     return (
-      <div className="rounded-3xl bg-panel p-12 text-center text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60">
+      <div className="rounded-3xl bg-panel p-12 text-center text-[13px] text-ink/60">
         Ingen søknader matcher søket.
       </div>
     );
@@ -906,7 +906,7 @@ function TimelineView({ apps }: { apps: Application[] }) {
                   >
                     <div className="flex items-baseline justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-0.5">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-ink/55 mb-0.5">
                           {e.label}
                           {future && (
                             <span className="ml-2 text-accent">kommende</span>
@@ -915,11 +915,11 @@ function TimelineView({ apps }: { apps: Application[] }) {
                         <div className="text-[14px] font-medium group-hover:text-accent transition-colors truncate">
                           {e.app.title}
                         </div>
-                        <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 truncate">
+                        <div className="text-[12px] text-ink/55 truncate">
                           {e.app.companyName}
                         </div>
                       </div>
-                      <span className="text-[11px] text-[#14110e]/60 dark:text-[#f0ece6]/60 shrink-0">
+                      <span className="text-[11px] text-ink/60 shrink-0">
                         {e.at.toLocaleDateString("nb-NO", {
                           day: "numeric",
                           month: "short",

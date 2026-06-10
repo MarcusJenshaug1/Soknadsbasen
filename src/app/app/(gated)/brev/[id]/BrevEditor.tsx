@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { AlertCircle } from "lucide-react";
 import { SectionLabel } from "@/components/ui/Pill";
 import { AiDraftButton } from "./AiDraftButton";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -35,7 +36,7 @@ type Letter = {
 };
 
 const INPUT =
-  "w-full bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#D5592E]";
+  "w-full bg-bg border border-black/8 dark:border-white/8 rounded-xl px-3 py-2 text-[13px] outline-none focus:border-accent";
 const LABEL = "text-[11px] uppercase tracking-wider text-ink/55 block mb-2";
 
 export function BrevEditor({
@@ -139,13 +140,13 @@ export function BrevEditor({
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10 space-y-6">
       <div className="flex items-center gap-2 text-[12px] text-ink/55">
-        <Link href="/app/brev" className="hover:text-[#D5592E]">
+        <Link href="/app/brev" className="hover:text-accent">
           Brev
         </Link>
         <span>/</span>
         <Link
           href={`/app/pipeline/${application.id}`}
-          className="hover:text-[#D5592E] truncate"
+          className="hover:text-accent truncate"
         >
           {application.companyName}
         </Link>
@@ -162,7 +163,19 @@ export function BrevEditor({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-ink/45">{savedLabel}</span>
+          <span
+            aria-live="polite"
+            className={
+              status === "error"
+                ? "inline-flex items-center gap-1 text-[11px] text-accent"
+                : "text-[11px] text-ink/45"
+            }
+          >
+            {status === "error" && (
+              <AlertCircle size={12} aria-hidden="true" />
+            )}
+            {savedLabel}
+          </span>
           <InviteButton
             resourceKind="letter"
             resourceId={application.id}
@@ -171,7 +184,7 @@ export function BrevEditor({
           />
           <button
             onClick={copyLetter}
-            className="px-3 py-1.5 rounded-full bg-[#D5592E] text-bg text-[11px] font-medium hover:bg-[#a94424] transition-colors"
+            className="px-3 py-1.5 rounded-full bg-accent text-bg text-[11px] font-medium hover:bg-accent-hover transition-colors"
           >
             {copied ? "Kopiert!" : "Kopier brev"}
           </button>
@@ -327,13 +340,13 @@ function StreamingPreview({
 }) {
   return (
     <div
-      className={`relative rounded-2xl bg-surface border border-[#D5592E] overflow-hidden ${minHeight}`}
+      className={`relative rounded-2xl bg-surface border border-accent overflow-hidden ${minHeight}`}
     >
       <div className="px-5 py-4 text-[14px] text-ink leading-[1.6] whitespace-pre-wrap">
         {text ? (
           <>
             {text}
-            <span className="inline-block w-[2px] h-[0.9em] bg-[#D5592E] ml-[2px] align-[-0.05em] animate-pulse" />
+            <span className="inline-block w-[2px] h-[0.9em] bg-accent ml-[2px] align-[-0.05em] animate-pulse" />
           </>
         ) : (
           <span className="text-ink/35 animate-pulse">AI skriver …</span>
