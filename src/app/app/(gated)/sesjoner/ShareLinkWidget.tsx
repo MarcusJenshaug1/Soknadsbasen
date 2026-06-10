@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { prettyOrigin } from "@/lib/shareUrl";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type LinkData = {
   token: string;
@@ -20,6 +21,7 @@ export function ShareLinkWidget() {
   const [link, setLink] = useState<LinkData | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
 
   useEffect(() => {
     fetch("/api/share")
@@ -46,6 +48,7 @@ export function ShareLinkWidget() {
       setLink(null);
     } finally {
       setLoading(false);
+      setConfirmRevoke(false);
     }
   }
 
@@ -70,9 +73,9 @@ export function ShareLinkWidget() {
         </div>
         {link ? (
           <button
-            onClick={revoke}
+            onClick={() => setConfirmRevoke(true)}
             disabled={loading}
-            className="shrink-0 text-[11px] text-ink/40 hover:text-accent transition-colors"
+            className="shrink-0 text-[11px] text-ink/40 hover:text-accent transition-colors disabled:opacity-50"
           >
             Deaktiver
           </button>
@@ -110,6 +113,17 @@ export function ShareLinkWidget() {
           {loading ? "Genererer …" : "Generer del-lenke"}
         </button>
       )}
+
+      <ConfirmDialog
+        open={confirmRevoke}
+        onClose={() => setConfirmRevoke(false)}
+        onConfirm={revoke}
+        loading={loading}
+        title="Trekk tilbake lenke"
+        message="Mottakere mister tilgang umiddelbart. Dette kan ikke angres."
+        confirmLabel="Trekk tilbake"
+        danger
+      />
     </div>
   );
 }

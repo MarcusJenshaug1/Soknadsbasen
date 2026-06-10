@@ -1376,7 +1376,7 @@ export function DesignExportForm() {
         open={previewVersion !== null}
         onClose={() => setPreviewVersion(null)}
         ariaLabel={previewVersion ? `Forhåndsvisning av versjon ${previewVersion.versionNum}` : "Forhåndsvisning av versjon"}
-        panelClassName="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-black/8 dark:border-white/8 bg-panel shadow-xl"
+        panelClassName="w-full max-w-[900px] max-h-[90vh] flex flex-col rounded-2xl border border-black/8 dark:border-white/8 bg-panel shadow-xl"
       >
         {previewVersion && (
           <>
@@ -1400,7 +1400,13 @@ export function DesignExportForm() {
             </div>
 
             <div className="overflow-auto px-5 py-5 bg-neutral-100 dark:bg-neutral-900">
-              <div className="mx-auto max-w-2xl bg-surface shadow-sm pointer-events-none select-none" aria-hidden>
+              {/* zoom (ikke scale) skalerer hele A4-siden til å passe modal-
+                  bredden, så HELE CV-en er synlig — scroll vertikalt for lengde. */}
+              <div
+                className="mx-auto bg-surface shadow-sm pointer-events-none select-none [--cv-zoom:0.6] sm:[--cv-zoom:0.82] lg:[--cv-zoom:0.95]"
+                style={{ zoom: "var(--cv-zoom)" }}
+                aria-hidden
+              >
                 <TemplateRenderer data={previewVersion.content} />
               </div>
             </div>

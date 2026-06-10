@@ -1,9 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Copy, X, Check, Trash2, Link2, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Copy,
+  X,
+  Check,
+  Trash2,
+  Link2,
+  Users,
+  ChevronDown,
+  Archive,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   COLLAB_INVITE_TTL_OPTIONS,
   type CollabResourceKind,
@@ -23,10 +33,17 @@ type InviteRow = {
   resourceId: string;
   label: string | null;
   expiresAt: string | null;
+  revokedAt: string | null;
   createdAt: string;
   activeSessions: number;
   pendingSuggestions: number;
 };
+
+function isArchived(inv: InviteRow): boolean {
+  if (inv.revokedAt) return true;
+  if (inv.expiresAt && new Date(inv.expiresAt).getTime() <= Date.now()) return true;
+  return false;
+}
 
 export function InviteModal({
   open,
@@ -50,13 +67,24 @@ export function InviteModal({
   const [ttlHours, setTtlHours] = useState<number | null>(7 * 24);
   const [label, setLabel] = useState("");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const { activeInvites, archivedInvites } = useMemo(() => {
+    const active: InviteRow[] = [];
+    const archived: InviteRow[] = [];
+    for (const inv of invites) {
+      (isArchived(inv) ? archived : active).push(inv);
+    }
+    return { activeInvites: active, archivedInvites: archived };
+  }, [invites]);
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(
-        `/api/collab/invite?kind=${resourceKind}&resourceId=${encodeURIComponent(resourceId)}`,
+        `/api/collab/invite?kind=${resourceKind}&resourceId=${encodeURIComponent(resourceId)}&includeArchived=1`,
         { cache: "no-store" },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -102,7 +130,6 @@ export function InviteModal({
   }
 
   async function revoke(id: string) {
-    if (!confirm("Trekke tilbake denne lenken? Aktive sesjoner mister tilgang.")) return;
     const res = await fetch(`/api/collab/invite/${id}`, { method: "DELETE" });
     if (res.ok) await fetchInvites();
   }
@@ -208,16 +235,16 @@ export function InviteModal({
           {/* Aktive lenker */}
           <section className="space-y-3">
             <h3 className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 font-medium">
-              Aktive lenker {invites.length > 0 && `(${invites.length})`}
+              Aktive lenker {activeInvites.length > 0 && `(${activeInvites.length})`}
             </h3>
             {loading && invites.length === 0 && (
               <p className="text-[12px] text-[#14110e]/45">Laster …</p>
             )}
-            {!loading && invites.length === 0 && (
+            {!loading && activeInvites.length === 0 && (
               <p className="text-[12px] text-[#14110e]/45 italic">Ingen aktive invitasjoner.</p>
             )}
             <ul className="space-y-2">
-              {invites.map((inv) => {
+              {activeInvites.map((inv) => {
                 const exp = inv.expiresAt ? new Date(inv.expiresAt) : null;
                 const expSoon = exp && exp.getTime() - Date.now() < 24 * 60 * 60_000;
                 return (
@@ -267,7 +294,7 @@ export function InviteModal({
                         </button>
                         <button
                           type="button"
-                          onClick={() => revoke(inv.id)}
+                          onClick={() => setConfirmId(inv.id)}
                           title="Trekk tilbake"
                           className="size-8 rounded-full hover:bg-red-50 flex items-center justify-center text-red-500 hover:text-red-600"
                         >
@@ -280,7 +307,82 @@ export function InviteModal({
               })}
             </ul>
           </section>
+
+          {/* Utløpte og tilbakekalte lenker (arkiv) */}
+          {archivedInvites.length > 0 && (
+            <section className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowArchived((v) => !v)}
+                aria-expanded={showArchived}
+                className="w-full flex items-center justify-between gap-2 text-left group"
+              >
+                <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#14110e]/40 font-medium group-hover:text-[#14110e]/60 transition-colors">
+                  <Archive size={12} />
+                  Utløpte og tilbakekalte ({archivedInvites.length})
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={cn(
+                    "text-[#14110e]/40 transition-transform",
+                    showArchived && "rotate-180",
+                  )}
+                />
+              </button>
+              {showArchived && (
+                <ul className="space-y-2">
+                  {archivedInvites.map((inv) => {
+                    const exp = inv.expiresAt ? new Date(inv.expiresAt) : null;
+                    const revoked = inv.revokedAt !== null;
+                    return (
+                      <li
+                        key={inv.id}
+                        className="rounded-xl border border-black/8 bg-surface/50 p-3 opacity-70"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] font-medium text-[#14110e]/55 truncate">
+                              {inv.label ?? "Uten navn"}
+                            </div>
+                            <div className="text-[11px] text-[#14110e]/45 mt-0.5 flex items-center gap-2 flex-wrap">
+                              {revoked ? (
+                                <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-[10px] font-medium">
+                                  Tilbakekalt
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full bg-black/8 text-[#14110e]/60 px-2 py-0.5 text-[10px] font-medium">
+                                  Utløpt
+                                </span>
+                              )}
+                              {exp && (
+                                <span>
+                                  Utløp {exp.toLocaleDateString("nb-NO", { day: "numeric", month: "short" })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          )}
         </div>
+
+        <ConfirmDialog
+          open={confirmId !== null}
+          onClose={() => setConfirmId(null)}
+          onConfirm={() => {
+            void revoke(confirmId!);
+            setConfirmId(null);
+          }}
+          title="Trekk tilbake lenke"
+          message="Mottakere mister tilgang umiddelbart. Dette kan ikke angres."
+          confirmLabel="Trekk tilbake"
+          danger
+        />
     </Modal>
   );
 }

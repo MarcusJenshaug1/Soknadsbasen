@@ -29,11 +29,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const kind = url.searchParams.get("kind") as CollabResourceKind | null;
   const resourceId = url.searchParams.get("resourceId");
+  // includeArchived=1: ta også med tilbakekalte lenker (for InviteModal sin
+  // arkiv-seksjon). Uten param (f.eks. varsel-bjella) returneres kun aktive.
+  const includeArchived = url.searchParams.get("includeArchived") === "1";
 
   const invites = await prisma.collabInvite.findMany({
     where: {
       ownerId: session.userId,
-      revokedAt: null,
+      ...(includeArchived ? {} : { revokedAt: null }),
       ...(kind ? { resourceKind: kind } : {}),
       ...(resourceId ? { resourceId } : {}),
     },
@@ -45,6 +48,7 @@ export async function GET(req: Request) {
       resourceId: true,
       label: true,
       expiresAt: true,
+      revokedAt: true,
       createdAt: true,
       _count: {
         select: {
@@ -63,6 +67,7 @@ export async function GET(req: Request) {
       resourceId: i.resourceId,
       label: i.label,
       expiresAt: i.expiresAt?.toISOString() ?? null,
+      revokedAt: i.revokedAt?.toISOString() ?? null,
       createdAt: i.createdAt.toISOString(),
       activeSessions: i._count.sessions,
       pendingSuggestions: i._count.suggestions,

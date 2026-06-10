@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Copy, Check, Trash2, Eye, X, Plus } from "lucide-react";
 import { useResumeStore } from "@/store/useResumeStore";
 import { buildShareUrl } from "@/lib/shareUrl";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface ShareLink {
   id: string;
@@ -40,6 +41,7 @@ export function ShareCVModal({ open, onClose }: Props) {
   const [links, setLinks] = useState<ShareLink[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [confirmToken, setConfirmToken] = useState<string | null>(null);
 
   const loadLinks = useCallback(async () => {
     setListError(null);
@@ -107,8 +109,7 @@ export function ShareCVModal({ open, onClose }: Props) {
     }
   }
 
-  async function revoke(token: string) {
-    if (!confirm("Tilbakekalle denne lenken? Mottakere mister tilgang umiddelbart.")) return;
+  async function doRevoke(token: string) {
     try {
       const res = await fetch("/api/cv/share", {
         method: "DELETE",
@@ -246,12 +247,25 @@ export function ShareCVModal({ open, onClose }: Props) {
               links={links}
               error={listError}
               onCopy={copy}
-              onRevoke={revoke}
+              onRevoke={setConfirmToken}
               copiedToken={copiedToken}
             />
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmToken !== null}
+        onClose={() => setConfirmToken(null)}
+        onConfirm={() => {
+          void doRevoke(confirmToken!);
+          setConfirmToken(null);
+        }}
+        title="Trekk tilbake lenke"
+        message="Mottakere mister tilgang umiddelbart. Dette kan ikke angres."
+        confirmLabel="Trekk tilbake"
+        danger
+      />
     </div>
   );
 }
@@ -339,75 +353,130 @@ function ListPane({
   onRevoke: (token: string) => void;
   copiedToken: string | null;
 }) {
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  if (error) return <p className="text-sm text-accent">{error}</p>;
   if (!links) return <p className="text-sm text-ink/60">Laster…</p>;
   if (links.length === 0) {
     return <p className="text-sm text-ink/60">Du har ingen delingslenker ennå.</p>;
   }
 
   const fmt = new Intl.DateTimeFormat("no-NO", { dateStyle: "medium" });
+  const activeLinks = links.filter(isActive);
+  const inactiveLinks = links.filter((l) => !isActive(l));
 
   return (
-    <ul className="space-y-3">
-      {links.map((l) => {
-        const active = isActive(l);
-        const url = buildShareUrl(l.token);
-        return (
-          <li
-            key={l.id}
-            className={`p-4 rounded-xl border ${
-              active
-                ? "border-black/10 dark:border-white/10 bg-surface"
-                : "border-black/8 dark:border-white/8 bg-surface/50 opacity-70"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-ink truncate">
-                    {l.label || l.resumeName || "CV"}
-                  </span>
-                  {!active && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-ink/10 text-ink/60">
-                      {l.revokedAt ? "Tilbakekalt" : "Utløpt"}
-                    </span>
-                  )}
-                </div>
-                {l.label && l.resumeName && (
-                  <p className="text-xs text-ink/55 mt-0.5">CV: {l.resumeName}</p>
-                )}
-                <p className="text-xs text-ink/50 mt-1">
-                  Opprettet {fmt.format(new Date(l.createdAt))}
-                  {l.expiresAt && ` · utløper ${fmt.format(new Date(l.expiresAt))}`}
-                  {!l.expiresAt && active && " · utløper aldri"}
-                  {" · "}
-                  {l.viewCount} visning{l.viewCount === 1 ? "" : "er"}
-                </p>
-                {active && (
-                  <p className="text-xs font-mono text-ink/60 mt-2 truncate">{url}</p>
-                )}
-              </div>
-              {active && (
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <button
-                    onClick={() => onCopy(url, l.token)}
-                    className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent/90 inline-flex items-center gap-1.5"
-                  >
-                    {copiedToken === l.token ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                    {copiedToken === l.token ? "Kopiert" : "Kopier"}
-                  </button>
-                  <button
-                    onClick={() => onRevoke(l.token)}
-                    className="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-medium inline-flex items-center gap-1.5"
-                  >
-                    <Trash2 className="size-3.5" /> Tilbakekall
-                  </button>
-                </div>
-              )}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-6">
+      <section>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink/55 mb-3">
+          Aktive ({activeLinks.length})
+        </h3>
+        {activeLinks.length === 0 ? (
+          <p className="text-sm text-ink/60">Ingen aktive lenker.</p>
+        ) : (
+          <ul className="space-y-3">
+            {activeLinks.map((l) => (
+              <LinkRow
+                key={l.id}
+                link={l}
+                fmt={fmt}
+                onCopy={onCopy}
+                onRevoke={onRevoke}
+                copiedToken={copiedToken}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {inactiveLinks.length > 0 && (
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink/55 mb-3">
+            Utløpte og tilbakekalte ({inactiveLinks.length})
+          </h3>
+          <ul className="space-y-3">
+            {inactiveLinks.map((l) => (
+              <LinkRow
+                key={l.id}
+                link={l}
+                fmt={fmt}
+                onCopy={onCopy}
+                onRevoke={onRevoke}
+                copiedToken={copiedToken}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function LinkRow({
+  link: l,
+  fmt,
+  onCopy,
+  onRevoke,
+  copiedToken,
+}: {
+  link: ShareLink;
+  fmt: Intl.DateTimeFormat;
+  onCopy: (text: string, token: string) => void;
+  onRevoke: (token: string) => void;
+  copiedToken: string | null;
+}) {
+  const active = isActive(l);
+  const url = buildShareUrl(l.token);
+  return (
+    <li
+      className={`p-4 rounded-xl border ${
+        active
+          ? "border-black/10 dark:border-white/10 bg-surface"
+          : "border-black/8 dark:border-white/8 bg-surface/50 opacity-70"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-ink truncate">
+              {l.label || l.resumeName || "CV"}
+            </span>
+            {!active && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-ink/10 text-ink/60">
+                {l.revokedAt ? "Tilbakekalt" : "Utløpt"}
+              </span>
+            )}
+          </div>
+          {l.label && l.resumeName && (
+            <p className="text-xs text-ink/55 mt-0.5">CV: {l.resumeName}</p>
+          )}
+          <p className="text-xs text-ink/50 mt-1">
+            Opprettet {fmt.format(new Date(l.createdAt))}
+            {l.expiresAt && ` · utløper ${fmt.format(new Date(l.expiresAt))}`}
+            {!l.expiresAt && active && " · utløper aldri"}
+            {" · "}
+            {l.viewCount} visning{l.viewCount === 1 ? "" : "er"}
+          </p>
+          {active && (
+            <p className="text-xs font-mono text-ink/60 mt-2 truncate">{url}</p>
+          )}
+        </div>
+        {active && (
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <button
+              onClick={() => onCopy(url, l.token)}
+              className="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover inline-flex items-center gap-1.5"
+            >
+              {copiedToken === l.token ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              {copiedToken === l.token ? "Kopiert" : "Kopier"}
+            </button>
+            <button
+              onClick={() => onRevoke(l.token)}
+              className="px-3 py-1.5 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 text-xs font-medium inline-flex items-center gap-1.5"
+            >
+              <Trash2 className="size-3.5" /> Tilbakekall
+            </button>
+          </div>
+        )}
+      </div>
+    </li>
   );
 }
