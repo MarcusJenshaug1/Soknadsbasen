@@ -18,20 +18,23 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Link from "next/link";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import {
   PIPELINE_COLUMNS,
   PIPELINE_STATUSES,
+  KANBAN_COLUMNS,
+  ACTIVE_KANBAN_COLUMNS,
+  TERMINAL_STATUSES,
+  columnForStatus,
   ARCHIVED_STATUSES,
-  isPipelineStatus,
 } from "@/lib/pipeline";
 
-const TERMINAL_STATUSES: StatusKey[] = ["accepted", "declined", "rejected"];
-const ACTIVE_COLUMNS = PIPELINE_COLUMNS.filter(
-  (c) => !TERMINAL_STATUSES.includes(c.status),
-);
-import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
+import {
+  StatusDot,
+  STATUS_LABEL,
+  STATUS_COLOR,
+  type StatusKey,
+} from "@/components/ui/StatusDot";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
 import { IconPlus, IconSearch, IconClose } from "@/components/ui/Icons";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
@@ -125,7 +128,7 @@ export function PipelineView({
   const [bulkLoading, setBulkLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const visibleColumns = showCompleted ? PIPELINE_COLUMNS : ACTIVE_COLUMNS;
+  const visibleColumns = showCompleted ? KANBAN_COLUMNS : ACTIVE_KANBAN_COLUMNS;
   const notArchivedApps = apps.filter((a) => !a.archivedAt);
   const archivedCount = apps.length - notArchivedApps.length;
   const completedCount = notArchivedApps.filter((a) =>
@@ -148,12 +151,11 @@ export function PipelineView({
   }, [apps, search, showArchived]);
 
   const byColumn = useMemo(() => {
-    const map = new Map<StatusKey, Application[]>();
-    for (const col of visibleColumns) map.set(col.status, []);
+    const map = new Map<string, Application[]>();
+    for (const col of visibleColumns) map.set(col.id, []);
     for (const a of filtered) {
-      if (isPipelineStatus(a.status) && map.has(a.status as StatusKey)) {
-        map.get(a.status as StatusKey)!.push(a);
-      }
+      const col = columnForStatus(a.status);
+      if (col && map.has(col.id)) map.get(col.id)!.push(a);
     }
     return map;
   }, [filtered, visibleColumns]);
@@ -166,22 +168,25 @@ export function PipelineView({
     const overId = e.over?.id ? String(e.over.id) : null;
     if (!overId) return;
 
-    // Drop target can be a column id ("col:<status>") or another card id.
-    let targetStatus: StatusKey | null = null;
-    if (overId.startsWith("col:")) {
-      const s = overId.slice(4) as StatusKey;
-      if (isPipelineStatus(s)) targetStatus = s;
-    } else {
-      const overApp = apps.find((a) => a.id === overId);
-      if (overApp && isPipelineStatus(overApp.status)) targetStatus = overApp.status;
-    }
-    if (!targetStatus) return;
+    // Drop target is a kanban column ("col:<columnId>") or another card id.
+    // Each column owns one or more statuses; the resulting status is the
+    // column's defaultDropStatus (for "Avsluttet" that is "rejected", and the
+    // user refines the exact terminal outcome in the detail view).
+    const overColumn = overId.startsWith("col:")
+      ? KANBAN_COLUMNS.find((c) => c.id === overId.slice(4))
+      : (() => {
+          const overApp = apps.find((a) => a.id === overId);
+          return overApp ? columnForStatus(overApp.status) : undefined;
+        })();
+    if (!overColumn) return;
 
     const current = apps.find((a) => a.id === appId);
-    if (!current || current.status === targetStatus) return;
+    if (!current) return;
+    // Already in this column — no-op (avoids resetting a terminal outcome).
+    if (columnForStatus(current.status)?.id === overColumn.id) return;
 
     const prev = apps;
-    const nextStatus = targetStatus;
+    const nextStatus = overColumn.defaultDropStatus;
     setApps((xs) =>
       xs.map((a) =>
         a.id === appId
@@ -386,11 +391,11 @@ export function PipelineView({
           <div className="md:hidden space-y-5">
             {visibleColumns.map((col) => (
               <Column
-                key={col.status}
+                key={col.id}
+                columnId={col.id}
                 label={col.label}
                 dotColor={col.dotColor}
-                status={col.status}
-                items={byColumn.get(col.status) ?? []}
+                items={byColumn.get(col.id) ?? []}
                 variant="mobile"
               />
             ))}
@@ -405,11 +410,11 @@ export function PipelineView({
           >
             {visibleColumns.map((col) => (
               <Column
-                key={col.status}
+                key={col.id}
+                columnId={col.id}
                 label={col.label}
                 dotColor={col.dotColor}
-                status={col.status}
-                items={byColumn.get(col.status) ?? []}
+                items={byColumn.get(col.id) ?? []}
                 variant="desktop"
               />
             ))}
@@ -469,19 +474,19 @@ export function PipelineView({
 }
 
 function Column({
+  columnId,
   label,
   dotColor,
-  status,
   items,
   variant,
 }: {
+  columnId: string;
   label: string;
   dotColor: string;
-  status: StatusKey;
   items: Application[];
   variant: "mobile" | "desktop";
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `col:${status}` });
+  const { setNodeRef, isOver } = useDroppable({ id: `col:${columnId}` });
 
   return (
     <div
@@ -547,47 +552,91 @@ function ApplicationCard({
   const next = nextLabel(app);
   const urgent = isUrgent(app);
   const isArchived = !!app.archivedAt;
+  // Terminal outcomes share the "Avsluttet" column, so surface the granular
+  // status (Takket ja / Takket nei / Avslag) as a pill on the card.
+  const isTerminal = TERMINAL_STATUSES.includes(app.status as StatusKey);
 
   return (
     <div
       ref={overlay ? undefined : setNodeRef}
       style={style}
-      {...(overlay ? {} : attributes)}
-      {...(overlay ? {} : listeners)}
       className={cn(
-        "group bg-surface rounded-2xl p-4 border border-black/5 dark:border-white/5 cursor-grab active:cursor-grabbing hover:border-accent/40 transition-colors",
+        "group relative bg-surface rounded-2xl border border-black/5 dark:border-white/5 hover:border-accent/40 transition-colors",
         overlay && "shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] rotate-[1deg]",
         isArchived && "opacity-60",
       )}
     >
-      <div className="flex items-start justify-between mb-2">
-        <CompanyLogo
-          website={app.companyWebsite}
-          name={app.companyName}
-          size="sm"
-        />
-        {isArchived ? (
-          <Pill variant="muted">Arkivert</Pill>
-        ) : urgent ? (
-          <Pill variant="accent">Hast</Pill>
-        ) : null}
-      </div>
+      {/* Hele kortet er en lenke til detalj (tastatur-tilgjengelig). Drag
+          skjer kun via grepet, så vi slipper stopPropagation-hacket og status
+          kan endres fra detalj-visningen med tastatur. */}
       <PrefetchLink
         href={`/app/pipeline/${app.id}`}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-        className="block"
+        className="block p-4 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
+        <div className="flex items-start justify-between mb-2 pr-7">
+          <CompanyLogo
+            website={app.companyWebsite}
+            name={app.companyName}
+            size="sm"
+          />
+          {isArchived ? (
+            <Pill variant="muted">Arkivert</Pill>
+          ) : urgent ? (
+            <Pill variant="accent">Hast</Pill>
+          ) : null}
+        </div>
         <div className="text-[14px] font-medium leading-tight mb-1">
           {app.title}
         </div>
         <div className="text-[11px] text-ink/55">{app.companyName}</div>
+        {isTerminal && (
+          <div className="mt-2 flex">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-panel px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-ink/70">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: STATUS_COLOR[app.status as StatusKey] }}
+              />
+              {STATUS_LABEL[app.status as StatusKey]}
+            </span>
+          </div>
+        )}
+        <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-ink/50">
+          <span>{next.text}</span>
+          {next.days !== null && <span>{next.days}d</span>}
+        </div>
       </PrefetchLink>
-      <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-ink/50">
-        <span>{next.text}</span>
-        {next.days !== null && <span>{next.days}d</span>}
-      </div>
+
+      {!overlay && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label={`Dra for å flytte ${app.title}`}
+          className="absolute top-1 right-1 inline-flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 md:p-1.5 rounded-lg text-ink/30 hover:text-ink/70 hover:bg-panel cursor-grab active:cursor-grabbing touch-none opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent outline-none transition-opacity"
+        >
+          <DragGrip />
+        </button>
+      )}
     </div>
+  );
+}
+
+function DragGrip() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden
+    >
+      <circle cx="5" cy="3" r="1.4" />
+      <circle cx="11" cy="3" r="1.4" />
+      <circle cx="5" cy="8" r="1.4" />
+      <circle cx="11" cy="8" r="1.4" />
+      <circle cx="5" cy="13" r="1.4" />
+      <circle cx="11" cy="13" r="1.4" />
+    </svg>
   );
 }
 

@@ -4,7 +4,7 @@ import { getSessionUserId } from "@/lib/auth";
 import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
-import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
+import { STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
 import { SessionBanner } from "@/components/sessions/SessionBanner";
@@ -58,9 +58,7 @@ export default async function SelskaperPage({
     name: string;
     website: string | null;
     count: number;
-    latestStatus: string;
     latestUpdate: Date;
-    latestTitle: string;
     apps: typeof apps;
   };
 
@@ -73,9 +71,7 @@ export default async function SelskaperPage({
         name: key,
         website: a.companyWebsite,
         count: 1,
-        latestStatus: a.status,
         latestUpdate: a.updatedAt,
-        latestTitle: a.title,
         apps: [a],
       });
     } else {
@@ -84,8 +80,6 @@ export default async function SelskaperPage({
       if (a.companyWebsite && !existing.website) existing.website = a.companyWebsite;
       if (a.updatedAt > existing.latestUpdate) {
         existing.latestUpdate = a.updatedAt;
-        existing.latestStatus = a.status;
-        existing.latestTitle = a.title;
       }
     }
   }
@@ -138,27 +132,37 @@ export default async function SelskaperPage({
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {companies.map((c) => (
+        {companies.map((c) => {
+          const sessionParam = requestedSessionId
+            ? `session=${encodeURIComponent(requestedSessionId)}&`
+            : "";
+          const companyHref = `/app/pipeline?${sessionParam}company=${encodeURIComponent(c.name)}`;
+
+          return (
           <div
             key={c.name}
             className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 p-5 flex flex-col"
           >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <CompanyLogo
-                website={c.website}
-                name={c.name}
-                size="md"
-                className="rounded-xl"
-              />
-              <StatusDot status={c.latestStatus as StatusKey} />
-            </div>
-            <div className="text-[15px] font-medium leading-tight mb-1">
-              {c.name}
-            </div>
-            <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 mb-3">
-              {c.count} søknad{c.count === 1 ? "" : "er"} ·{" "}
-              {formatRelative(c.latestUpdate)}
-            </div>
+            <PrefetchLink
+              href={companyHref}
+              className="group block mb-3 rounded-xl -m-1 p-1 hover:bg-panel/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <div className="mb-4">
+                <CompanyLogo
+                  website={c.website}
+                  name={c.name}
+                  size="md"
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="text-[15px] font-medium leading-tight mb-1 group-hover:text-accent transition-colors">
+                {c.name}
+              </div>
+              <div className="text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55">
+                {c.count} søknad{c.count === 1 ? "" : "er"} ·{" "}
+                {formatRelative(c.latestUpdate)}
+              </div>
+            </PrefetchLink>
             <ul className="space-y-1.5 text-[12px] text-[#14110e]/70 dark:text-[#f0ece6]/70 border-t border-black/5 dark:border-white/5 pt-3 mt-auto">
               {c.apps.slice(0, 3).map((a) => (
                 <li key={a.id}>
@@ -180,7 +184,8 @@ export default async function SelskaperPage({
               )}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

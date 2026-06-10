@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SectionLabel, Pill } from "@/components/ui/Pill";
@@ -275,6 +275,15 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
     const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
     if (!res.ok) setApp((a) => ({ ...a, tasks: prev }));
   }
+
+  const activitiesSorted = useMemo(
+    () =>
+      [...app.activities].sort(
+        (a, b) =>
+          new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+      ),
+    [app.activities],
+  );
 
   const saved = savingField
     ? "Lagrer…"
@@ -628,7 +637,7 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
           </Card>
 
           <Card>
-            <SectionLabel className="mb-3">Kommunikasjon</SectionLabel>
+            <SectionLabel className="mb-3">Aktivitet</SectionLabel>
             <p className="text-[11px] text-ink/55 mb-3">
               Logg melding du har sendt eller mottatt.
             </p>
@@ -699,9 +708,8 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
             </form>
 
             <ul className="space-y-3">
-              {app.activities
-                .filter((a) => a.type === "communication")
-                .map((a) => (
+              {activitiesSorted.map((a) =>
+                a.type === "communication" ? (
                   <li
                     key={a.id}
                     className="group rounded-xl bg-bg border border-black/5 dark:border-white/5 p-3"
@@ -739,36 +747,23 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
                       {formatDate(a.occurredAt, true)}
                     </div>
                   </li>
-                ))}
-              {!app.activities.some((a) => a.type === "communication") && (
-                <li className="text-[12px] text-ink/40 text-center py-2">
-                  Ingen kommunikasjon loggført.
-                </li>
+                ) : (
+                  <li key={a.id} className="flex gap-3 px-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-ink/40 mt-[7px] shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[12px] text-ink/80">
+                        {a.note ?? STATUS_LABEL[a.type as StatusKey] ?? a.type}
+                      </div>
+                      <div className="text-[11px] text-ink/45">
+                        {formatDate(a.occurredAt, true)}
+                      </div>
+                    </div>
+                  </li>
+                ),
               )}
-            </ul>
-          </Card>
-
-          <Card>
-            <SectionLabel className="mb-4">Tidslinje</SectionLabel>
-            <ul className="space-y-3">
-              {app.activities.map((a) => (
-                <li key={a.id} className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent mt-[7px] shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[12px] text-ink/80">
-                      {a.type === "communication"
-                        ? `${a.direction === "outbound" ? "Du sendte" : "Du mottok"} — ${channelLabel(a.channel)}`
-                        : (a.note ?? STATUS_LABEL[a.type as StatusKey] ?? a.type)}
-                    </div>
-                    <div className="text-[11px] text-ink/45">
-                      {formatDate(a.occurredAt, true)}
-                    </div>
-                  </div>
-                </li>
-              ))}
-              {app.activities.length === 0 && (
+              {activitiesSorted.length === 0 && (
                 <li className="text-[12px] text-ink/40 text-center py-4">
-                  Ingen hendelser ennå.
+                  Ingen aktivitet ennå.
                 </li>
               )}
             </ul>

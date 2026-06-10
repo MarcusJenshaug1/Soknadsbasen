@@ -7,7 +7,6 @@ import { AlertCircle, Phone } from "lucide-react";
 import { IconClose, IconLink, IconMail, IconPlus } from "@/components/ui/Icons";
 import { AvatarCropper } from "@/components/AvatarCropper";
 import { Modal } from "@/components/ui/Modal";
-import { cn } from "@/lib/cn";
 
 export type Contact = {
   id: string;
@@ -35,8 +34,6 @@ type FormState = {
   notes: string;
   lastContactedAt: string;
 };
-
-type Grouping = "none" | "letter" | "company";
 
 const EMPTY_FORM: FormState = {
   name: "",
@@ -267,15 +264,34 @@ function ContactModal({
     }
   }
 
-  const textFields: { key: keyof FormState; label: string; placeholder: string; type?: string }[] = [
+  type TextField = { key: keyof FormState; label: string; placeholder: string; type?: string };
+
+  const personFields: TextField[] = [
     { key: "name", label: "Navn *", placeholder: "Kari Nordmann" },
     { key: "title", label: "Stilling", placeholder: "Engineering Manager" },
     { key: "company", label: "Selskap", placeholder: "Bekk" },
+  ];
+
+  const contactInfoFields: TextField[] = [
     { key: "email", label: "E-post", placeholder: "kari@bekk.no", type: "email" },
     { key: "phone", label: "Telefon", placeholder: "+47 999 00 000", type: "tel" },
     { key: "linkedinUrl", label: "LinkedIn URL", placeholder: "https://linkedin.com/in/kari" },
-    { key: "lastContactedAt", label: "Sist kontaktet", placeholder: "", type: "date" },
   ];
+
+  const renderField = ({ key, label, placeholder, type }: TextField) => (
+    <div key={key}>
+      <label className="text-[11px] uppercase tracking-wider text-ink/55 block mb-1">
+        {label}
+      </label>
+      <input
+        type={type ?? "text"}
+        value={form[key]}
+        onChange={(e) => set(key, e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-xl border border-black/15 dark:border-white/15 text-[13px] focus:outline-none focus:border-accent bg-surface text-ink"
+      />
+    </div>
+  );
 
   return (
     <>
@@ -353,32 +369,50 @@ function ContactModal({
             </div>
           </div>
 
-          {textFields.map(({ key, label, placeholder, type }) => (
-            <div key={key}>
+          <section className="space-y-4 pt-1">
+            <h3 className="text-[12px] font-medium text-ink/80 pb-1 border-b border-black/8 dark:border-white/8">
+              Person
+            </h3>
+            {personFields.map(renderField)}
+          </section>
+
+          <section className="space-y-4 pt-1">
+            <h3 className="text-[12px] font-medium text-ink/80 pb-1 border-b border-black/8 dark:border-white/8">
+              Kontaktinfo
+            </h3>
+            {contactInfoFields.map(renderField)}
+          </section>
+
+          <section className="space-y-4 pt-1">
+            <h3 className="text-[12px] font-medium text-ink/80 pb-1 border-b border-black/8 dark:border-white/8">
+              Notat og historikk
+            </h3>
+            <div>
               <label className="text-[11px] uppercase tracking-wider text-ink/55 block mb-1">
-                {label}
+                Notater
               </label>
-              <input
-                type={type ?? "text"}
-                value={form[key]}
-                onChange={(e) => set(key, e.target.value)}
-                placeholder={placeholder}
-                className="w-full px-3 py-2 rounded-xl border border-black/15 dark:border-white/15 text-[13px] focus:outline-none focus:border-accent bg-surface text-ink"
+              <textarea
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                rows={3}
+                placeholder="Møtte på karrieremesse, hjelp med intro til team …"
+                className="w-full px-3 py-2 rounded-xl border border-black/15 dark:border-white/15 text-[13px] resize-none focus:outline-none focus:border-accent bg-surface text-ink"
               />
             </div>
-          ))}
-          <div>
-            <label className="text-[11px] uppercase tracking-wider text-ink/55 block mb-1">
-              Notater
-            </label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              rows={3}
-              placeholder="Møtte på karrieremesse, hjelp med intro til team …"
-              className="w-full px-3 py-2 rounded-xl border border-black/15 dark:border-white/15 text-[13px] resize-none focus:outline-none focus:border-accent bg-surface text-ink"
-            />
-          </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label htmlFor="lastContactedAt" className="text-[12px] text-ink/60 shrink-0">
+                Sist kontaktet
+              </label>
+              <input
+                id="lastContactedAt"
+                type="date"
+                value={form.lastContactedAt}
+                onChange={(e) => set("lastContactedAt", e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-black/15 dark:border-white/15 text-[13px] focus:outline-none focus:border-accent bg-surface text-ink"
+              />
+            </div>
+          </section>
+
           <div aria-live="polite">
             {error && (
               <p className="flex items-center gap-1.5 text-[12px] text-red-600">
@@ -422,77 +456,9 @@ function ContactModal({
   );
 }
 
-function GroupHeader({ label }: { label: string }) {
-  return (
-    <div className="col-span-full flex items-center gap-3 pt-2 pb-1">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/40 min-w-[1.5rem]">
-        {label}
-      </span>
-      <div className="flex-1 h-px bg-black/8 dark:bg-white/8" />
-    </div>
-  );
-}
-
-function GroupingToggle({ value, onChange }: { value: Grouping; onChange: (g: Grouping) => void }) {
-  const options: { value: Grouping; label: string }[] = [
-    { value: "none", label: "Alle" },
-    { value: "letter", label: "A–Å" },
-    { value: "company", label: "Selskap" },
-  ];
-  return (
-    <div className="inline-flex bg-panel rounded-full p-0.5 gap-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "px-3 py-1.5 rounded-full text-[12px] transition-colors",
-            value === o.value
-              ? "bg-bg text-ink font-medium"
-              : "text-ink/55 hover:text-ink",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function buildGroups(contacts: Contact[], grouping: Grouping): { label: string; items: Contact[] }[] {
-  if (grouping === "none") return [{ label: "", items: contacts }];
-
-  const map = new Map<string, Contact[]>();
-
-  for (const c of contacts) {
-    const key =
-      grouping === "letter"
-        ? (c.name[0]?.toUpperCase() ?? "#")
-        : (c.company?.trim() || "Uten selskap");
-
-    const arr = map.get(key) ?? [];
-    arr.push(c);
-    map.set(key, arr);
-  }
-
-  return [...map.entries()]
-    .sort(([a], [b]) => {
-      if (grouping === "letter") {
-        if (a === "#") return 1;
-        if (b === "#") return -1;
-      } else {
-        if (a === "Uten selskap") return 1;
-        if (b === "Uten selskap") return -1;
-      }
-      return a.localeCompare(b, "nb");
-    })
-    .map(([label, items]) => ({ label, items }));
-}
-
 export function NetworkView({ initial }: { initial: Contact[] }) {
   const [contacts, setContacts] = useState<Contact[]>(initial);
   const [search, setSearch] = useState("");
-  const [grouping, setGrouping] = useState<Grouping>("none");
   const [modal, setModal] = useState<"new" | Contact | null>(null);
 
   const handleSave = useCallback((saved: Contact) => {
@@ -513,17 +479,25 @@ export function NetworkView({ initial }: { initial: Contact[] }) {
     setModal(null);
   }, []);
 
-  const filtered = contacts.filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      c.company?.toLowerCase().includes(q) ||
-      c.title?.toLowerCase().includes(q)
-    );
-  });
-
-  const groups = buildGroups(filtered, grouping);
+  const filtered = contacts
+    .filter((c) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.company?.toLowerCase().includes(q) ||
+        c.title?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      // Sist kontaktede øverst; kontakter uten dato faller bakerst, sortert alfabetisk.
+      if (a.lastContactedAt && b.lastContactedAt) {
+        return b.lastContactedAt.localeCompare(a.lastContactedAt);
+      }
+      if (a.lastContactedAt) return -1;
+      if (b.lastContactedAt) return 1;
+      return a.name.localeCompare(b.name, "nb");
+    });
 
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
@@ -567,8 +541,8 @@ export function NetworkView({ initial }: { initial: Contact[] }) {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            {contacts.length >= 5 && (
+          {contacts.length >= 5 && (
+            <div className="mb-6">
               <input
                 type="search"
                 value={search}
@@ -577,27 +551,19 @@ export function NetworkView({ initial }: { initial: Contact[] }) {
                 placeholder="Søk etter navn, selskap …"
                 className="w-full max-w-xs px-4 py-2 rounded-full border border-black/15 dark:border-white/15 text-[13px] focus:outline-none focus:border-accent bg-surface text-ink"
               />
-            )}
-            {contacts.length >= 3 && (
-              <GroupingToggle value={grouping} onChange={setGrouping} />
-            )}
-          </div>
+            </div>
+          )}
 
           {filtered.length === 0 ? (
             <p className="text-[13px] text-ink/50">Ingen treff for &ldquo;{search}&rdquo;</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {groups.map(({ label, items }) => (
-                <div key={label || "__all__"} className="contents">
-                  {label && <GroupHeader label={label} />}
-                  {items.map((c) => (
-                    <ContactCard
-                      key={c.id}
-                      contact={c}
-                      onEdit={(contact) => setModal(contact)}
-                    />
-                  ))}
-                </div>
+              {filtered.map((c) => (
+                <ContactCard
+                  key={c.id}
+                  contact={c}
+                  onEdit={(contact) => setModal(contact)}
+                />
               ))}
             </div>
           )}

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { SectionLabel } from "@/components/ui/Pill";
-import { StatusDot, type StatusKey } from "@/components/ui/StatusDot";
-import { IconCheck, IconClose } from "@/components/ui/Icons";
+import { useEffect, useState } from "react";
+import { SectionLabel, Pill } from "@/components/ui/Pill";
+import { IconCheck, IconClose, IconPlus } from "@/components/ui/Icons";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
 
 type Task = {
@@ -24,6 +23,12 @@ type Task = {
   };
 };
 
+type ApplicationOption = {
+  id: string;
+  companyName: string;
+  title: string;
+};
+
 const TYPE_LABEL: Record<string, string> = {
   followup: "Oppfølging",
   document: "Dokument",
@@ -32,12 +37,27 @@ const TYPE_LABEL: Record<string, string> = {
   other: "Annet",
 };
 
-const PRIORITY: Record<string, { label: string; color: string }> = {
-  low: { label: "Lav", color: "#94a3b8" },
-  medium: { label: "Medium", color: "#14110e" },
-  high: { label: "Høy", color: "#D5592E" },
-  urgent: { label: "Haster", color: "#D5592E" },
+const TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "followup", label: "Oppfølging" },
+  { value: "document", label: "Dokument" },
+  { value: "research", label: "Research" },
+  { value: "interview", label: "Intervju" },
+  { value: "other", label: "Annet" },
+];
+
+const PRIORITY_LABEL: Record<string, string> = {
+  low: "Lav",
+  medium: "Medium",
+  high: "Høy",
+  urgent: "Haster",
 };
+
+const PRIORITY_OPTIONS: { value: string; label: string }[] = [
+  { value: "low", label: "Lav" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "Høy" },
+  { value: "urgent", label: "Haster" },
+];
 
 function startOfDay(d = new Date()) {
   const x = new Date(d);
@@ -75,8 +95,18 @@ function formatDue(s: string | null) {
   });
 }
 
+/** type + prioritet slått til én etikett (prioritet vises kun når den ikke er standard). */
+function metaPill(task: Task): string | null {
+  const typeLabel = task.type ? TYPE_LABEL[task.type] : null;
+  const showPrio = task.priority && task.priority !== "medium";
+  const prioLabel = showPrio ? PRIORITY_LABEL[task.priority] : null;
+  if (typeLabel && prioLabel) return `${typeLabel} · ${prioLabel}`;
+  return typeLabel ?? prioLabel;
+}
+
 export function OppgaverView({ initial }: { initial: Task[] }) {
   const [tasks, setTasks] = useState(initial);
+  const [creating, setCreating] = useState(false);
 
   async function toggle(task: Task) {
     const completed = !task.completedAt;
@@ -105,6 +135,11 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
     if (!res.ok) setTasks(prev);
   }
 
+  function handleCreated(task: Task) {
+    setTasks((xs) => [task, ...xs]);
+    setCreating(false);
+  }
+
   const grouped = new Map<ReturnType<typeof bucketFor>, Task[]>();
   for (const b of BUCKETS) grouped.set(b.key, []);
   for (const t of tasks) grouped.get(bucketFor(t))!.push(t);
@@ -122,16 +157,21 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
         <div className="text-center py-16">
           <div className="text-[18px] font-medium mb-2">Ingen oppgaver ennå.</div>
           <p className="text-[13px] text-ink/60 max-w-sm mx-auto">
-            Legg til oppgaver fra en søknad — forberedelse til intervju,
+            Legg til oppgaver knyttet til en søknad — forberedelse til intervju,
             oppfølgings-e-post, eller innhenting av referanser.
           </p>
-          <Link
-            href="/app/pipeline"
-            className="inline-flex mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover"
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="inline-flex items-center gap-1.5 mt-6 px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover"
           >
-            Åpne pipeline
-          </Link>
+            <IconPlus size={15} />
+            Ny oppgave
+          </button>
         </div>
+        {creating && (
+          <NewTaskModal onClose={() => setCreating(false)} onCreated={handleCreated} />
+        )}
       </div>
     );
   }
@@ -151,6 +191,14 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
             )}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-1.5 shrink-0 px-4 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover self-start md:self-auto"
+        >
+          <IconPlus size={15} />
+          Ny oppgave
+        </button>
       </div>
 
       <div className="space-y-8">
@@ -178,6 +226,10 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
           );
         })}
       </div>
+
+      {creating && (
+        <NewTaskModal onClose={() => setCreating(false)} onCreated={handleCreated} />
+      )}
     </div>
   );
 }
@@ -195,8 +247,7 @@ function TaskRow({
   const done = !!task.completedAt;
   const overdue =
     task.dueAt && !done && new Date(task.dueAt).getTime() < Date.now();
-  const prio = task.priority ? PRIORITY[task.priority] : null;
-  const typeLabel = task.type ? TYPE_LABEL[task.type] : null;
+  const pill = metaPill(task);
   return (
     <li className="group flex items-start gap-3 p-4">
       <button
@@ -218,48 +269,37 @@ function TaskRow({
           onClick={() => task.description && setExpanded((v) => !v)}
           className="block text-left w-full"
         >
-          <div
-            className={cn(
-              "text-[14px] font-medium leading-tight",
-              done && "line-through text-ink/40",
-            )}
-          >
-            {task.title}
-          </div>
-          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            <PrefetchLink
-              href={`/app/pipeline/${task.application.id}`}
-              className="text-[11px] text-accent hover:text-ink truncate"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {task.application.title} · {task.application.companyName}
-            </PrefetchLink>
-            <StatusDot status={task.application.status as StatusKey} />
-            {prio && task.priority !== "medium" && (
-              <span
-                className="text-[10px] uppercase tracking-[0.12em] inline-flex items-center gap-1"
-                style={{ color: prio.color }}
-              >
-                <span
-                  className="w-1 h-1 rounded-full"
-                  style={{ background: prio.color }}
-                />
-                {prio.label}
-              </span>
-            )}
-            {typeLabel && (
-              <span className="text-[10px] uppercase tracking-[0.12em] text-ink/55">
-                {typeLabel}
-              </span>
-            )}
+          <div className="flex items-baseline gap-2.5">
             <span
               className={cn(
-                "text-[11px]",
-                overdue ? "text-accent" : "text-ink/50",
+                "text-[15px] font-medium leading-snug shrink-0 tabular-nums",
+                overdue ? "text-accent" : done ? "text-ink/40" : "text-ink",
               )}
             >
               {formatDue(task.dueAt)}
             </span>
+            <span
+              className={cn(
+                "text-[14px] font-medium leading-snug min-w-0 truncate",
+                done && "line-through text-ink/40",
+              )}
+            >
+              {task.title}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            {pill && (
+              <Pill variant="muted" className="shrink-0">
+                {pill}
+              </Pill>
+            )}
+            <PrefetchLink
+              href={`/app/pipeline/${task.application.id}`}
+              className="text-[11px] text-ink/50 hover:text-accent truncate"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {task.application.title} · {task.application.companyName}
+            </PrefetchLink>
           </div>
         </button>
         {expanded && task.description && (
@@ -277,5 +317,243 @@ function TaskRow({
         <IconClose size={14} />
       </button>
     </li>
+  );
+}
+
+const FIELD_CLASS =
+  "w-full px-3 py-2 rounded-lg bg-bg border border-black/12 dark:border-white/12 text-[14px] focus:outline-none focus:ring-2 focus:ring-accent";
+
+function NewTaskModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (task: Task) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [dueAt, setDueAt] = useState("");
+  const [type, setType] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [applicationId, setApplicationId] = useState("");
+  const [applications, setApplications] = useState<ApplicationOption[]>([]);
+  const [loadingApps, setLoadingApps] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/applications?sort=updatedAt");
+        if (!res.ok) throw new Error("fetch failed");
+        const data = (await res.json()) as ApplicationOption[];
+        if (cancelled) return;
+        setApplications(data);
+        if (data.length) setApplicationId(data[0].id);
+      } catch {
+        if (!cancelled) setError("Kunne ikke hente søknadene dine.");
+      } finally {
+        if (!cancelled) setLoadingApps(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !applicationId || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          applicationId,
+          dueAt: dueAt || null,
+          type: type || null,
+          priority,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setError(data?.error ?? "Kunne ikke opprette oppgaven.");
+        return;
+      }
+      const task = (await res.json()) as Task;
+      onCreated(task);
+    } catch {
+      setError("Kunne ikke opprette oppgaven.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const noApps = !loadingApps && applications.length === 0;
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      ariaLabel="Ny oppgave"
+      panelClassName="w-full max-w-md"
+    >
+      <div className="bg-surface rounded-2xl border border-black/5 dark:border-white/5 shadow-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/5 dark:border-white/5">
+          <h2 className="text-[16px] font-medium">Ny oppgave</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Lukk"
+            className="-m-2 p-2 text-ink/40 hover:text-ink transition-colors"
+          >
+            <IconClose size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label
+              htmlFor="task-title"
+              className="block text-[12px] font-medium text-ink/70 mb-1.5"
+            >
+              Tittel
+            </label>
+            <input
+              id="task-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="F.eks. Send oppfølgings-e-post"
+              className={FIELD_CLASS}
+              autoFocus
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="task-due"
+                className="block text-[12px] font-medium text-ink/70 mb-1.5"
+              >
+                Frist
+              </label>
+              <input
+                id="task-due"
+                type="date"
+                value={dueAt}
+                onChange={(e) => setDueAt(e.target.value)}
+                className={FIELD_CLASS}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="task-type"
+                className="block text-[12px] font-medium text-ink/70 mb-1.5"
+              >
+                Type
+              </label>
+              <select
+                id="task-type"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className={FIELD_CLASS}
+              >
+                <option value="">Ingen</option>
+                {TYPE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="task-priority"
+                className="block text-[12px] font-medium text-ink/70 mb-1.5"
+              >
+                Prioritet
+              </label>
+              <select
+                id="task-priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className={FIELD_CLASS}
+              >
+                {PRIORITY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="task-application"
+                className="block text-[12px] font-medium text-ink/70 mb-1.5"
+              >
+                Søknad
+              </label>
+              <select
+                id="task-application"
+                value={applicationId}
+                onChange={(e) => setApplicationId(e.target.value)}
+                className={FIELD_CLASS}
+                disabled={loadingApps || noApps}
+                required
+              >
+                {loadingApps && <option value="">Laster…</option>}
+                {noApps && <option value="">Ingen søknader</option>}
+                {applications.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} · {a.companyName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {noApps && (
+            <p className="text-[12px] text-ink/60">
+              Oppgaver knyttes til en søknad. Opprett en søknad i pipeline
+              først.
+            </p>
+          )}
+
+          {error && (
+            <p className="text-[12px] text-accent" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-full text-[13px] text-ink/70 hover:bg-panel transition-colors"
+            >
+              Avbryt
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !title.trim() || !applicationId}
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <IconPlus size={15} />
+              {submitting ? "Oppretter…" : "Opprett"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
   );
 }

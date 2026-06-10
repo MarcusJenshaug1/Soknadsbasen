@@ -2,11 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/useSessionStore";
 import { IconChevronDown } from "@/components/ui/Icons";
-import { CloseSessionModal } from "./CloseSessionModal";
-import { NewSessionModal } from "./NewSessionModal";
 import { cn } from "@/lib/cn";
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -15,17 +12,18 @@ const OUTCOME_LABELS: Record<string, string> = {
   OTHER: "Avsluttet",
 };
 
+/**
+ * Rask kontekst-bytter for mobil. Full livssyklus (start / avslutt / gi nytt
+ * navn / gjenåpne) bor på /app/sesjoner — denne viser aktiv sesjon, lar deg
+ * hoppe til en tidligere pipeline, og lenker til den autoritative flaten.
+ */
 export function MobileSessionBar() {
   const activeSession = useSessionStore((s) => s.activeSession);
   const sessions = useSessionStore((s) => s.sessions);
   const load = useSessionStore((s) => s.load);
 
   const [open, setOpen] = useState(false);
-  const [showClose, setShowClose] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [newAfterClose, setNewAfterClose] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   useEffect(() => {
     load();
@@ -68,36 +66,24 @@ export function MobileSessionBar() {
       {open && (
         <div className="absolute top-full left-0 right-0 bg-bg border-b border-black/8 dark:border-white/8 shadow-lg">
           {activeSession && (
-            <div className="px-4 py-3 border-b border-black/6 dark:border-white/6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-[12px] font-medium truncate">{activeSession.name}</span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setShowClose(true); setOpen(false); }}
-                  className="text-[11px] text-accent hover:underline"
-                >
-                  Avslutt sesjon
-                </button>
-                <span className="text-ink/20 text-[11px]">·</span>
-                <button
-                  onClick={() => { setNewAfterClose(true); setShowClose(true); setOpen(false); }}
-                  className="text-[11px] text-ink/50 hover:text-ink hover:underline"
-                >
-                  Start ny sesjon
-                </button>
-              </div>
+            <div className="px-4 py-3 border-b border-black/6 dark:border-white/6 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
+              <span className="text-[12px] font-medium truncate">
+                {activeSession.name}
+              </span>
             </div>
           )}
 
           {closedSessions.length > 0 && (
             <div className="px-4 py-2 border-b border-black/6 dark:border-white/6 space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-ink/40 mb-1.5">Tidligere</div>
+              <div className="text-[10px] uppercase tracking-wider text-ink/40 mb-1.5">
+                Tidligere
+              </div>
               {closedSessions.map((s) => (
                 <Link
                   key={s.id}
                   href={`/app/pipeline?session=${s.id}`}
+                  prefetch={true}
                   onClick={() => setOpen(false)}
                   className="flex items-center justify-between py-1.5 text-[12px] hover:text-accent transition-colors"
                 >
@@ -111,32 +97,17 @@ export function MobileSessionBar() {
           )}
 
           <div className="px-4 py-3">
-            {activeSession ? (
-              <Link
-                href="/app/sesjoner"
-                onClick={() => setOpen(false)}
-                className="block text-center text-[11px] text-ink/50 hover:text-ink transition-colors"
-              >
-                Se alle sesjoner
-              </Link>
-            ) : (
-              <button
-                onClick={() => { setShowNew(true); setOpen(false); }}
-                className="w-full py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover transition-colors"
-              >
-                Start ny sesjon
-              </button>
-            )}
+            <Link
+              href="/app/sesjoner"
+              prefetch={true}
+              onClick={() => setOpen(false)}
+              className="block text-center text-[11px] text-ink/50 hover:text-ink transition-colors"
+            >
+              Administrer sesjoner
+            </Link>
           </div>
         </div>
       )}
-
-      <CloseSessionModal
-        open={showClose}
-        onClose={() => { setShowClose(false); setNewAfterClose(false); }}
-        onSuccess={() => { if (newAfterClose) setShowNew(true); }}
-      />
-      <NewSessionModal open={showNew} onClose={() => setShowNew(false)} />
     </div>
   );
 }
