@@ -14,21 +14,29 @@ export default function JobbListingLoading() {
         <Skeleton className="h-4 w-3/4 max-w-[420px]" />
       </section>
 
-      <div className="rounded-2xl border border-black/10 bg-white p-4 md:p-5 mb-8 flex flex-wrap gap-3">
-        <Skeleton className="h-10 flex-1 min-w-[200px]" />
-        <Skeleton className="h-10 w-[180px]" />
-        <Skeleton className="h-10 w-[180px]" />
+      <div className="rounded-2xl border border-black/10 bg-[#eee9df]/40 p-3 md:p-4">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2">
+          <Skeleton className="h-11 w-full md:min-w-[220px]" />
+          <Skeleton className="h-11 w-full md:w-[160px]" />
+          <Skeleton className="h-11 w-full md:w-[180px]" />
+          <Skeleton className="h-11 w-full md:w-[96px]" />
+        </div>
       </div>
 
       <ul className="space-y-3 mt-8">
         {Array.from({ length: 8 }).map((_, i) => (
           <li
             key={i}
-            className="rounded-2xl border border-black/10 bg-white px-5 py-4 md:py-5"
+            className="rounded-2xl border border-black/10 bg-white px-5 py-4 md:py-5 pr-16"
           >
-            <Skeleton className="h-5 w-2/3 mb-2.5" />
-            <Skeleton className="h-3.5 w-1/3 mb-4" />
-            <div className="flex gap-3">
+            <div className="flex items-start gap-4 mb-3">
+              <Skeleton className="size-10 shrink-0 rounded-2xl" />
+              <div className="flex-1 min-w-0">
+                <Skeleton className="h-[18px] w-2/3 mb-2" />
+                <Skeleton className="h-3.5 w-1/3" />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-3 w-28" />

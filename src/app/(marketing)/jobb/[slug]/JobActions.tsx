@@ -94,14 +94,11 @@ export function JobActions({
           type="button"
           onClick={createAndOpen}
           disabled={busy}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium hover:bg-[#a94424] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          aria-busy={busy}
+          className="inline-flex min-h-12 items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#D5592E] text-[#faf8f5] text-[14px] font-medium outline-none hover:bg-[#a94424] active:bg-[#8f3a1e] disabled:opacity-60 disabled:cursor-wait focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-colors"
         >
-          <FileText className="size-4" aria-hidden />
-          {busy
-            ? "Åpner …"
-            : isLoggedIn
-              ? "Lag søknad i Søknadsbasen"
-              : "Lag søknad i Søknadsbasen"}
+          <FileText className={`size-4 ${busy ? "animate-pulse" : ""}`} aria-hidden />
+          {busy ? "Åpner …" : "Lag søknad i Søknadsbasen"}
         </button>
 
         {applyUrl && (
@@ -110,7 +107,7 @@ export function JobActions({
             target="_blank"
             rel="noopener noreferrer"
             title={`Søk hos ${employerName}`}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-black/15 text-[14px] whitespace-nowrap hover:border-[#14110e]/30 hover:bg-black/5 transition-colors"
+            className="inline-flex min-h-12 items-center justify-center gap-2 px-6 py-3 rounded-full border border-black/15 text-[14px] whitespace-nowrap outline-none hover:border-[#14110e]/30 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-colors"
           >
             Søk hos arbeidsgiver
             <ExternalLink className="size-4" aria-hidden />
@@ -122,7 +119,7 @@ export function JobActions({
           onClick={toggleSave}
           aria-pressed={Boolean(savedId)}
           aria-label={savedId ? "Fjern fra lagrede" : "Lagre stilling"}
-          className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full border text-[14px] transition-colors ${
+          className={`inline-flex min-h-12 items-center justify-center gap-2 px-5 py-3 rounded-full border text-[14px] outline-none focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-colors ${
             savedId
               ? "border-[#D5592E]/30 bg-[#D5592E]/8 text-[#D5592E] hover:bg-[#D5592E]/12"
               : "border-black/15 text-[#14110e]/75 hover:border-[#14110e]/30 hover:bg-black/5"
@@ -142,14 +139,16 @@ export function JobActions({
           Lagt til som kladd i din pipeline.{" "}
           <Link
             href={`/app/pipeline/${savedId}`}
-            className="text-[#D5592E] hover:underline"
+            className="rounded text-[#D5592E] underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[#D5592E]/50"
           >
             Åpne søknaden →
           </Link>
         </p>
       )}
       {error && (
-        <p className="text-[12px] text-red-600">{error}</p>
+        <p role="alert" className="text-[12px] text-red-600">
+          {error}
+        </p>
       )}
     </div>
   );

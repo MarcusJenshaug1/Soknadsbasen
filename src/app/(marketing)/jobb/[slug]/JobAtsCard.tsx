@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useResumeStore } from "@/store/useResumeStore";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { AtsScoreRing } from "@/components/ats/AtsScoreRing";
 import { AtsChipRow } from "@/components/ats/AtsChipRow";
 import {
@@ -135,7 +136,7 @@ export function JobAtsCard({
         </p>
         <Link
           href="/app/cv"
-          className="inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline underline-offset-2"
+          className="inline-flex min-h-9 items-center gap-1 rounded text-[12px] font-medium text-accent underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[#D5592E]/50"
         >
           Åpne CV-bygger →
         </Link>
@@ -145,19 +146,24 @@ export function JobAtsCard({
 
   if (loading || !result) {
     return (
-      <div className="rounded-2xl border border-black/10 bg-white p-5 mb-6 flex items-center gap-3">
-        <span className="inline-flex gap-[3px]">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
-              style={{ animationDelay: `${i * 150}ms` }}
-            />
-          ))}
-        </span>
-        <span className="text-[12px] text-[#14110e]/65">
-          AI sjekker match mot CV-en din …
-        </span>
+      <div
+        role="status"
+        aria-live="polite"
+        className="rounded-2xl border border-black/10 bg-white p-5 mb-6"
+      >
+        <div className="flex items-start gap-5">
+          <Skeleton className="size-16 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-2.5 w-24 mb-2.5" />
+            <Skeleton className="h-4 w-40 mb-2" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+        <div className="mt-4 space-y-2.5">
+          <Skeleton className="h-6 w-full rounded-full" />
+          <Skeleton className="h-6 w-4/5 rounded-full" />
+        </div>
+        <span className="sr-only">AI sjekker match mot CV-en din</span>
       </div>
     );
   }
@@ -223,7 +229,9 @@ export function JobAtsCard({
         <button
           type="button"
           onClick={() => setTipsOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-ink text-bg text-[12px] font-medium hover:bg-[#2a2520] transition-colors"
+          aria-haspopup="dialog"
+          aria-expanded={tipsOpen}
+          className="inline-flex min-h-9 items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-ink text-bg text-[12px] font-medium outline-none hover:bg-[#2a2520] focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-colors"
         >
           <SparkleIcon />
           Få hjelp med CV
