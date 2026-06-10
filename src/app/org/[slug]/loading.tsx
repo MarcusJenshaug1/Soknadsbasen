@@ -1,8 +1,9 @@
 import { Skeleton, PageHeaderSkeleton } from "@/components/ui/Skeleton";
 
+// Bart innhold: layoutet wrapper allerede children i max-w-5xl px-8 py-8.
 export default function Loading() {
   return (
-    <div className="max-w-[1000px] mx-auto px-5 md:px-10 py-6 md:py-10">
+    <div className="space-y-8">
       <PageHeaderSkeleton />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
