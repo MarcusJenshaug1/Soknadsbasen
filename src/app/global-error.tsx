@@ -1,18 +1,19 @@
 "use client";
 
-// Global error boundary: erstatter HELE root-layouten ved feil — inkludert
-// <html> og <body> — så den må rendre disse selv og kan ikke bruke Tailwind
-// (globals.css lastes via root-layouten som her er borte). Derav inline-styles.
+// Global error boundary: erstatter HELE root-layouten ved feil og må rendre
+// <html>/<body> selv. Den KAN importere globals.css, men holdes bevisst
+// selvstendig med inline-styles: er krasjet i CSS/chunk-lasting skal
+// fallbacken fortsatt rendre. Branded twin: src/components/ErrorFallback.tsx.
 
 import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 
 export default function GlobalError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     console.error("[global-error boundary]", error);
@@ -58,7 +59,7 @@ export default function GlobalError({
           >
             <button
               type="button"
-              onClick={() => reset()}
+              onClick={() => unstable_retry()}
               style={{
                 padding: "10px 20px",
                 borderRadius: "999px",
