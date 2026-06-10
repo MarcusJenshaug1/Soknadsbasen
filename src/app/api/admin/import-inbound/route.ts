@@ -3,13 +3,13 @@ import { Resend } from "resend";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
-
 export async function POST() {
   const session = await getSession();
   if (!session || session.email !== process.env.ADMIN_EMAIL) {
     return NextResponse.json({ error: "Ikke tilgang" }, { status: 403 });
   }
+
+  const resend = new Resend(process.env.RESEND_API_KEY!);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: listData, error } = await (resend.emails.receiving.list as any)();

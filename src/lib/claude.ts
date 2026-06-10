@@ -22,8 +22,13 @@ function resolveModel(opts: ClaudeOptions): string {
 const DEFAULT_MAX_TOKENS = 2048;
 
 // maxRetries: 4 speiler den gamle eksponentielle backoffen; SDK-en retrier
-// 429/5xx automatisk.
-const client = new Anthropic({ maxRetries: 4 });
+// 429/5xx automatisk. Lazy: konstruktøren kaster uten ANTHROPIC_API_KEY, som
+// ikke finnes under `next build` — utsett til første kall (runtime).
+let clientSingleton: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!clientSingleton) clientSingleton = new Anthropic({ maxRetries: 4 });
+  return clientSingleton;
+}
 
 export type ClaudeOptions = {
   /** Modell-ID. Default Sonnet 4.6; mekaniske ruter sender Haiku. */
@@ -72,7 +77,7 @@ export async function claudeGenerate(
 ): Promise<string> {
   let message: Anthropic.Message;
   try {
-    message = await client.messages.create({
+    message = await getClient().messages.create({
       model: resolveModel(opts),
       max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
       system: buildSystem(opts),
@@ -103,7 +108,7 @@ export async function claudeStream(
     async start(controller) {
       let emittedText = false;
       try {
-        const stream = client.messages.stream({
+        const stream = getClient().messages.stream({
           model: resolveModel(opts),
           max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
           system: buildSystem(opts),
