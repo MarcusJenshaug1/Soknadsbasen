@@ -2,8 +2,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
-import { HotKeyListener } from "@/components/HotKeyListener";
-import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { UpdateToast } from "@/components/UpdateToast";
 import { JsonLdScript } from "@/components/seo/JsonLd";
@@ -40,11 +38,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <JsonLdScript data={[organizationJsonLd(), websiteJsonLd()]} />
-          <ImpersonationBanner />
-          <AuthProvider>
-            <HotKeyListener />
-            {children}
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
           <ServiceWorkerRegistration />
           <UpdateToast />
           <Analytics />

@@ -1,30 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { suspendCloudSync } from "@/hooks/useCloudSync";
 
-type Status = {
-  active: boolean;
-  adminEmail?: string | null;
-  targetEmail?: string | null;
-  targetName?: string | null;
-};
-
-export function ImpersonationBanner() {
-  const [status, setStatus] = useState<Status | null>(null);
+/**
+ * Rendres server-betinget fra app/org-layoutene (som allerede har
+ * impersonasjons-konteksten via React.cache) i stedet for å fetche status
+ * fra klienten på hver sidevisning for alle besøkende.
+ */
+export function ImpersonationBanner({
+  adminEmail,
+  targetEmail,
+  targetName,
+}: {
+  adminEmail: string;
+  targetEmail: string;
+  targetName: string | null;
+}) {
   const [stopping, setStopping] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/impersonate/status", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((s: Status) => { if (!cancelled) setStatus(s); })
-      .catch(() => { if (!cancelled) setStatus({ active: false }); });
-    return () => { cancelled = true; };
-  }, []);
 
   async function stop() {
     setStopping(true);
@@ -40,11 +34,7 @@ export function ImpersonationBanner() {
     }
   }
 
-  if (!status?.active) return null;
-
-  const targetLabel = status.targetName
-    ? `${status.targetName} (${status.targetEmail})`
-    : status.targetEmail;
+  const targetLabel = targetName ? `${targetName} (${targetEmail})` : targetEmail;
 
   return (
     <div className="sticky top-0 z-50 bg-red-600 text-white text-[13px]">
@@ -52,7 +42,7 @@ export function ImpersonationBanner() {
         <ShieldAlert size={16} className="shrink-0" />
         <span className="flex-1 min-w-0">
           Du ser Søknadsbasen som <strong>{targetLabel}</strong>
-          <span className="opacity-80"> · admin: {status.adminEmail}</span>
+          <span className="opacity-80"> · admin: {adminEmail}</span>
         </span>
         <button
           onClick={stop}
