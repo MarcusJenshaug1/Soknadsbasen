@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // Bookworm-runneren (Docker) bruker OpenSSL 3.0. Pinnes eksplisitt fordi
+  // Prisma sin auto-deteksjon feiler i slim-imaget og defaulter til 1.1.x,
+  // som gir "could not locate Query Engine for debian-openssl-3.0.x" ved start.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
