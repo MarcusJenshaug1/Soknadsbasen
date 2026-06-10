@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FileText, Sparkles, ListChecks, Wand2 } from "lucide-react";
 import { useResumeStore, type Experience, type Education, type Language, type Certification, type Project } from "@/store/useResumeStore";
 import { IconClose, IconArrowRight, IconCheck } from "@/components/ui/Icons";
 import { SectionLabel } from "@/components/ui/Pill";
@@ -204,11 +206,11 @@ export function ImportCVModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-[#14110e]/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-[#faf8f5] rounded-3xl w-full max-w-[620px] max-h-[85vh] overflow-hidden flex flex-col border border-black/8">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8">
+      <div className="relative bg-bg rounded-3xl w-full max-w-[620px] max-h-[85vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
           <div>
             <SectionLabel>Importer CV</SectionLabel>
             <h2 className="text-[20px] font-medium tracking-tight mt-1">
@@ -220,7 +222,7 @@ export function ImportCVModal({
               onClose();
               reset();
             }}
-            className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#14110e]/60"
+            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60"
             aria-label="Lukk"
           >
             <IconClose size={18} />
@@ -242,10 +244,10 @@ export function ImportCVModal({
         </div>
 
         {step === "preview" && parsed && (
-          <footer className="px-6 py-4 border-t border-black/8 flex items-center justify-between gap-3 bg-[#eee9df]/50">
+          <footer className="px-6 py-4 border-t border-black/8 dark:border-white/8 flex items-center justify-between gap-3 bg-panel/50">
             <button
               onClick={reset}
-              className="text-[12px] text-[#14110e]/60 hover:text-[#14110e]"
+              className="text-[12px] text-ink/60 hover:text-ink"
             >
               Prøv en annen fil
             </button>
@@ -255,13 +257,13 @@ export function ImportCVModal({
                   onClose();
                   reset();
                 }}
-                className="px-4 py-2 rounded-full text-[12px] border border-black/15 hover:border-black/30"
+                className="px-4 py-2 rounded-full text-[12px] border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30"
               >
                 Avbryt
               </button>
               <button
                 onClick={applyToStore}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424]"
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover"
               >
                 Bruk denne CVen
                 <IconArrowRight size={14} />
@@ -287,10 +289,10 @@ function UploadStep({
 }) {
   return (
     <div className="space-y-5">
-      <p className="text-[13px] text-[#14110e]/65 leading-relaxed">
+      <p className="text-[13px] text-ink/65 leading-relaxed">
         Last opp en eksisterende CV eller en LinkedIn-profil eksportert som PDF.
         AI leser innholdet og fyller ut feltene. Vi legger aldri til informasjon
-        som ikke står i kilden — alt kan redigeres manuelt etterpå.
+        som ikke står i kilden, og alt kan redigeres manuelt etterpå.
       </p>
       <div
         onDragOver={(e) => {
@@ -308,18 +310,15 @@ function UploadStep({
         className={cn(
           "cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-colors",
           dragOver
-            ? "border-[#D5592E] bg-[#D5592E]/5"
-            : "border-black/15 hover:border-black/40 bg-white",
+            ? "border-accent bg-accent/5"
+            : "border-black/15 dark:border-white/15 hover:border-black/40 dark:hover:border-white/40 bg-surface",
         )}
       >
-        <div className="size-10 mx-auto mb-3 rounded-full bg-[#eee9df] flex items-center justify-center">
-          <IconArrowRight
-            size={18}
-            className="rotate-[-90deg] text-[#14110e]/70"
-          />
+        <div className="size-10 mx-auto mb-3 rounded-full bg-panel flex items-center justify-center">
+          <IconArrowRight size={18} className="rotate-[-90deg] text-ink/70" />
         </div>
         <p className="text-[14px] font-medium">Dra og slipp PDF her</p>
-        <p className="text-[12px] text-[#14110e]/55 mt-1">
+        <p className="text-[12px] text-ink/55 mt-1">
           eller klikk for å velge en fil
         </p>
         <input
@@ -334,14 +333,8 @@ function UploadStep({
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Tile
-          title="PDF-CV"
-          desc="Vanlige CV-formater leses inn."
-        />
-        <Tile
-          title="LinkedIn PDF"
-          desc="Profil → mer → lagre som PDF → last opp."
-        />
+        <Tile title="PDF-CV" desc="Vanlige CV-formater leses inn." />
+        <Tile title="LinkedIn PDF" desc="Profil → mer → lagre som PDF → last opp." />
       </div>
     </div>
   );
@@ -349,21 +342,147 @@ function UploadStep({
 
 function Tile({ title, desc }: { title: string; desc: string }) {
   return (
-    <div className="p-4 rounded-2xl bg-white border border-black/5">
+    <div className="p-4 rounded-2xl bg-surface border border-black/5 dark:border-white/5">
       <div className="text-[13px] font-medium">{title}</div>
-      <div className="text-[11px] text-[#14110e]/55 mt-1">{desc}</div>
+      <div className="text-[11px] text-ink/55 mt-1">{desc}</div>
     </div>
   );
 }
 
+const PARSE_STAGES = [
+  { id: "read", label: "Leser PDF-en", Icon: FileText },
+  { id: "ai", label: "AI-en leser gjennom", Icon: Sparkles },
+  { id: "structure", label: "Strukturerer feltene", Icon: ListChecks },
+  { id: "polish", label: "Pusser på detaljene", Icon: Wand2 },
+];
+
+// Varm, selvbevisst humor om PROSESSEN/AI-en — aldri om brukeren.
+const PARSE_QUIPS = [
+  "AI-en tar på seg lesebrillene.",
+  "Må innrømme det, fin erfaring du har her.",
+  "Teller kommaene så du slipper.",
+  "Vi finner aldri på noe, bare det som faktisk står der.",
+  "Sorterer årene dine pent i bokser.",
+  "Henter fram det viktigste, lar resten ligge.",
+  "En god CV fortjener en grundig lesning.",
+  "Lover å ikke dømme skriftvalget ditt.",
+];
+
 function ParsingStep({ fileName }: { fileName: string }) {
+  const [stage, setStage] = useState(0);
+  const [quip, setQuip] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(
+      () => setStage((s) => Math.min(s + 1, PARSE_STAGES.length - 1)),
+      3200,
+    );
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(
+      () => setQuip((q) => (q + 1) % PARSE_QUIPS.length),
+      2700,
+    );
+    return () => clearInterval(t);
+  }, []);
+
+  // Holder seg under 100 % til serveren faktisk svarer (da byttes hele steget ut).
+  const pct = Math.min(94, 16 + stage * 26);
+  const StageIcon = PARSE_STAGES[stage].Icon;
+
   return (
-    <div className="py-14 text-center">
-      <div className="inline-flex size-10 rounded-full border-2 border-[#D5592E] border-t-transparent animate-spin mb-5" />
-      <div className="text-[15px] font-medium">Leser {fileName} …</div>
-      <p className="text-[12px] text-[#14110e]/55 mt-2">
-        AI ekstraherer strukturerte felter. Tar vanligvis 10-20 sekunder.
-      </p>
+    <div className="py-6">
+      <div className="flex flex-col items-center text-center mb-7">
+        <motion.div
+          className="size-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={stage}
+              initial={{ opacity: 0, scale: 0.6, rotate: -12 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.6, rotate: 12 }}
+              transition={{ duration: 0.35 }}
+              className="text-accent"
+            >
+              <StageIcon size={26} />
+            </motion.span>
+          </AnimatePresence>
+        </motion.div>
+        <div className="text-[15px] font-medium truncate max-w-[280px]">
+          {fileName}
+        </div>
+        <p className="text-[12px] text-ink/55 mt-1">
+          Vanligvis 10 til 20 sekunder. Ingenting blir funnet på.
+        </p>
+      </div>
+
+      <div className="h-1.5 bg-panel rounded-full overflow-hidden mb-6">
+        <motion.div
+          className="h-full bg-accent rounded-full"
+          initial={{ width: "8%" }}
+          animate={{ width: `${pct}%` }}
+          transition={{ ease: "easeOut", duration: 0.7 }}
+        />
+      </div>
+
+      <ul className="space-y-2.5 mb-6">
+        {PARSE_STAGES.map((s, i) => {
+          const done = i < stage;
+          const active = i === stage;
+          return (
+            <li key={s.id} className="flex items-center gap-3">
+              <span
+                className={cn(
+                  "size-5 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                  done && "bg-success text-bg",
+                  active && "bg-accent text-bg",
+                  !done && !active && "bg-panel text-ink/30",
+                )}
+              >
+                {done ? (
+                  <IconCheck size={12} />
+                ) : active ? (
+                  <motion.span
+                    className="size-2 rounded-full bg-bg"
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  />
+                ) : (
+                  <span className="size-1.5 rounded-full bg-current" />
+                )}
+              </span>
+              <span
+                className={cn(
+                  "text-[13px] transition-colors",
+                  done || active ? "text-ink" : "text-ink/40",
+                )}
+              >
+                {s.label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="h-5 text-center" aria-live="polite">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={quip}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.4 }}
+            className="text-[12px] text-ink/50 italic"
+          >
+            {PARSE_QUIPS[quip]}
+          </motion.p>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -418,25 +537,25 @@ function PreviewStep({ parsed }: { parsed: Parsed }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-[12px] text-[#14110e]/65">
+      <p className="text-[12px] text-ink/65">
         Sjekk over at dette stemmer. Vi erstatter eksisterende CV-innhold når du
         klikker &quot;Bruk denne CVen&quot;.
       </p>
-      <ul className="divide-y divide-black/5 bg-white rounded-2xl border border-black/5">
+      <ul className="divide-y divide-black/5 dark:divide-white/5 bg-surface rounded-2xl border border-black/5 dark:border-white/5">
         {rows.map((r) => (
           <li key={r.label} className="flex items-start justify-between gap-4 px-4 py-3">
-            <span className="text-[11px] uppercase tracking-[0.12em] text-[#14110e]/55 shrink-0 min-w-[110px]">
+            <span className="text-[11px] uppercase tracking-[0.12em] text-ink/55 shrink-0 min-w-[110px]">
               {r.label}
             </span>
             <span
               className={cn(
                 "text-[13px] text-right flex-1 min-w-0",
-                r.value ? "text-[#14110e]" : "text-[#14110e]/30 italic",
+                r.value ? "text-ink" : "text-ink/30 italic",
               )}
             >
               {r.value ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <IconCheck size={12} className="text-[#16a34a]" />
+                  <IconCheck size={12} className="text-success" />
                   {r.value}
                 </span>
               ) : (
@@ -453,16 +572,16 @@ function PreviewStep({ parsed }: { parsed: Parsed }) {
 function ErrorStep({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="py-10 text-center">
-      <div className="inline-flex size-10 rounded-full bg-[#D5592E]/10 text-[#D5592E] items-center justify-center mb-4">
+      <div className="inline-flex size-10 rounded-full bg-accent/10 text-accent items-center justify-center mb-4">
         <IconClose size={20} />
       </div>
       <div className="text-[15px] font-medium mb-2">Import mislyktes</div>
-      <p className="text-[12px] text-[#14110e]/65 max-w-sm mx-auto mb-6">
+      <p className="text-[12px] text-ink/65 max-w-sm mx-auto mb-6">
         {message}
       </p>
       <button
         onClick={onRetry}
-        className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424]"
+        className="px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover"
       >
         Prøv igjen
       </button>
