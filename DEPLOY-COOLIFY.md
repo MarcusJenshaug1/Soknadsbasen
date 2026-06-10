@@ -149,12 +149,41 @@ curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://soknadsbasen.no/api/cr
   Redirect URLs) slik at innlogging/passord-reset peker på nytt domene.
 - **IndexNow:** nøkkelfila `/soknadsbasen-indexnow-2026.txt` følger med appen — ok.
 
-## 10. Collab-realtime (hvis i bruk)
+## 10. Collab-realtime (Yjs/Hocuspocus)
 
-`NEXT_PUBLIC_HOCUSPOCUS_URL` + mappa `hocuspocus-server/` er en egen
-WebSocket-tjeneste (sanntids-samskriving). Hvis dere bruker collab:
-deploy den som en **egen** Coolify-resource (egen Dockerfile/port) og pek
-`NEXT_PUBLIC_HOCUSPOCUS_URL` dit. Bruker dere det ikke, kan variabelen stå tom.
+`hocuspocus-server/` er en egen WebSocket-tjeneste for sanntids-samskriving av
+CV. Den er nå selvstendig byggbar (`Dockerfile.hocuspocus`, build-context =
+repo-rot) og verifisert til å starte (`Hocuspocus v2.15.3 … Ready`).
+
+**Toggle:** Hovedappen bruker Yjs-collab **kun hvis** `NEXT_PUBLIC_HOCUSPOCUS_URL`
+er satt (build-time). Er den tom, brukes Supabase broadcast-sync som før.
+
+### Deploy som egen Coolify-resource
+1. **+ New Resource → samme repo**, men **Build Pack = Dockerfile** med
+   **Dockerfile-sti = `Dockerfile.hocuspocus`**.
+2. **Port:** `1234`. **Domene:** `collab.soknadsbasen.no` (Coolify gir TLS;
+   WebSocket går over `wss://`).
+3. **Env (runtime):**
+   ```
+   SUPABASE_URL                  # https://<ref>.supabase.co (for JWT/JWKS)
+   DATABASE_URL                  # pooled, samme som hovedappen
+   DIRECT_URL                    # non-pooled
+   PORT=1234
+   ```
+4. **Aktiver i hovedappen:** sett `NEXT_PUBLIC_HOCUSPOCUS_URL=wss://collab.soknadsbasen.no`
+   som **build-arg** på hovedapp-resourcen, og redeploy den (NEXT_PUBLIC_* inlines
+   ved build).
+5. **DNS:** A-record `collab.soknadsbasen.no` → server-IP.
+
+> Tjenesten kjører ingen migrasjoner (hovedappen eier `prisma migrate deploy`).
+> Den deler DB og leser/skriver `cvYjsState` + `UserData.resumeData`.
+> Bruker dere ikke collab ennå, kan du hoppe over hele steget — la
+> `NEXT_PUBLIC_HOCUSPOCUS_URL` stå tom.
+
+> **Vedlikehold:** `hocuspocus-server/src/shared/mapper.ts` + `resume-types.ts`
+> er vendret fra `src/lib/yjs/mapper.ts` og `src/store/useResumeStore.ts`
+> (tjenesten deployes selvstendig og kan ikke importere fra Next-appen). Endrer
+> du CV-datamodellen, oppdater begge sider.
 
 ## 11. Deploy og verifiser
 

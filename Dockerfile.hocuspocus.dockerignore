@@ -1,0 +1,17 @@
+# Per-Dockerfile ignore for collab-serveren. Behold prisma/ + hocuspocus-server/;
+# rot-.dockerignore (som ekskluderer hocuspocus-server) gjelder ikke når denne finnes.
+**/node_modules
+**/dist
+.git
+.github
+.next
+.claude
+.env
+.env.*
+*.log
+.DS_Store
+src
+public
+content
+Dockerfile
+.dockerignore

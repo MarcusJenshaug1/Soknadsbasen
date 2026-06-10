@@ -12,5 +12,5 @@
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["src/**/*", "../src/lib/yjs/mapper.ts", "../src/store/useResumeStore.ts"]
+  "include": ["src/**/*"]
 }
