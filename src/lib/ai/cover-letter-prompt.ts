@@ -1,5 +1,5 @@
 // Norsk-konvensjons-prompt for søknadsbrev. Bygger på norsk søknadstradisjon
-// og kompenserer for at vi bruker Gemini Flash (ikke Pro) ved å gi sterke
+// og kompenserer for at vi bruker Claude (vi bruker en rask, rimelig modell) ved å gi sterke
 // negative-shots og few-shot eksempler.
 //
 // Markedsføres som "Norsk-modus" på /funksjoner og /sammenligning/lonna.
