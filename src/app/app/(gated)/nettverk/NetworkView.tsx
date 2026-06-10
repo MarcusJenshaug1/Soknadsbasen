@@ -6,6 +6,7 @@ import { SectionLabel } from "@/components/ui/Pill";
 import { AlertCircle, Phone } from "lucide-react";
 import { IconClose, IconLink, IconMail, IconPlus } from "@/components/ui/Icons";
 import { AvatarCropper } from "@/components/AvatarCropper";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
 
 export type Contact = {
@@ -276,20 +277,26 @@ function ContactModal({
     { key: "lastContactedAt", label: "Sist kontaktet", placeholder: "", type: "date" },
   ];
 
-  return createPortal(
+  return (
     <>
-    <AvatarCropper
-      file={cropFile}
-      onCancel={() => setCropFile(null)}
-      onConfirm={async (blob) => {
-        setCropFile(null);
-        const base64 = await blobToBase64(blob);
-        set("photoUrl", base64);
-      }}
-    />
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full md:max-w-lg bg-bg rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
+    {createPortal(
+      <AvatarCropper
+        file={cropFile}
+        onCancel={() => setCropFile(null)}
+        onConfirm={async (blob) => {
+          setCropFile(null);
+          const base64 = await blobToBase64(blob);
+          set("photoUrl", base64);
+        }}
+      />,
+      document.body,
+    )}
+    <Modal
+      open
+      onClose={onClose}
+      ariaLabel={initial ? "Rediger kontakt" : "Ny kontakt"}
+      panelClassName="w-full md:max-w-lg bg-bg rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col mt-auto md:mt-0"
+    >
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-black/8 dark:border-white/8">
           <h2 className="text-[16px] font-medium">
             {initial ? "Rediger kontakt" : "Ny kontakt"}
@@ -410,10 +417,8 @@ function ContactModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
-    </>,
-    document.body,
+    </Modal>
+    </>
   );
 }
 

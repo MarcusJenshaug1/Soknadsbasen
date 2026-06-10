@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconClose, IconPlus } from "@/components/ui/Icons";
+import { Modal } from "@/components/ui/Modal";
 import { SectionLabel } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
 
@@ -168,19 +169,17 @@ export function NewApplicationModal({
     }, 200);
   }
 
-  if (!open) return null;
-
   const extracting = status === "extracting";
   const saving = status === "saving";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
-        onClick={close}
-      />
-      <div className="relative bg-bg rounded-3xl w-full max-w-[680px] max-h-[88vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
+    <Modal
+      open={open}
+      onClose={close}
+      ariaLabel="Ny søknad"
+      panelClassName="bg-bg rounded-3xl w-full max-w-[680px] max-h-[88vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8"
+    >
+      <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
           <div>
             <SectionLabel>Ny søknad</SectionLabel>
             <h2 className="text-[20px] font-medium tracking-tight mt-1">
@@ -264,8 +263,7 @@ export function NewApplicationModal({
             </button>
           </footer>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 

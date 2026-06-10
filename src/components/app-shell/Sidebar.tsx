@@ -8,23 +8,13 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { SessionSwitcher } from "@/components/sessions/SessionSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { PendingSuggestionsBell } from "@/components/collab/PendingSuggestionsBell";
+import {
+  NAV_ITEMS,
+  NAV_GROUP_ORDER,
+  NAV_GROUP_LABELS,
+  isNavActive,
+} from "@/lib/nav";
 import type { OrgContext } from "@/lib/auth";
-
-type NavItem = { href: string; label: string; gated: boolean; dot?: boolean };
-
-const NAV: readonly NavItem[] = [
-  { href: "/app", label: "Hjem", gated: true },
-  { href: "/jobb", label: "Stillinger", gated: false, dot: true },
-  { href: "/app/cv", label: "Min CV", gated: true },
-  { href: "/app/pipeline", label: "Søknader", gated: true },
-  { href: "/app/brev", label: "Søknadsbrev", gated: true },
-  { href: "/app/oppgaver", label: "Oppgaver", gated: true },
-  { href: "/app/selskaper", label: "Selskaper", gated: true },
-  { href: "/app/nettverk", label: "Nettverk", gated: true },
-  { href: "/app/innsikt", label: "Innsikt", gated: true },
-  { href: "/app/sesjoner", label: "Sesjoner", gated: true },
-  { href: "/app/billing", label: "Abonnement", gated: false },
-] as const;
 
 function initialsFor(name?: string | null, email?: string | null): string {
   const source = name?.trim() || email?.split("@")[0] || "?";
@@ -56,7 +46,7 @@ export function Sidebar({
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const initials = initialsFor(user?.name, user?.email);
-  const nav = NAV.filter((n) => hasAccess || !n.gated);
+  const nav = NAV_ITEMS.filter((n) => hasAccess || !n.gated);
 
   return (
     <aside className="hidden md:flex w-[240px] shrink-0 border-r border-black/8 dark:border-white/8 flex-col p-6 bg-bg h-dvh sticky top-0 print:hidden">
@@ -83,34 +73,45 @@ export function Sidebar({
         )}
       </div>
       <nav className="space-y-0.5 text-[13px] flex-1 flex flex-col">
-        <div className="flex-1 space-y-0.5">
-        {nav.map((n) => {
-          const active =
-            n.href === "/app"
-              ? pathname === "/app"
-              : pathname === n.href || pathname.startsWith(`${n.href}/`);
-          return (
-            <Link
-              key={n.href}
-              href={n.href}
-              prefetch={true}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-full transition-colors",
-                active
-                  ? "bg-ink text-bg dark:bg-white/12 dark:text-ink"
-                  : "text-[#14110e]/70 dark:text-[#f0ece6]/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-ink",
-              )}
-            >
-              {n.dot ? (
-                <span
-                  className="size-1.5 rounded-full bg-[#D5592E] shrink-0"
-                  aria-hidden
-                />
-              ) : null}
-              {n.label}
-            </Link>
-          );
-        })}
+        <div className="flex-1 space-y-1">
+          {NAV_GROUP_ORDER.map((group) => {
+            const items = nav.filter((n) => n.group === group);
+            if (!items.length) return null;
+            return (
+              <div key={group} className="space-y-0.5">
+                {group !== "hoved" && (
+                  <div className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-[0.15em] text-ink/40">
+                    {NAV_GROUP_LABELS[group]}
+                  </div>
+                )}
+                {items.map((n) => {
+                  const active = isNavActive(n.href, pathname);
+                  return (
+                    <Link
+                      key={n.href}
+                      href={n.href}
+                      prefetch={true}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-full transition-colors",
+                        active
+                          ? "bg-ink text-bg dark:bg-white/12 dark:text-ink"
+                          : "text-ink/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-ink",
+                      )}
+                    >
+                      {n.dot ? (
+                        <span
+                          className="size-1.5 rounded-full bg-accent shrink-0"
+                          aria-hidden
+                        />
+                      ) : null}
+                      {n.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
         {hasAccess && (
           <div className="mt-4 pt-4 border-t border-black/8 dark:border-white/8 space-y-2">
@@ -165,7 +166,7 @@ export function Sidebar({
           <div className="text-[12px] font-medium truncate">
             {displayName(user?.name, user?.email)}
           </div>
-          <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 truncate">
+          <div className="text-[11px] text-ink/55 truncate">
             {user?.email ?? "—"}
           </div>
         </div>
@@ -174,7 +175,7 @@ export function Sidebar({
         href="https://marcusjenshaug.no"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 flex items-center gap-2 text-[11px] text-[#14110e]/35 dark:text-[#f0ece6]/35 hover:text-[#14110e]/60 dark:hover:text-[#f0ece6]/60 transition-colors"
+        className="mt-3 flex items-center gap-2 text-[11px] text-ink/35 hover:text-ink/60 transition-colors"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

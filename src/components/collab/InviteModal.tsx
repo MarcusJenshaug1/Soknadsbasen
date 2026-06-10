@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Copy, X, Check, Trash2, Link2, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Modal } from "@/components/ui/Modal";
 import {
   COLLAB_INVITE_TTL_OPTIONS,
   type CollabResourceKind,
@@ -118,20 +119,14 @@ export function InviteModal({
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-label="Inviter hjelper"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      ariaLabel="Inviter hjelper"
+      panelClassName="w-full max-w-[600px] max-h-[88vh] overflow-y-auto rounded-2xl bg-bg shadow-2xl border border-black/10"
     >
-      <div
-        className="relative w-full max-w-[600px] max-h-[88vh] overflow-y-auto rounded-2xl bg-bg shadow-2xl border border-black/10"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 px-6 py-4 flex items-start justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 px-6 py-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-[0.2em] text-accent mb-1">
               Inviter hjelper
@@ -286,7 +281,6 @@ export function InviteModal({
             </ul>
           </section>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
