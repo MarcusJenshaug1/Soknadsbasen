@@ -16,7 +16,6 @@ type Draft = {
   jobUrl: string;
   jobDescription: string;
   deadline: string;
-  offerSalary: string;
   location: string;
 };
 
@@ -28,7 +27,6 @@ const EMPTY: Draft = {
   jobUrl: "",
   jobDescription: "",
   deadline: "",
-  offerSalary: "",
   location: "",
 };
 
@@ -80,7 +78,6 @@ export function NewApplicationModal({
         jobUrl: url,
         jobDescription: data.jobDescription ?? "",
         deadline: data.deadline ?? "",
-        offerSalary: data.salary ?? "",
         location: data.location ?? "",
       });
       setMode("manual");
@@ -114,7 +111,6 @@ export function NewApplicationModal({
         jobUrl: "",
         jobDescription: data.jobDescription ?? "",
         deadline: data.deadline ?? "",
-        offerSalary: data.salary ?? "",
         location: data.location ?? "",
       });
       setMode("manual");
@@ -419,15 +415,6 @@ function ManualStep({
             type="date"
             value={draft.deadline}
             onChange={(e) => update("deadline", e.target.value)}
-            className={INPUT}
-          />
-        </div>
-        <div>
-          <label className={LABEL}>Lønn</label>
-          <input
-            value={draft.offerSalary}
-            onChange={(e) => update("offerSalary", e.target.value)}
-            placeholder="780 000 NOK"
             className={INPUT}
           />
         </div>

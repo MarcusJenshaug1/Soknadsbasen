@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
-import { StatusDot, STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
+import { StatusDot, type StatusKey } from "@/components/ui/StatusDot";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
 
 export const dynamic = "force-dynamic";

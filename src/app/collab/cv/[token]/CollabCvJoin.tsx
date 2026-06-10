@@ -128,8 +128,8 @@ export function CollabCvJoin({
           Velkommen, {join.ownerLabel ?? "hjelper"}!
         </h1>
         <p className="text-[14px] text-ink/65 leading-[1.55] mb-6">
-          Du er nå koblet til {ownerDisplayName} sin CV. Editor-visningen kommer
-          på plass når collab-serveren er aktiv (vi setter den opp denne uka).
+          Du er nå koblet til {ownerDisplayName} sin CV. Live-redigering for
+          medhjelpere er ikke åpnet ennå — du får beskjed når den er klar.
         </p>
         <p className="text-[12px] text-ink/45">
           Sesjon-id: <code>{join.sessionId.slice(0, 8)}…</code>

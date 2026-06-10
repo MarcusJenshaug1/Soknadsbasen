@@ -30,7 +30,7 @@ export default async function SesjonerPage() {
         Sesjoner
       </h1>
       <p className="text-[13px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-8">
-        Alle søkerunder, med statistikk og lenke til pipeline-arkivet.
+        Alle søkerunder, med lenke til pipeline-arkivet.
       </p>
 
       <ShareLinkWidget />

@@ -20,7 +20,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
-import { PIPELINE_COLUMNS, isPipelineStatus } from "@/lib/pipeline";
+import {
+  PIPELINE_COLUMNS,
+  PIPELINE_STATUSES,
+  ARCHIVED_STATUSES,
+  isPipelineStatus,
+} from "@/lib/pipeline";
 
 const TERMINAL_STATUSES: StatusKey[] = ["accepted", "declined", "rejected"];
 const ACTIVE_COLUMNS = PIPELINE_COLUMNS.filter(
@@ -495,13 +500,6 @@ function Column({
           </span>
           <span className="text-[11px] text-[#14110e]/40 dark:text-[#f0ece6]/40">{items.length}</span>
         </div>
-        <button
-          type="button"
-          className="text-[#14110e]/40 dark:text-[#f0ece6]/40 hover:text-ink transition-colors"
-          aria-label={`Legg til i ${label}`}
-        >
-          <IconPlus size={16} />
-        </button>
       </div>
       <SortableContext
         items={items.map((a) => a.id)}
@@ -623,20 +621,11 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
             onClick={onCreate}
             className="px-5 py-3 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
           >
-            Opprett manuelt
+            Legg til søknad
           </button>
-          <button
-            onClick={onCreate}
-            className="px-5 py-3 rounded-full bg-surface border border-black/10 dark:border-white/10 text-[13px] hover:border-black/25 dark:hover:border-white/25 transition-colors"
-          >
-            Importer fra lenke
-          </button>
-          <button
-            onClick={onCreate}
-            className="px-5 py-3 rounded-full text-[13px] text-[#14110e]/65 dark:text-[#f0ece6]/65 hover:text-ink transition-colors"
-          >
-            Lim inn stillingstekst
-          </button>
+          <p className="text-[12px] text-[#14110e]/45 dark:text-[#f0ece6]/45">
+            Manuelt, fra lenke eller ved å lime inn stillingsteksten.
+          </p>
         </div>
       </div>
     </div>
@@ -737,15 +726,11 @@ function ListView({
   );
 }
 
-const STATUS_OPTIONS = [
-  { value: "draft", label: "Kladd" },
-  { value: "applied", label: "Søkt" },
-  { value: "interview", label: "Intervju" },
-  { value: "offer", label: "Tilbud" },
-  { value: "accepted", label: "Takket ja" },
-  { value: "rejected", label: "Avslag" },
-  { value: "withdrawn", label: "Trukket" },
-];
+// Avledet fra én kilde (PIPELINE_COLUMNS + ARCHIVED_STATUSES) så bulk-menyen
+// aldri drifter fra kanban-labelene — f.eks. "applied" = "Sendt" begge steder.
+const STATUS_OPTIONS = [...PIPELINE_STATUSES, ...ARCHIVED_STATUSES].map(
+  (status) => ({ value: status, label: STATUS_LABEL[status] }),
+);
 
 function BulkActionBar({
   count,
