@@ -151,23 +151,24 @@ export async function POST(req: Request) {
     );
   }
 
-  const app = await prisma.jobApplication.findFirst({
-    where: { id: body.applicationId, userId: session.userId },
-    select: {
-      companyName: true,
-      title: true,
-      jobDescription: true,
-      notes: true,
-    },
-  });
+  const [app, userData] = await Promise.all([
+    prisma.jobApplication.findFirst({
+      where: { id: body.applicationId, userId: session.userId },
+      select: {
+        companyName: true,
+        title: true,
+        jobDescription: true,
+        notes: true,
+      },
+    }),
+    prisma.userData.findUnique({
+      where: { userId: session.userId },
+      select: { resumeData: true },
+    }),
+  ]);
   if (!app) {
     return NextResponse.json({ error: "Søknad ikke funnet" }, { status: 404 });
   }
-
-  const userData = await prisma.userData.findUnique({
-    where: { userId: session.userId },
-    select: { resumeData: true },
-  });
 
   const resumeContext = buildResumeContext(userData?.resumeData);
 
@@ -238,13 +239,9 @@ Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved n
           .replace(/^```(?:markdown|md)?\s*/i, "")
           .replace(/```\s*$/i, "")
           .trim();
-        if (!cleaned) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: "Tomt svar fra AI. Prøv igjen." })}\n\n`),
-          );
-          controller.close();
-          return;
-        }
+        // geminiStream feiler på helt tomt svar; dette dekker svar som BLIR
+        // tomme etter fence-stripping. Catch-blokken under emitter error-event.
+        if (!cleaned) throw new Error("Tomt svar fra AI. Prøv igjen.");
         const html = marked.parse(cleaned, { async: false }) as string;
         const warnings = validateCoverLetter(cleaned, app.companyName);
         controller.enqueue(

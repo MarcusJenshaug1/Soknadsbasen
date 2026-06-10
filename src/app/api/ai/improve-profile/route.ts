@@ -112,15 +112,7 @@ ${body.summary ? `EKSISTERENDE PROFIL-TEKST (forbedre denne, behold fakta):\n${b
           accumulated += value;
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: value })}\n\n`));
         }
-        const text = accumulated.trim();
-        if (!text) {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: "Tomt svar fra AI. Prøv igjen." })}\n\n`),
-          );
-          controller.close();
-          return;
-        }
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, text })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, text: accumulated.trim() })}\n\n`));
       } catch (err) {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : "AI-feil" })}\n\n`),

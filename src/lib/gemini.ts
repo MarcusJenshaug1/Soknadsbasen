@@ -135,6 +135,7 @@ export async function geminiStream(
     async start(controller) {
       const reader = upstream.getReader();
       let buffer = "";
+      let emittedText = false;
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -151,11 +152,20 @@ export async function geminiStream(
                 candidates?: { content?: { parts?: { text?: string }[] } }[];
               };
               const chunk = evt.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (chunk) controller.enqueue(chunk);
+              if (chunk) {
+                if (chunk.trim()) emittedText = true;
+                controller.enqueue(chunk);
+              }
             } catch {
               // ignore malformed SSE lines
             }
           }
+        }
+        // Samme invariant som geminiGenerate: et «vellykket» svar uten tekst
+        // er en feil — ellers shipper konsumentene tomt innhold som suksess.
+        if (!emittedText) {
+          controller.error(new Error("Tomt svar fra Gemini. Prøv igjen."));
+          return;
         }
         controller.close();
       } catch (err) {
