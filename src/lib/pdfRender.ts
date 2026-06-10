@@ -23,12 +23,21 @@ async function launchBrowser(): Promise<Browser> {
       headless: true,
     }) as unknown as Browser;
   }
+  const execPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (execPath) {
+    // Coolify/Docker: system-Chromium via puppeteer-core (lett, ingen
+    // browser-fetcher; installert komplett i imaget — se Dockerfile).
+    const { default: puppeteerCore } = await import("puppeteer-core");
+    return puppeteerCore.launch({
+      headless: true,
+      executablePath: execPath,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    }) as unknown as Browser;
+  }
+  // Lokal dev: full puppeteer som laster ned og bruker sin egen Chromium.
   const { default: puppeteer } = await import("puppeteer");
   return puppeteer.launch({
     headless: true,
-    // På Coolify/Docker peker PUPPETEER_EXECUTABLE_PATH på system-Chromium
-    // (installert i imaget). Lokalt er den ikke satt → puppeteer bruker sin egen.
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   }) as unknown as Browser;
 }

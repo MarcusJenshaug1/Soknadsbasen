@@ -68,6 +68,15 @@ COPY --from=build /app/public ./public
 # Prisma schema + migrasjoner trengs for `migrate deploy`.
 COPY --from=build /app/prisma ./prisma
 
+# Puppeteer-core (PDF via system-Chromium): Next standalone-tracing kopierer
+# bare package.json for serverExternalPackages, ikke lib-filene — så vi
+# installerer det komplett (med alle deps) i et tmp-tre og legger det over
+# i app-node_modules. Uten dette feiler /api/pdf med MODULE_NOT_FOUND.
+RUN cd /tmp && npm init -y >/dev/null 2>&1 \
+ && npm install puppeteer-core@24.42.0 --no-audit --no-fund >/dev/null 2>&1 \
+ && cp -r /tmp/node_modules/. ./node_modules/ \
+ && rm -rf /tmp/node_modules /tmp/package.json && npm cache clean --force
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
