@@ -26,6 +26,9 @@ async function launchBrowser(): Promise<Browser> {
   const { default: puppeteer } = await import("puppeteer");
   return puppeteer.launch({
     headless: true,
+    // På Coolify/Docker peker PUPPETEER_EXECUTABLE_PATH på system-Chromium
+    // (installert i imaget). Lokalt er den ikke satt → puppeteer bruker sin egen.
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   }) as unknown as Browser;
 }
