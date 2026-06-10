@@ -15,11 +15,15 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Slankt selvstendig serveroutput for Docker/Coolify (.next/standalone).
+  output: "standalone",
   poweredByHeader: false,
   trailingSlash: false,
   env: {
     NEXT_PUBLIC_BUILD_ID:
-      process.env.VERCEL_GIT_COMMIT_SHA ?? `dev-${Date.now()}`,
+      process.env.VERCEL_GIT_COMMIT_SHA ??
+      process.env.SOURCE_COMMIT ??
+      `dev-${Date.now()}`,
   },
   serverExternalPackages: ["pdfjs-dist", "puppeteer", "puppeteer-core", "@sparticuz/chromium"],
   outputFileTracingIncludes: {
