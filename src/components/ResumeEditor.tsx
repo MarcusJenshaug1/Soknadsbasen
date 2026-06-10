@@ -148,7 +148,7 @@ export function ResumeEditor() {
         {/* Editor + Preview */}
         <div className="flex-1 flex overflow-hidden">
           <div
-            className={`${mobileView === "editor" ? "flex" : "hidden"} md:flex w-full md:w-[45%] lg:w-[40%] overflow-y-auto px-5 md:px-10 pb-8 bg-surface md:border-r border-black/8 dark:border-white/8`}
+            className={`${mobileView === "editor" ? "flex" : "hidden"} md:flex w-full md:w-[58%] lg:w-[62%] overflow-y-auto px-5 md:px-10 pb-8 bg-surface md:border-r border-black/8 dark:border-white/8`}
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -173,7 +173,7 @@ export function ResumeEditor() {
           </div>
 
           <div
-            className={`${mobileView === "preview" ? "flex" : "hidden"} md:flex w-full md:w-[55%] lg:w-[60%] bg-panel overflow-y-auto px-2 md:px-4 py-4 md:py-8 justify-center items-start`}
+            className={`${mobileView === "preview" ? "flex" : "hidden"} md:flex w-full md:w-[42%] lg:w-[38%] bg-panel overflow-y-auto px-2 md:px-4 py-4 md:py-8 justify-center items-start`}
           >
             <LivePreview />
           </div>

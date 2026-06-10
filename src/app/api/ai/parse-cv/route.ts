@@ -210,8 +210,12 @@ function convertDescriptionsToHtml(root: Record<string, unknown>) {
 
 /* ─── PDF text extraction (copied from legacy route) ─────── */
 async function extractPdfText(data: Uint8Array): Promise<string> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await pdfjs.getDocument({ data }).promise;
+  // unpdf pakker en serverless-vennlig pdfjs-build UTEN canvas/DOMMatrix-krav,
+  // så uthenting virker i Docker-standalone (direkte pdfjs-dist krasjet på
+  // manglende @napi-rs/canvas → "DOMMatrix is not defined"). Samme item-shape
+  // ({ str, transform }), så y-koordinat-grupperingen under er uendret.
+  const { getDocumentProxy } = await import("unpdf");
+  const doc = await getDocumentProxy(data);
   const pages: string[] = [];
 
   for (let i = 1; i <= doc.numPages; i++) {

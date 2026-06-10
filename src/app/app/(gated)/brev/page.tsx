@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { StatusDot, type StatusKey } from "@/components/ui/StatusDot";
 import { PrefetchLink } from "@/components/ui/PrefetchLink";
+import { NewLetterButton, type LetterPickerApp } from "./NewLetterButton";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +28,24 @@ export default async function BrevPage() {
   const withLetters = apps.filter((a) => a.coverLetter);
   const withoutLetters = apps.filter((a) => !a.coverLetter);
 
+  const pickerApps: LetterPickerApp[] = apps.map((a) => ({
+    id: a.id,
+    title: a.title,
+    companyName: a.companyName,
+    hasLetter: Boolean(a.coverLetter),
+  }));
+
   return (
     <div className="max-w-[1000px] mx-auto px-5 md:px-10 py-6 md:py-10">
       <SectionLabel className="mb-3">Søknadsbrev</SectionLabel>
-      <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium mb-2">
-        Brevene dine
-      </h1>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
+        <h1 className="text-[32px] md:text-[40px] leading-none tracking-[-0.03em] font-medium">
+          Brevene dine
+        </h1>
+        <div className="shrink-0">
+          <NewLetterButton apps={pickerApps} />
+        </div>
+      </div>
       <p className="text-[14px] text-[#14110e]/60 dark:text-[#f0ece6]/60 mb-10">
         Ett brev per søknad. Auto-lagres mens du skriver.
       </p>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CalendarClock, Flag, Phone, Plus } from "lucide-react";
 import { getSessionWithAccess } from "@/lib/auth";
 import { getActiveSession } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +66,48 @@ function pickNextMilestone(apps: Application[]) {
     .filter((e) => e.at.getTime() >= now)
     .sort((a, b) => a.at.getTime() - b.at.getTime())[0];
   return soonest ?? null;
+}
+
+type ActionKind = "interview" | "deadline" | "followUp";
+
+type ActionItem = {
+  app: Application;
+  at: Date;
+  kind: ActionKind;
+  /** Negative = overdue (i fortiden). */
+  days: number;
+};
+
+/**
+ * Utleder en handlingsliste fra app-objektene vi allerede har hentet (ingen
+ * ekstra DB-kall). Tar med forfalte oppfølginger ("krever oppmerksomhet") og
+ * alt med frist/intervju/oppfølging innen 14 dager fram i tid. Sortert med
+ * det mest presserende først (forfalt øverst, deretter nærmest i tid).
+ */
+function buildActionItems(apps: Application[], limit = 5): ActionItem[] {
+  const now = Date.now();
+  const horizon = now + 14 * 86_400_000;
+
+  const items: ActionItem[] = [];
+  for (const a of apps) {
+    const candidates: { at: Date | null; kind: ActionKind }[] = [
+      { at: a.interviewAt, kind: "interview" },
+      { at: a.deadlineAt, kind: "deadline" },
+      { at: a.followUpAt, kind: "followUp" },
+    ];
+    for (const c of candidates) {
+      if (!c.at) continue;
+      const t = c.at.getTime();
+      // Forfalte oppfølginger er handlingsverdige; forfalte frister/intervjuer
+      // er ikke lenger noe brukeren kan rekke, så de hoppes over.
+      const isOverdue = t < now;
+      if (isOverdue && c.kind !== "followUp") continue;
+      if (!isOverdue && t > horizon) continue;
+      items.push({ app: a, at: c.at, kind: c.kind, days: daysUntil(c.at) });
+    }
+  }
+
+  return items.sort((x, y) => x.at.getTime() - y.at.getTime()).slice(0, limit);
 }
 
 /**
@@ -190,6 +233,7 @@ export default async function AppHomePage() {
   const rejectedCount = apps.filter((a) => a.status === "rejected").length;
 
   const milestone = pickNextMilestone(active);
+  const actionItems = buildActionItems(active);
   const cvPercent = computeCvPercent(userData?.resumeData ?? null);
 
   const oldestActive = active.reduce<Date | null>(
@@ -251,13 +295,14 @@ export default async function AppHomePage() {
         <div className="flex gap-2">
           <Link
             href="/app/pipeline"
-            className="px-5 py-2.5 rounded-full border border-black/15 dark:border-white/15 text-[13px] hover:border-black/30 dark:hover:border-white/30 transition-colors"
+            className="px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-accent-hover transition-colors inline-flex items-center gap-1.5"
           >
+            <Plus className="size-3.5" />
             Ny søknad
           </Link>
           <Link
             href="/app/cv"
-            className="px-5 py-2.5 rounded-full bg-accent text-bg text-[13px] font-medium hover:bg-[#a94424] dark:hover:bg-[#c45830] transition-colors"
+            className="px-5 py-2.5 rounded-full border border-black/15 dark:border-white/15 text-[13px] hover:border-black/30 dark:hover:border-white/30 transition-colors"
           >
             Rediger CV
           </Link>
@@ -270,48 +315,36 @@ export default async function AppHomePage() {
         firstName={firstName(session.name)}
       />
 
-      {/* CV + stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mt-4 md:mt-6">
-        <div className="md:col-span-5 bg-panel rounded-3xl p-6 md:p-8">
-          <SectionLabel className="mb-3">CV-fullføring</SectionLabel>
-          <div className="flex items-baseline gap-2 mb-5">
-            <span className="text-[48px] md:text-[56px] leading-none tracking-[-0.03em] font-medium">
-              {cvPercent}
-            </span>
-            <span className="text-[22px] text-[#14110e]/50 dark:text-[#f0ece6]/50">%</span>
-          </div>
-          <div className="h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden mb-5">
-            <div
-              className="h-full bg-ink rounded-full transition-[width]"
-              style={{ width: `${cvPercent}%` }}
-            />
-          </div>
-          <Link
-            href="/app/cv"
-            className="text-[13px] text-accent hover:text-ink"
-          >
-            Fullfør →
-          </Link>
-        </div>
+      {/* Krever oppmerksomhet / Denne uken */}
+      {actionItems.length > 0 && (
+        <ActionList items={actionItems} />
+      )}
 
-        <div className="md:col-span-7 grid grid-cols-2 gap-3">
-          <StatCard label="Aktive søknader" value={String(active.length)} />
-          <StatCard
-            label="Svarprosent"
-            value={`${responseRate}%`}
-            sub={sentCount > 0 ? `av ${sentCount} sendt` : undefined}
-          />
-          <StatCard
-            label="Dager pågående"
-            value={daysRunning > 0 ? String(daysRunning) : "—"}
-            sub="siden start"
-          />
-          <StatCard
-            label="Intervjuer"
-            value={String(interviewCount)}
-            sub="akkurat nå"
-          />
-        </div>
+      {/* CV-fullføring: kun en handlings-nudge når CV ikke er ferdig.
+          Den fulle CV-statusen (CV-er, lenker, sist redigert) eier CvModule
+          lenger ned, så vi unngår å vise to overlappende CV-kort. */}
+      {cvPercent < 100 && (
+        <CvNudge percent={cvPercent} />
+      )}
+
+      {/* Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 md:mt-6">
+        <StatCard label="Aktive søknader" value={String(active.length)} />
+        <StatCard
+          label="Svarprosent"
+          value={`${responseRate}%`}
+          sub={sentCount > 0 ? `av ${sentCount} sendt` : undefined}
+        />
+        <StatCard
+          label="Dager pågående"
+          value={daysRunning > 0 ? String(daysRunning) : "—"}
+          sub="siden start"
+        />
+        <StatCard
+          label="Intervjuer"
+          value={String(interviewCount)}
+          sub="akkurat nå"
+        />
       </div>
 
       {/* Resultater */}
@@ -479,16 +512,16 @@ function MilestoneCard({
           </p>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/app/pipeline"
+              href={`/app/pipeline/${milestone.app.id}`}
               className="px-5 py-2.5 rounded-full bg-bg text-ink text-[13px] font-medium hover:bg-surface"
             >
-              Åpne
+              Åpne søknaden
             </Link>
             <Link
               href="/app/pipeline"
               className="px-5 py-2.5 rounded-full border border-bg/20 text-[13px] hover:border-bg/40"
             >
-              Flytt i kalender
+              Se pipeline
             </Link>
           </div>
         </div>
@@ -502,6 +535,112 @@ function MilestoneCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function actionMeta(kind: ActionKind): {
+  Icon: typeof CalendarClock;
+  verb: string;
+} {
+  switch (kind) {
+    case "interview":
+      return { Icon: CalendarClock, verb: "Intervju" };
+    case "deadline":
+      return { Icon: Flag, verb: "Søknadsfrist" };
+    case "followUp":
+      return { Icon: Phone, verb: "Følg opp" };
+  }
+}
+
+function relativeDays(days: number): { text: string; overdue: boolean } {
+  if (days < 0) {
+    const n = Math.abs(days);
+    return { text: n === 1 ? "1 dag forsinket" : `${n} dager forsinket`, overdue: true };
+  }
+  if (days === 0) return { text: "i dag", overdue: false };
+  if (days === 1) return { text: "i morgen", overdue: false };
+  return { text: `om ${days} dager`, overdue: false };
+}
+
+function ActionList({ items }: { items: ActionItem[] }) {
+  return (
+    <section className="mt-4 md:mt-6 bg-surface rounded-3xl border border-black/5 dark:border-white/5 p-6 md:p-8">
+      <div className="flex items-baseline justify-between mb-4 gap-3">
+        <div>
+          <SectionLabel className="mb-2">Krever oppmerksomhet</SectionLabel>
+          <h2 className="text-[22px] md:text-[24px] tracking-tight font-medium">
+            Denne uken
+          </h2>
+        </div>
+        <Link href="/app/pipeline" className="text-[13px] text-accent hover:text-ink">
+          Se alle →
+        </Link>
+      </div>
+
+      <ul className="space-y-1.5">
+        {items.map((item) => {
+          const { Icon, verb } = actionMeta(item.kind);
+          const { text, overdue } = relativeDays(item.days);
+          return (
+            <li key={`${item.app.id}-${item.kind}`}>
+              <PrefetchLink
+                href={`/app/pipeline/${item.app.id}`}
+                className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-panel transition-colors"
+              >
+                <span
+                  className={
+                    overdue
+                      ? "size-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0"
+                      : "size-9 rounded-xl bg-panel text-[#14110e]/55 dark:text-[#f0ece6]/55 flex items-center justify-center shrink-0"
+                  }
+                >
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-medium text-ink truncate">
+                    {verb} hos {item.app.companyName}
+                  </div>
+                  <div className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 mt-0.5 truncate">
+                    {item.app.title}
+                  </div>
+                </div>
+                <span
+                  className={
+                    overdue
+                      ? "text-[12px] font-medium text-accent shrink-0"
+                      : "text-[12px] text-[#14110e]/55 dark:text-[#f0ece6]/55 shrink-0"
+                  }
+                >
+                  {text}
+                </span>
+              </PrefetchLink>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function CvNudge({ percent }: { percent: number }) {
+  return (
+    <Link
+      href="/app/cv"
+      className="group mt-4 md:mt-6 flex items-center gap-4 bg-panel rounded-3xl p-5 md:p-6 hover:bg-surface transition-colors"
+    >
+      <div className="flex-1 min-w-0">
+        <SectionLabel className="mb-2">CV-en din er {percent}% ferdig</SectionLabel>
+        <div className="h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden max-w-md">
+          <div
+            className="h-full bg-ink rounded-full transition-[width]"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      </div>
+      <span className="text-[13px] text-accent group-hover:text-ink whitespace-nowrap shrink-0">
+        Fullfør CV →
+      </span>
+    </Link>
   );
 }
 
