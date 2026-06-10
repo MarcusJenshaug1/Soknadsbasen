@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { getSession } from "@/lib/auth";
+import { HotKeyListener } from "@/components/HotKeyListener";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { getImpersonationContext, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { OrgNav } from "./OrgNav";
 
@@ -12,7 +14,10 @@ export default async function OrgLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const session = await getSession();
+  const [session, impersonation] = await Promise.all([
+    getSession(),
+    getImpersonationContext(),
+  ]);
   if (!session) redirect(`/logg-inn?redirect=/org/${slug}`);
 
   const org = await prisma.organization.findUnique({
@@ -32,7 +37,16 @@ export default async function OrgLayout({
   const isAdmin = org.memberships[0].role === "admin";
 
   return (
-    <div className="min-h-dvh bg-[#f9f9f8] flex">
+    <>
+      {impersonation ? (
+        <ImpersonationBanner
+          adminEmail={impersonation.adminEmail}
+          targetEmail={session.email}
+          targetName={session.name}
+        />
+      ) : null}
+      <HotKeyListener />
+      <div className="min-h-dvh bg-[#f9f9f8] flex">
       <aside className="w-[220px] shrink-0 border-r border-black/8 flex flex-col bg-bg sticky top-0 h-dvh">
         <div className="px-5 py-5 border-b border-black/6">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -74,6 +88,7 @@ export default async function OrgLayout({
       <main className="flex-1 min-w-0">
         <div className="max-w-5xl mx-auto px-8 py-8">{children}</div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }

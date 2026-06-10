@@ -43,18 +43,21 @@ export function SaveButton({ slug, isLoggedIn, initialSaved }: Props) {
     <button
       type="button"
       onClick={onClick}
+      disabled={busy}
       aria-pressed={saved}
+      aria-busy={busy}
       aria-label={saved ? "Fjern fra lagrede" : "Lagre stilling"}
-      className={`relative inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+      title={saved ? "Fjern fra lagrede" : "Lagre stilling"}
+      className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] disabled:cursor-wait ${
         saved
           ? "border-[#D5592E]/30 bg-[#D5592E]/10 text-[#D5592E] hover:bg-[#D5592E]/15"
           : "border-black/10 bg-white text-[#14110e]/55 hover:border-[#14110e]/30 hover:text-[#14110e]"
-      } ${busy ? "opacity-60" : ""}`}
+      } ${busy ? "opacity-70" : ""}`}
     >
       {saved ? (
-        <BookmarkCheck className="size-4" aria-hidden />
+        <BookmarkCheck className={`size-4 ${busy ? "animate-pulse" : ""}`} aria-hidden />
       ) : (
-        <Bookmark className="size-4" aria-hidden />
+        <Bookmark className={`size-4 ${busy ? "animate-pulse" : ""}`} aria-hidden />
       )}
     </button>
   );

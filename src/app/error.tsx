@@ -2,7 +2,7 @@
 
 import { ErrorFallback } from "@/components/ErrorFallback";
 
-export default function AppError({
+export default function RootError({
   error,
   unstable_retry,
 }: {
@@ -13,8 +13,8 @@ export default function AppError({
     <ErrorFallback
       error={error}
       retry={unstable_retry}
-      homeHref="/app"
-      homeLabel="Til appen"
+      homeHref="/"
+      homeLabel="Til forsiden"
     />
   );
 }

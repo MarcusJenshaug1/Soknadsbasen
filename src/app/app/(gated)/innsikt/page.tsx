@@ -120,8 +120,18 @@ export default async function InnsiktPage({
   const last7Start = new Date(now.getTime() - 7 * 86_400_000);
   const prev7Start = new Date(now.getTime() - 14 * 86_400_000);
 
-  // Hent ukesdata + CV-lenker parallelt
-  const [weekApps, prevWeekApps, weekTasks, cvLinks] = await Promise.all([
+  // Where-clause for hovedaggregater, basert kun på searchParams + allerede
+  // hentede sesjoner — uavhengig av batchen under, så den kan kjøre i samme.
+  const whereBase = { userId: userId, archivedAt: null };
+  const where =
+    scope === "session" && effectiveSessionId
+      ? { ...whereBase, sessionId: effectiveSessionId }
+      : scope === "all"
+      ? whereBase
+      : { ...whereBase, createdAt: { gte: periodCutoff(period) } };
+
+  // Hent ukesdata + CV-lenker + hovedaggregater parallelt
+  const [weekApps, prevWeekApps, weekTasks, cvLinks, apps] = await Promise.all([
     prisma.jobApplication.findMany({
       where: { userId: userId, archivedAt: null, createdAt: { gte: last7Start } },
       select: { status: true, statusUpdatedAt: true, interviewAt: true },
@@ -150,6 +160,25 @@ export default async function InnsiktPage({
         createdAt: true,
       },
       orderBy: { viewCount: "desc" },
+    }),
+    prisma.jobApplication.findMany({
+      where,
+      select: {
+        status: true,
+        statusUpdatedAt: true,
+        applicationDate: true,
+        source: true,
+        title: true,
+        createdAt: true,
+        activities: {
+          where: {
+            type: { in: ["interview", "offer", "status"] },
+          },
+          orderBy: { occurredAt: "asc" },
+          take: 1,
+          select: { occurredAt: true, type: true },
+        },
+      },
     }),
   ]);
 
@@ -185,35 +214,6 @@ export default async function InnsiktPage({
   const topLinks = cvLinks
     .filter((l) => l.viewCount > 0)
     .slice(0, 5);
-
-  // Bygg where-clause for hovedaggregater basert på scope
-  const whereBase = { userId: userId, archivedAt: null };
-  const where =
-    scope === "session" && effectiveSessionId
-      ? { ...whereBase, sessionId: effectiveSessionId }
-      : scope === "all"
-      ? whereBase
-      : { ...whereBase, createdAt: { gte: periodCutoff(period) } };
-
-  const apps = await prisma.jobApplication.findMany({
-    where,
-    select: {
-      status: true,
-      statusUpdatedAt: true,
-      applicationDate: true,
-      source: true,
-      title: true,
-      createdAt: true,
-      activities: {
-        where: {
-          type: { in: ["interview", "offer", "status"] },
-        },
-        orderBy: { occurredAt: "asc" },
-        take: 1,
-        select: { occurredAt: true, type: true },
-      },
-    },
-  });
 
   const filters = (
     <InnsiktFilters

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { geminiGenerate } from "@/lib/gemini";
+import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 
 /**
@@ -8,12 +9,13 @@ import { parseLooseJson } from "@/lib/json";
  * Body: { url: string } OR { text: string }
  * Returns: { title, companyName, source, jobDescription, location?, deadline?, salary? }
  *
- * Fetches the URL, strips HTML to text, sends to Gemini with strict schema.
+ * Fetches the URL, strips HTML to text, sends to Claude with strict schema.
  * If `text` is provided directly (paste-in flow), we skip the fetch.
  */
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  if (!checkAiRateLimit(session.userId)) return NextResponse.json({ error: AI_RATE_LIMIT_MESSAGE }, { status: 429 });
 
   const body = (await req.json()) as { url?: string; text?: string };
 
@@ -73,7 +75,8 @@ Regler:
   const userPrompt = `${sourceUrl ? `URL: ${sourceUrl}\n\n` : ""}=== SIDEINNHOLD ===\n${rawText}\n=== SLUTT ===`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
+      model: "claude-haiku-4-5",
       system,
       temperature: 0.2,
       maxOutputTokens: 8192,
@@ -102,7 +105,7 @@ Regler:
       sourceUrl,
     });
   } catch (err) {
-    console.error("[parse-job-url] gemini failed:", err);
+    console.error("[parse-job-url] claude failed:", err);
     return NextResponse.json(
       {
         error:

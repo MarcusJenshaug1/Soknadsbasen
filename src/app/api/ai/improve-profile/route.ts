@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
 import { prisma } from "@/lib/prisma";
-import { geminiStream } from "@/lib/gemini";
+import { claudeStream } from "@/lib/claude";
 import { parseActiveResume } from "@/lib/resume-server";
 
 /**
@@ -14,6 +15,7 @@ import { parseActiveResume } from "@/lib/resume-server";
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  if (!checkAiRateLimit(session.userId)) return NextResponse.json({ error: AI_RATE_LIMIT_MESSAGE }, { status: 429 });
 
   const body = (await req.json()) as {
     summary?: string;
@@ -85,9 +87,9 @@ ${cvSummary}
 
 ${body.summary ? `EKSISTERENDE PROFIL-TEKST (forbedre denne, behold fakta):\n${body.summary}` : "Ingen eksisterende profil — skriv én fra bunn av basert på CV-dataene."}`;
 
-  let geminiReadable: ReadableStream<string>;
+  let claudeReadable: ReadableStream<string>;
   try {
-    geminiReadable = await geminiStream(userPrompt, {
+    claudeReadable = await claudeStream(userPrompt, {
       system,
       temperature: 0.7,
       maxOutputTokens: 400,
@@ -100,14 +102,14 @@ ${body.summary ? `EKSISTERENDE PROFIL-TEKST (forbedre denne, behold fakta):\n${b
   }
 
   const encoder = new TextEncoder();
-  const geminiReader = geminiReadable.getReader();
+  const claudeReader = claudeReadable.getReader();
 
   const outputStream = new ReadableStream({
     async start(controller) {
       let accumulated = "";
       try {
         while (true) {
-          const { done, value } = await geminiReader.read();
+          const { done, value } = await claudeReader.read();
           if (done) break;
           accumulated += value;
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: value })}\n\n`));

@@ -21,9 +21,10 @@ export default function JobDetailLoading() {
             <Skeleton className="h-7 w-24 rounded-full" />
             <Skeleton className="h-7 w-16 rounded-full" />
           </div>
-          <div className="flex gap-3">
-            <Skeleton className="h-11 w-40 rounded-full" />
-            <Skeleton className="h-11 w-32 rounded-full" />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Skeleton className="h-12 w-full sm:w-56 rounded-full" />
+            <Skeleton className="h-12 w-full sm:w-48 rounded-full" />
+            <Skeleton className="h-12 w-full sm:w-28 rounded-full" />
           </div>
         </header>
 

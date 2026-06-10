@@ -123,6 +123,13 @@ export default function PersonvernPage() {
               <strong>Vercel</strong> (hosting av nettsiden) — EU-regioner.
             </li>
           </ul>
+          <p>
+            Når du aktivt bruker en AI-funksjon, overføres den aktuelle teksten
+            til <strong>Anthropic (USA)</strong> for bearbeiding. Dette er den
+            eneste behandlingen utenfor EU/EØS. Overføringen skjer på grunnlag av
+            EUs standardavtaleklausuler (SCC), og dataene lagres ikke hos Anthropic
+            og brukes ikke til modelltrening.
+          </p>
 
           <h2>6. Databehandlere og tredjeparter</h2>
           <p>
@@ -143,10 +150,11 @@ export default function PersonvernPage() {
               <strong>Vercel Inc.</strong> — hosting. Lagring i EU.
             </li>
             <li>
-              <strong>Google (Gemini API)</strong> — valgfri AI-assistanse
-              (CV-forbedring, jobb-analyse). Data sendes kun når du aktivt
-              bruker disse funksjonene. Google behandler data i tråd med sine
-              egne vilkår for Gemini API.
+              <strong>Anthropic PBC (USA)</strong> — valgfri AI-assistanse
+              (CV-forbedring, jobb-analyse, søknadsbrev). Data sendes kun når du
+              aktivt bruker disse funksjonene, overføres under EUs
+              standardavtaleklausuler (SCC), og lagres ikke og brukes ikke til
+              modelltrening.
             </li>
           </ul>
           <p>

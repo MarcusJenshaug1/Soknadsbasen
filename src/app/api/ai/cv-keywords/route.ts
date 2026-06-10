@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { getSession } from "@/lib/auth";
+import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
 import { prisma } from "@/lib/prisma";
-import { geminiGenerate } from "@/lib/gemini";
+import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
 
@@ -18,6 +19,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export async function POST() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  if (!checkAiRateLimit(session.userId)) return NextResponse.json({ error: AI_RATE_LIMIT_MESSAGE }, { status: 429 });
 
   const userData = await prisma.userData.findUnique({
     where: { userId: session.userId },
@@ -78,7 +80,8 @@ REGLER:
   const userPrompt = `=== CV ===\n${summary}\n=== SLUTT ===`;
 
   try {
-    const raw = await geminiGenerate(userPrompt, {
+    const raw = await claudeGenerate(userPrompt, {
+      model: "claude-haiku-4-5",
       system,
       temperature: 0.1,
       maxOutputTokens: 1500,

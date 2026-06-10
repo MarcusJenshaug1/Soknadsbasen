@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
+import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
 import { prisma } from "@/lib/prisma";
-import { geminiStream } from "@/lib/gemini";
+import { claudeStream } from "@/lib/claude";
 import {
   buildSystemPrompt,
   validateCoverLetter,
@@ -130,6 +131,9 @@ export async function POST(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
   }
+  if (!checkAiRateLimit(session.userId)) {
+    return NextResponse.json({ error: AI_RATE_LIMIT_MESSAGE }, { status: 429 });
+  }
 
   const body = (await req.json()) as {
     applicationId?: string;
@@ -151,23 +155,24 @@ export async function POST(req: Request) {
     );
   }
 
-  const app = await prisma.jobApplication.findFirst({
-    where: { id: body.applicationId, userId: session.userId },
-    select: {
-      companyName: true,
-      title: true,
-      jobDescription: true,
-      notes: true,
-    },
-  });
+  const [app, userData] = await Promise.all([
+    prisma.jobApplication.findFirst({
+      where: { id: body.applicationId, userId: session.userId },
+      select: {
+        companyName: true,
+        title: true,
+        jobDescription: true,
+        notes: true,
+      },
+    }),
+    prisma.userData.findUnique({
+      where: { userId: session.userId },
+      select: { resumeData: true },
+    }),
+  ]);
   if (!app) {
     return NextResponse.json({ error: "Søknad ikke funnet" }, { status: 404 });
   }
-
-  const userData = await prisma.userData.findUnique({
-    where: { userId: session.userId },
-    select: { resumeData: true },
-  });
 
   const resumeContext = buildResumeContext(userData?.resumeData);
 
@@ -207,9 +212,9 @@ ${
 
 Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved navn hvis oppgitt. Bruk avsenderens navn/kontaktinfo bare hvis det passer naturlig i teksten — den vises uansett i egne felter utenfor brødteksten.`;
 
-  let geminiReadable: ReadableStream<string>;
+  let claudeReadable: ReadableStream<string>;
   try {
-    geminiReadable = await geminiStream(userPrompt, {
+    claudeReadable = await claudeStream(userPrompt, {
       system,
       temperature: 0.8,
       maxOutputTokens: 1500,
@@ -222,14 +227,14 @@ Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved n
   }
 
   const encoder = new TextEncoder();
-  const geminiReader = geminiReadable.getReader();
+  const claudeReader = claudeReadable.getReader();
 
   const outputStream = new ReadableStream({
     async start(controller) {
       let accumulated = "";
       try {
         while (true) {
-          const { done, value } = await geminiReader.read();
+          const { done, value } = await claudeReader.read();
           if (done) break;
           accumulated += value;
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk: value })}\n\n`));
@@ -238,6 +243,9 @@ Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved n
           .replace(/^```(?:markdown|md)?\s*/i, "")
           .replace(/```\s*$/i, "")
           .trim();
+        // claudeStream feiler på helt tomt svar; dette dekker svar som BLIR
+        // tomme etter fence-stripping. Catch-blokken under emitter error-event.
+        if (!cleaned) throw new Error("Tomt svar fra AI. Prøv igjen.");
         const html = marked.parse(cleaned, { async: false }) as string;
         const warnings = validateCoverLetter(cleaned, app.companyName);
         controller.enqueue(

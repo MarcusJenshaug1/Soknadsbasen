@@ -24,7 +24,7 @@ export function parseLooseJson<T = unknown>(raw: string): T {
   try {
     return JSON.parse(candidate) as T;
   } catch {
-    // Gemini sometimes emits literal newlines inside strings etc.
+    // LLMs sometimes emit literal newlines inside strings etc.
     return JSON.parse(jsonrepair(candidate)) as T;
   }
 }

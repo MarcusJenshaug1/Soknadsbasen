@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 /// 2) orgen har ≥ 3 paid Stripe-fakturaer (proxy: ≥ 3 entries i pending|eligible|paid).
 /// Krever Authorization: Bearer $CRON_SECRET (Vercel cron setter denne automatisk).
 export async function GET(req: Request) {
+  // Fail-closed: uten CRON_SECRET avvises alt, ellers kan hvem som helst
+  // flippe provisjoner til eligible.
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const auth = req.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const candidates = await prisma.commissionEntry.findMany({

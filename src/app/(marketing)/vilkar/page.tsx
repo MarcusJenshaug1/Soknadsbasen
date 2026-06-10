@@ -182,7 +182,7 @@ export default function VilkarPage() {
             <li>tap av data som skyldes kundens egne handlinger,</li>
             <li>
               innhold eller tjenester levert av tredjeparter (f.eks. Stripe,
-              Supabase, Gemini).
+              Supabase, Anthropic).
             </li>
           </ul>
           <p>

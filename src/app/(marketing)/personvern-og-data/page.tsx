@@ -92,9 +92,9 @@ export default function PersonvernOgDataPage() {
               />
               <ArchBox
                 step="4b"
-                title="Google Gemini"
-                location="EU-region"
-                description="AI-generering av søknadsbrev og CV-sammendrag. Sender bare den teksten du ber om at AI-en skal bearbeide. Lagres ikke til trening."
+                title="Anthropic Claude"
+                location="USA (kun ved aktiv AI-bruk)"
+                description="AI-generering av søknadsbrev og CV-sammendrag. Sender bare den teksten du ber om at AI-en skal bearbeide, og bare når du selv bruker en AI-funksjon. Overføres til USA under EUs standardavtaleklausuler (SCC). Lagres ikke og brukes ikke til trening."
                 muted
               />
               <ArchBox
@@ -122,8 +122,10 @@ export default function PersonvernOgDataPage() {
               eller tredjeparts.
             </NeverItem>
             <NeverItem>
-              Sender personopplysninger ut av EU. All lagring og prosessering er
-              i Sverige eller andre EU-land.
+              Lagrer personopplysningene dine utenfor EU. Database, filer og
+              hosting ligger i EU/EØS. Eneste unntak er valgfri AI: bruker du en
+              AI-funksjon, bearbeides teksten hos Anthropic i USA (under SCC),
+              uten å lagres eller brukes til trening.
             </NeverItem>
             <NeverItem>
               Bruker markedsføring-cookies eller tracking-pixler fra Meta,
@@ -157,8 +159,9 @@ export default function PersonvernOgDataPage() {
               dataportabilitet, og vi gjør det enkelt å bruke disse rettighetene.
             </AlwaysItem>
             <AlwaysItem>
-              Driver hele plattformen i EU. Norske krav til personvern er
-              minimumsnivået, ikke ambisjonen.
+              Driver lagring, database og hosting i EU. Den eneste databehandleren
+              utenfor EU er valgfri AI (Anthropic, USA), og det sier vi tydelig
+              fra om. Norske krav til personvern er minimumsnivået, ikke ambisjonen.
             </AlwaysItem>
           </ul>
         </section>

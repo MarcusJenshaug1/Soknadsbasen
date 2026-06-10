@@ -27,9 +27,19 @@ export async function POST(req: Request) {
       });
       return NextResponse.json({ id: resume.id, message: "Created new CV" });
     } else {
-      // Autosave: overwrite the latest version to avoid row explosion during editing
+      // Autosave: overwrite the latest version to avoid row explosion during
+      // editing. Scope til eier først — uten dette kan en bruker overskrive en
+      // annens CV ved å sende inn dens resumeId (IDOR; ingen RLS i bunn).
+      const resume = await prisma.resume.findFirst({
+        where: { id: data.id, userId: session.userId },
+        select: { id: true },
+      });
+      if (!resume) {
+        return NextResponse.json({ error: "CV ikke funnet" }, { status: 404 });
+      }
+
       const latestVersion = await prisma.resumeVersion.findFirst({
-        where: { resumeId: data.id },
+        where: { resumeId: resume.id },
         orderBy: { createdAt: "desc" },
       });
 

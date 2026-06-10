@@ -16,7 +16,8 @@ interface SendMailOptions {
 export async function sendMail({ to, subject, html, from }: SendMailOptions) {
   if (resend) {
     await resend.emails.send({ from: from ?? FROM, to, subject, html });
-    console.log(`[Email] Sent "${subject}" to ${to}`);
+    // Ikke logg mottakeradressen (PII) i prod — emnet holder for sporing.
+    console.log(`[Email] Sent "${subject}"`);
   } else {
     console.log("\n╔══════════════════════════════════════════════════╗");
     console.log("║  DEV EMAIL (RESEND_API_KEY not configured)      ║");

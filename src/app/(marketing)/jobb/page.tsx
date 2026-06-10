@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { preconnect } from "react-dom";
-import { Briefcase, Building2, Calendar, MapPin, Users } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Users,
+} from "lucide-react";
 import { SectionLabel } from "@/components/ui/Pill";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
@@ -271,6 +279,7 @@ export default async function JobsHubPage({
           categories={categories}
           sort={effectiveSort}
           isLoggedIn={isLoggedIn}
+          resultCount={total}
         />
 
         <section
@@ -278,7 +287,7 @@ export default async function JobsHubPage({
           className="mt-8"
         >
           {jobs.length === 0 ? (
-            <NoResults q={q} />
+            <NoResults q={q} hasFilters={Boolean(q || region || kategori)} />
           ) : (
             <ul className="space-y-3">
               {jobs.map((job) => (
@@ -379,7 +388,7 @@ function JobCard({
       <Link
         prefetch
         href={`/jobb/${slug}`}
-        className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 hover:shadow-[0_2px_12px_rgba(20,17,14,0.04)] transition-all px-5 py-4 md:py-5 pr-16"
+        className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 hover:shadow-[0_2px_12px_rgba(20,17,14,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-all px-5 py-4 md:py-5 pr-16"
       >
         <div className="flex items-start gap-4 mb-3">
           <CompanyLogo website={employerHomepage} name={employerName} size="md" />
@@ -400,10 +409,10 @@ function JobCard({
                 </span>
               )}
             </div>
-            <h3 className="text-[16px] md:text-[18px] font-medium tracking-tight mb-1.5 group-hover:text-[#D5592E] transition-colors">
+            <h3 className="text-[16px] md:text-[18px] font-medium tracking-tight mb-1.5 line-clamp-2 group-hover:text-[#D5592E] transition-colors">
               {title}
             </h3>
-            <div className="text-[13px] text-[#14110e]/70 font-medium">
+            <div className="text-[13px] text-[#14110e]/70 font-medium truncate">
               {employerName}
             </div>
           </div>
@@ -506,24 +515,28 @@ function JobCard({
   );
 }
 
-function NoResults({ q }: { q: string }) {
+function NoResults({ q, hasFilters }: { q: string; hasFilters: boolean }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-[#eee9df]/40 p-8 md:p-12 text-center">
-      <h3 className="text-[20px] md:text-[24px] font-medium mb-3">
-        {q ? `Ingen stillinger matcher "${q}"` : "Ingen stillinger akkurat nå"}
+      <h3 className="text-[20px] md:text-[24px] font-medium mb-3 text-balance">
+        {q
+          ? `Ingen stillinger matcher "${q}"`
+          : hasFilters
+            ? "Ingen stillinger matcher filteret"
+            : "Ingen stillinger akkurat nå"}
       </h3>
       <p className="text-[14px] text-[#14110e]/65 max-w-[480px] mx-auto mb-6">
-        {q
-          ? "Prøv en kortere søkeord, eller bla gjennom alle stillinger via filteret over."
-          : "Vi henter nye stillinger automatisk fra Arbeidsplassen.no hver time."}
+        {hasFilters
+          ? "Prøv et bredere søk, et annet område, eller nullstill filteret for å se alle stillinger."
+          : "Vi henter nye stillinger automatisk fra Arbeidsplassen.no hver time. Kom tilbake snart."}
       </p>
-      {q && (
+      {hasFilters && (
         <Link
           prefetch
           href="/jobb"
-          className="inline-flex px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] hover:bg-[#a94424] transition-colors"
+          className="inline-flex min-h-11 items-center justify-center px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium outline-none hover:bg-[#a94424] active:bg-[#8f3a1e] focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-colors"
         >
-          Se alle stillinger
+          Nullstill filteret
         </Link>
       )}
     </div>
@@ -550,38 +563,43 @@ function Pagination({
     return `/jobb${qs ? `?${qs}` : ""}`;
   };
 
+  const isFirst = current === 1;
+  const isLast = current === total;
+  const linkClass =
+    "inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full text-[#14110e]/70 outline-none hover:bg-black/5 hover:text-[#14110e] focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 transition-colors";
+  const disabledClass =
+    "inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full text-[#14110e]/30 cursor-default select-none";
+
   return (
     <nav
       aria-label="Sidenavigasjon"
       className="mt-10 flex items-center justify-between gap-3 text-[13px]"
     >
-      <Link
-        prefetch
-        href={buildUrl(current - 1)}
-        aria-disabled={current === 1}
-        className={
-          current === 1
-            ? "px-4 py-2 rounded-full text-[#14110e]/30 pointer-events-none"
-            : "px-4 py-2 rounded-full text-[#14110e]/70 hover:bg-black/5 hover:text-[#14110e] transition-colors"
-        }
-      >
-        ← Forrige
-      </Link>
+      {isFirst ? (
+        <span aria-disabled="true" className={disabledClass}>
+          <ChevronLeft className="size-4" aria-hidden />
+          Forrige
+        </span>
+      ) : (
+        <Link prefetch href={buildUrl(current - 1)} rel="prev" className={linkClass}>
+          <ChevronLeft className="size-4" aria-hidden />
+          Forrige
+        </Link>
+      )}
       <span className="text-[12px] text-[#14110e]/55">
         Side {current} av {total}
       </span>
-      <Link
-        prefetch
-        href={buildUrl(current + 1)}
-        aria-disabled={current === total}
-        className={
-          current === total
-            ? "px-4 py-2 rounded-full text-[#14110e]/30 pointer-events-none"
-            : "px-4 py-2 rounded-full text-[#14110e]/70 hover:bg-black/5 hover:text-[#14110e] transition-colors"
-        }
-      >
-        Neste →
-      </Link>
+      {isLast ? (
+        <span aria-disabled="true" className={disabledClass}>
+          Neste
+          <ChevronRight className="size-4" aria-hidden />
+        </span>
+      ) : (
+        <Link prefetch href={buildUrl(current + 1)} rel="next" className={linkClass}>
+          Neste
+          <ChevronRight className="size-4" aria-hidden />
+        </Link>
+      )}
     </nav>
   );
 }

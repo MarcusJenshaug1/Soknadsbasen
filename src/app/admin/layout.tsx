@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { HotKeyListener } from "@/components/HotKeyListener";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Building2, Users, Tag, Inbox, LayoutDashboard, UserCheck, ShieldAlert } from "lucide-react";
@@ -29,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-dvh bg-[#f9f9f8] flex">
+      <HotKeyListener />
       <aside className="w-[220px] shrink-0 border-r border-black/8 flex flex-col bg-bg">
         {/* Brand */}
         <div className="px-5 py-5 border-b border-black/6">
