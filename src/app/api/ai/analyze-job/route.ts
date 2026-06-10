@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
@@ -15,6 +16,7 @@ import { parseLooseJson } from "@/lib/json";
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  if (!checkAiRateLimit(session.userId)) return NextResponse.json({ error: AI_RATE_LIMIT_MESSAGE }, { status: 429 });
 
   const body = (await req.json()) as { applicationId?: string };
   if (!body.applicationId) {

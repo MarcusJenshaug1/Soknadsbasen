@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
+import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
 import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
+  }
+  if (!checkAiRateLimit(session.userId)) {
+    return NextResponse.json({ error: AI_RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   const formData = await request.formData();
@@ -144,11 +148,11 @@ ${truncated}
     // renders lists/bold etc. nicely. Templates already expect HTML.
     convertDescriptionsToHtml(json as Record<string, unknown>);
   } catch (err) {
+    // Logg lengde, ikke innhold: råsvaret er den parsede CV-en (PII).
     console.error(
       "[parse-cv] claude/parse failed:",
       err,
-      "\n--- Claude raw (first 500 chars) ---\n",
-      rawResponse.slice(0, 500),
+      `(råsvar: ${rawResponse.length} tegn)`,
     );
     return NextResponse.json(
       {
