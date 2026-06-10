@@ -8,7 +8,6 @@ import { JsonLdScript } from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { rootMetadata, rootViewport } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/siteConfig";
-import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -41,7 +40,6 @@ export default function RootLayout({
           <AuthProvider>{children}</AuthProvider>
           <ServiceWorkerRegistration />
           <UpdateToast />
-          <Analytics />
         </ThemeProvider>
       </body>
     </html>

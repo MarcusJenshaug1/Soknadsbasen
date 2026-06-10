@@ -118,39 +118,79 @@ function yArrayToStringArray(yarr: Y.Array<string>): string[] {
   return yarr.toArray();
 }
 
+function updateMapFields(
+  map: Y.Map<unknown>,
+  item: Record<string, unknown>,
+  textKeys: readonly string[],
+) {
+  for (const [k, v] of Object.entries(item)) {
+    if (textKeys.includes(k)) {
+      ensureYText(map, k, typeof v === "string" ? v : "");
+    } else if (map.get(k) !== v) {
+      map.set(k, v);
+    }
+  }
+  // Fjern nøkler som ikke lenger finnes i kilde-itemet.
+  for (const k of Array.from(map.keys())) {
+    if (!(k in item)) map.delete(k);
+  }
+}
+
+function buildItemMap(
+  item: Record<string, unknown>,
+  textKeys: readonly string[],
+): Y.Map<unknown> {
+  // Bygg detached og populer FØR integrering — yarr.insert integrerer hele
+  // subtreet i én operasjon.
+  const map = new Y.Map();
+  updateMapFields(map, item, textKeys);
+  return map;
+}
+
 function setListWithIds<T extends { id: string }>(
   yarr: Y.Array<Y.Map<unknown>>,
   items: T[],
   textKeys: readonly string[],
 ) {
-  // Bygg en map fra id → eksisterende Y.Map for å beholde Y.Text-identiteter
-  // (slik at concurrent karakter-merge fortsetter å fungere).
-  const existing = new Map<string, Y.Map<unknown>>();
-  for (let i = 0; i < yarr.length; i++) {
-    const m = yarr.get(i);
-    const id = m.get("id");
-    if (typeof id === "string") existing.set(id, m);
+  // In-place reconciliation. KRITISK: en Yjs-type kan kun integreres ÉN gang.
+  // Den gamle "slett alt + gjenbruk by id"-varianten re-integrerte slettede
+  // (tombstonede) Y.Map-er, som kaster "Cannot read properties of null
+  // (reading 'forEach')" / "Add Yjs type to a document before reading data".
+  // Vi oppdaterer derfor gjenkjente items PÅ PLASS og bygger kun nye/flyttede
+  // ferskt — bevarer Y.Text-identitet for character-merge der det er mulig.
+  const targetIds = new Set(items.map((it) => it.id));
+
+  // 1. Fjern items som ikke lenger finnes (baklengs så indekser holder).
+  for (let i = yarr.length - 1; i >= 0; i--) {
+    const id = yarr.get(i).get("id");
+    if (typeof id !== "string" || !targetIds.has(id)) yarr.delete(i, 1);
   }
 
-  // Tøm og rebuild i ny rekkefølge — Y.Array kan ikke reorderes effektivt
-  // uten å delete+insert. Vi bevarer Y.Map-identiteter for items vi
-  // kjenner igjen ved id.
-  if (yarr.length > 0) yarr.delete(0, yarr.length);
-
-  const fresh: Y.Map<unknown>[] = [];
-  for (const item of items) {
-    const reused = existing.get(item.id);
-    const map = reused ?? new Y.Map();
-    for (const [k, v] of Object.entries(item)) {
-      if (textKeys.includes(k)) {
-        ensureYText(map, k, typeof v === "string" ? v : "");
-      } else {
-        map.set(k, v);
+  // 2. Reconcile posisjon for posisjon i mål-rekkefølgen.
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx] as unknown as Record<string, unknown>;
+    const atIdx = idx < yarr.length ? yarr.get(idx) : null;
+    if (atIdx && atIdx.get("id") === items[idx].id) {
+      updateMapFields(atIdx, item, textKeys); // på plass — bevarer identitet
+      continue;
+    }
+    // Finnes id-en lenger bak (reordering)? Slett der og bygg ferskt her — en
+    // flyttet type kan ikke re-integreres, så den gjenoppbygges fra data.
+    let foundAt = -1;
+    for (let j = idx + 1; j < yarr.length; j++) {
+      if (yarr.get(j).get("id") === items[idx].id) {
+        foundAt = j;
+        break;
       }
     }
-    fresh.push(map);
+    if (foundAt !== -1) yarr.delete(foundAt, 1);
+    yarr.insert(idx, [buildItemMap(item, textKeys)]);
   }
-  if (fresh.length > 0) yarr.insert(0, fresh);
+
+  // 3. Sikkerhet: trim eventuelle overflødige.
+  if (yarr.length > items.length) {
+    yarr.delete(items.length, yarr.length - items.length);
+  }
 }
 
 function listToObjects<T>(
