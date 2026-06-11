@@ -220,6 +220,16 @@ export default function Home() {
                 t: "ATS-garanti",
                 d: "PDF-eksport optimalisert for rekrutteringssystemer.",
               },
+              {
+                n: "07",
+                t: "Stillingssøk",
+                d: "Alle NAV-stillinger med 13 filtre og match mot CV-en din.",
+              },
+              {
+                n: "08",
+                t: "Lagrede søk & varsler",
+                d: "Få beskjed når nye stillinger matcher. E-post, app eller push.",
+              },
             ].map((f) => (
               <div
                 key={f.n}

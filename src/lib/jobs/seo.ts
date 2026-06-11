@@ -94,6 +94,24 @@ function toCuratedParams(params: JobbParams, index: RegisterIndex): JobbParams {
   return { ...EMPTY_PARAMS, fylke, kategori };
 }
 
+/** Foreslått navn for lagret søk, bygget av de aktive valgene. */
+export function suggestSearchName(params: JobbParams, index: RegisterIndex): string {
+  const parts: string[] = [];
+  if (params.q) parts.push(`«${params.q}»`);
+  if (params.kategori[0]) {
+    parts.push(index.kategori.get(params.kategori[0])?.label ?? params.kategori[0]);
+  }
+  const sted =
+    params.kommune[0] !== undefined
+      ? index.kommune.get(params.kommune[0])?.label
+      : params.fylke[0] !== undefined
+        ? fylkeBySlug(params.fylke[0])?.label
+        : undefined;
+  if (sted) parts.push(`i ${sted}`);
+  if (params.sommerjobb) parts.push("(sommerjobb)");
+  return parts.join(" ").slice(0, 80) || "Mitt stillingssøk";
+}
+
 /** Lesbar etikett for ett aktivt valg — chips-raden og «fjern siste filter». */
 export function paramValueLabel(
   key: keyof typeof FACET_GROUP_LABELS | "q",

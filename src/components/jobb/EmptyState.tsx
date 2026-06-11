@@ -4,6 +4,7 @@ import { FiArrowRight, FiSearch } from "react-icons/fi";
 import type { FacetCounts } from "@/lib/jobs/facets-query";
 import { fylkeBySlug } from "@/lib/jobs/geo";
 import type { RegisterIndex } from "@/lib/jobs/registers";
+import { suggestSearchName } from "@/lib/jobs/seo";
 import {
   EMPTY_PARAMS,
   buildJobbUrl,
@@ -12,20 +13,28 @@ import {
   type JobbParams,
 } from "@/lib/jobs/search-params";
 
+import { SaveSearchButton } from "./SaveSearchButton";
+
 /**
  * 0 treff er aldri en blindvei: foreslå nabofylker (med faktiske treffantall
- * fra facett-RPC-en, som ekskluderer fylke-filteret), populære kategorier og
- * nullstilling. «Lagre dette søket» kobles på i Fase 3.
+ * fra facett-RPC-en, som ekskluderer fylke-filteret), populære kategorier,
+ * nullstilling — og «Lagre dette søket og få varsel når det kommer treff».
  */
 export function EmptyState({
   params,
   counts,
   index,
+  loggedIn,
 }: {
   params: JobbParams;
   counts: FacetCounts;
   index: RegisterIndex;
+  loggedIn: boolean;
 }) {
+  const query = buildJobbUrl({ ...params, side: 1, sortering: null }).replace(
+    /^\/jobb\??/,
+    "",
+  );
   const fylkeCounts = counts.counts["fylke"] ?? {};
   const neighborSuggestions =
     params.fylke.length === 1
@@ -72,7 +81,16 @@ export function EmptyState({
         >
           Nullstill filtre
         </Link>
+        <SaveSearchButton
+          query={query}
+          suggestedName={suggestSearchName(params, index)}
+          loggedIn={loggedIn}
+          primary
+        />
       </div>
+      <p className="mx-auto mt-3 max-w-[400px] text-[11.5px] text-ink-muted">
+        Lagrer du søket, sier vi fra når det kommer treff.
+      </p>
       {popular.length > 0 && (
         <div className="mt-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">

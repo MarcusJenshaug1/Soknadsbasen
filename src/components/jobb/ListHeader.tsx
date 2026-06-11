@@ -1,8 +1,14 @@
 import { PAGE_SIZE } from "@/lib/jobs/queries";
-import type { JobbParams, SortKey } from "@/lib/jobs/search-params";
+import {
+  buildJobbUrl,
+  countActiveFilters,
+  type JobbParams,
+  type SortKey,
+} from "@/lib/jobs/search-params";
 
 import type { Density } from "./JobCard";
 import { DensityToggle, VisitTracker } from "./DensityToggle";
+import { SaveSearchButton } from "./SaveSearchButton";
 import { SortSelect } from "./SortSelect";
 
 /** Smal mellomrom som tusenskille (designreferansen). */
@@ -20,15 +26,21 @@ export function ListHeader({
   sort,
   loggedIn,
   density,
+  suggestedSearchName,
 }: {
   total: number;
   params: JobbParams;
   sort: SortKey;
   loggedIn: boolean;
   density: Density;
+  suggestedSearchName: string;
 }) {
   const from = total === 0 ? 0 : (params.side - 1) * PAGE_SIZE + 1;
   const to = Math.min(params.side * PAGE_SIZE, total);
+  const query = buildJobbUrl({ ...params, side: 1, sortering: null }).replace(
+    /^\/jobb\??/,
+    "",
+  );
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -43,6 +55,13 @@ export function ListHeader({
         )}
       </p>
       <div className="flex items-center gap-2">
+        {countActiveFilters(params) > 0 && (
+          <SaveSearchButton
+            query={query}
+            suggestedName={suggestedSearchName}
+            loggedIn={loggedIn}
+          />
+        )}
         <SortSelect params={params} current={sort} loggedIn={loggedIn} />
         <DensityToggle current={density} />
       </div>

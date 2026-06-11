@@ -52,6 +52,11 @@ export const COMPETITORS: Competitor[] = [
       "Søknadsbasen kombinerer 8 CV-maler med 6 fargepaletter og 5 typografisett (240 unike kombinasjoner), AI-assistert søknadsbrev med eksplisitt norsk-konvensjon-prompt, pipeline med kanban + liste + tidslinje, oppgaver og frister, og innsikt med svarrate per kilde og funnel-analyse.",
     ],
     comparisonTable: [
+      {
+        feature: "Stillingssøk med lagrede søk og varsler",
+        soknadsbasen: "yes (alle NAV-stillinger, 13 filtre)",
+        competitor: "Ikke verifisert",
+      },
       { feature: "Pris månedlig", soknadsbasen: "79 kr/mnd", competitor: "299 kr/mnd" },
       { feature: "Første måned", soknadsbasen: "Gratis prøve 7 dager", competitor: "89 kr (introduksjon)" },
       { feature: "Total kostnad 6 måneder", soknadsbasen: "299 kr (engangs)", competitor: "1 644 kr (89 + 5×299)" },
@@ -140,6 +145,11 @@ export const COMPETITORS: Competitor[] = [
       "Søknadsbasen er en samlet jobbsøker-plattform: CV-bygger med 8 maler, AI-assistert søknadsbrev, pipeline for tracking, oppgaver og frister, samt innsikt over jobbsøkingen din.",
     ],
     comparisonTable: [
+      {
+        feature: "Stillingssøk med lagrede søk og varsler",
+        soknadsbasen: "yes (alle NAV-stillinger, 13 filtre)",
+        competitor: "Ikke verifisert",
+      },
       { feature: "CV-bygger med flere maler", soknadsbasen: "8 maler", competitor: "yes (mange)" },
       { feature: "PDF-eksport", soknadsbasen: "yes", competitor: "yes" },
       { feature: "ATS-vennlig PDF", soknadsbasen: "yes", competitor: "partial", note: "Avhenger av valgt mal" },
@@ -211,6 +221,11 @@ export const COMPETITORS: Competitor[] = [
       "Søknadsbasen er bygget for det norske markedet fra grunn av: norsk språk og søknadskultur, ATS-tilpasning for norske rekrutterings-systemer (Webcruiter, ReachMee, Workday), og NOK-prising uten valuta-konvertering.",
     ],
     comparisonTable: [
+      {
+        feature: "Stillingssøk med lagrede søk og varsler",
+        soknadsbasen: "yes (alle NAV-stillinger, 13 filtre)",
+        competitor: "Ikke verifisert",
+      },
       { feature: "CV-maler", soknadsbasen: "8 maler", competitor: "30+ maler" },
       { feature: "Norsk språk og UI", soknadsbasen: "yes", competitor: "Lokalisering finnes (CVapp.no)" },
       { feature: "ATS-tilpasning for norske systemer", soknadsbasen: "yes", competitor: "no", note: "Optimalisert for amerikanske ATS" },
@@ -277,6 +292,11 @@ export const COMPETITORS: Competitor[] = [
       "Søknadsbasen er bygget for det norske markedet: norsk språk og UI, norsk søknadsbrev-konvensjon, ATS-maler testet mot Webcruiter og ReachMee, og NOK-prising.",
     ],
     comparisonTable: [
+      {
+        feature: "Stillingssøk med lagrede søk og varsler",
+        soknadsbasen: "yes (alle NAV-stillinger, 13 filtre)",
+        competitor: "Ikke verifisert",
+      },
       { feature: "Kanban-pipeline", soknadsbasen: "yes", competitor: "yes (best i klassen)" },
       { feature: "AI CV-bygger", soknadsbasen: "yes (8 maler)", competitor: "yes" },
       { feature: "AI-søknadsbrev", soknadsbasen: "yes", competitor: "yes" },
@@ -349,6 +369,11 @@ export const COMPETITORS: Competitor[] = [
       "Søknadsbasen er en frittstående jobbsøker-plattform: CV-bygger med 8 maler, AI-søknadsbrev, pipeline for å spore søknader på tvers av Finn, NAV, LinkedIn og direkte arbeidsgiver-portaler, og innsikt over jobbsøkingen din.",
     ],
     comparisonTable: [
+      {
+        feature: "Stillingssøk med lagrede søk og varsler",
+        soknadsbasen: "yes (alle NAV-stillinger, 13 filtre)",
+        competitor: "Ikke verifisert",
+      },
       { feature: "Pris", soknadsbasen: "79 kr/mnd", competitor: "Gratis" },
       { feature: "CV-bygger", soknadsbasen: "8 maler", competitor: "1 layout" },
       { feature: "PDF-eksport", soknadsbasen: "yes (8 maler)", competitor: "yes (1 layout)" },
@@ -418,6 +443,11 @@ export const COMPETITORS: Competitor[] = [
       "Søknadsbasen er en spesialbygd plattform med pipeline (kanban + liste), CV-bygger, AI-søknadsbrev og innsikt, alt designet rundt jobbsøkings-flyten.",
     ],
     comparisonTable: [
+      {
+        feature: "Stillingssøk med lagrede søk og varsler",
+        soknadsbasen: "yes (alle NAV-stillinger, 13 filtre)",
+        competitor: "Ikke verifisert",
+      },
       { feature: "Pris", soknadsbasen: "79 kr/mnd", competitor: "Gratis" },
       { feature: "Pipeline med kanban", soknadsbasen: "yes", competitor: "no" },
       { feature: "Visuell status-flyt", soknadsbasen: "yes", competitor: "Manuell fargekoding" },

@@ -59,6 +59,7 @@ model User {
   collabInvites         CollabInvite[]
   jobMatches            JobMatch[]
   jobsSeen              JobSeen[]
+  savedSearches         SavedSearch[]
 
   @@index([role])
 }
@@ -974,8 +975,9 @@ model Job {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  matches JobMatch[]
-  seenBy  JobSeen[]
+  matches         JobMatch[]
+  seenBy          JobSeen[]
+  savedSearchHits SavedSearchHit[]
 
   @@index([slug])
   @@index([employerSlug])
@@ -1007,6 +1009,46 @@ model JobMatch {
 
   @@id([userId, jobId])
   @@index([userId, score(sort: Desc)])
+  @@index([jobId])
+}
+
+/// Lagret søk fra /jobb: navngitt filterkombinasjon (kanonisk querystring fra
+/// buildJobbUrl) med varslingskanaler per søk. Nye stillinger matches mot
+/// lagrede søk i enrich-cronen; dedup per (stilling, søk) via SavedSearchHit.
+model SavedSearch {
+  id     String @id @default(cuid())
+  userId String @db.Uuid
+  name   String
+  /// Querystring-delen av buildJobbUrl-output (uten "/jobb?"). Tom = alle.
+  query  String
+
+  emailEnabled Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+  pushEnabled  Boolean @default(false)
+  /// "daglig" (digest, default) | "umiddelbart"
+  emailFrequency String @default("daglig")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hits SavedSearchHit[]
+
+  @@index([userId])
+}
+
+/// Én rad per (lagret søk, stilling) som har matchet — garanterer maks ett
+/// varsel per stilling per søk. emailedAt null = venter på daglig digest.
+model SavedSearchHit {
+  savedSearchId String
+  jobId         String
+  matchedAt     DateTime  @default(now())
+  emailedAt     DateTime?
+
+  search SavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  job    Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@id([savedSearchId, jobId])
   @@index([jobId])
 }
 

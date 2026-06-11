@@ -27,7 +27,7 @@ import {
   type JobListItem,
   type JobbContext,
 } from "@/lib/jobs/queries";
-import { jobbSeoDecision } from "@/lib/jobs/seo";
+import { jobbSeoDecision, suggestSearchName } from "@/lib/jobs/seo";
 import {
   buildJobbUrl,
   countActiveFilters,
@@ -234,9 +234,15 @@ async function ListSection({
         sort={sort}
         loggedIn={loggedIn}
         density={density}
+        suggestedSearchName={suggestSearchName(ctx.params, ctx.index)}
       />
       {jobs.length === 0 ? (
-        <EmptyState params={ctx.params} counts={counts} index={ctx.index} />
+        <EmptyState
+          params={ctx.params}
+          counts={counts}
+          index={ctx.index}
+          loggedIn={loggedIn}
+        />
       ) : (
         <ul
           className={`flex flex-col ${density === "kompakt" ? "gap-2" : "gap-2.5"}`}

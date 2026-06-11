@@ -18,6 +18,7 @@ import {
 } from "./facets";
 import { extractJobKeywords } from "./format";
 import { computeMatchesForJobs } from "./match";
+import { matchSavedSearchesForJobs } from "./saved-search";
 
 /**
  * Beriker stillinger med ÉN Haiku-call per jobb: ATS-nøkkelord (samme regler
@@ -39,6 +40,8 @@ export type EnrichResult = {
   enriched: number;
   matchRowsWritten: number;
   staleMatchesDeleted: number;
+  savedSearchHits: number;
+  savedSearchNotifications: number;
   durationMs: number;
   errors: string[];
 };
@@ -224,6 +227,8 @@ export async function enrichPendingJobs(opts: {
     enriched: 0,
     matchRowsWritten: 0,
     staleMatchesDeleted: 0,
+    savedSearchHits: 0,
+    savedSearchNotifications: 0,
     durationMs: 0,
     errors: [],
   };
@@ -279,6 +284,17 @@ export async function enrichPendingJobs(opts: {
     } catch (err) {
       result.errors.push(
         `computeMatchesForJobs: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    // Lagrede søk matches ETTER berikelse — facett-filtre treffer først nå.
+    try {
+      const ss = await matchSavedSearchesForJobs(enrichedIds);
+      result.savedSearchHits = ss.newHits;
+      result.savedSearchNotifications = ss.notificationsCreated;
+      result.errors.push(...ss.errors);
+    } catch (err) {
+      result.errors.push(
+        `matchSavedSearches: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

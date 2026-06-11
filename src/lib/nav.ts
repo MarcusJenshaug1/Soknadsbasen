@@ -38,6 +38,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/app/pipeline", label: "Søknader", icon: IconGrid, gated: true, group: "hoved", primaryTab: true },
   { href: "/app/innsikt", label: "Innsikt", icon: IconTrend, gated: true, group: "hoved", primaryTab: true },
   { href: "/app/brev", label: "Søknadsbrev", gated: true, group: "verktoy" },
+  { href: "/app/lagrede-sok", label: "Lagrede søk", gated: true, group: "verktoy" },
   { href: "/app/oppgaver", label: "Oppgaver", gated: true, group: "verktoy" },
   { href: "/app/selskaper", label: "Selskaper", gated: true, group: "verktoy" },
   { href: "/app/nettverk", label: "Nettverk", gated: true, group: "verktoy" },

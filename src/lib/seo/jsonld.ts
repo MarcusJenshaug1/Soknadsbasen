@@ -145,6 +145,8 @@ export function webApplicationJsonLd(): JsonLd {
       "Oppgaver og frister",
       "Innsikt i intervju-kilder",
       "ATS-optimalisert PDF-eksport",
+      "Stillingssøk med 13 filtre og match-score mot CV",
+      "Lagrede søk med varsler på e-post, in-app og push",
     ],
     offers: [
       {

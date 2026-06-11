@@ -80,8 +80,20 @@ const FEATURES = [
     ],
   },
   {
-    id: "personvern",
+    id: "stillingssok",
     label: "05",
+    title: "Stillingssøk med match og varsler",
+    paragraphs: [
+      "Stillingsmodulen samler alle aktive stillinger fra Arbeidsplassen.no og lar deg filtrere på 13 dimensjoner: fylke, kommune, yrkeskategori, publiseringsdato, heltid/deltid, ansettelsesform, sektor, sommerjobb, og tolkede krav som utdanning, erfaring, førerkort, arbeidsspråk og hjemmekontor. Hvert valg viser antall treff live, og listen sorteres etter hvor godt CV-en din matcher kravene i annonsen.",
+      "Lagre en filterkombinasjon som navngitt søk, så sier vi fra når nye stillinger matcher. Du velger kanal per søk: e-post (daglig oppsummering eller umiddelbart), varsel i appen eller push på mobilen. Maks ett varsel per stilling per søk, ingen støy.",
+    ],
+    links: [
+      { href: "/jobb", label: "Utforsk stillingene" },
+    ],
+  },
+  {
+    id: "personvern",
+    label: "06",
     title: "Personvern og datakontroll",
     paragraphs: [
       "Alle data lagres i EU, hos Supabase i Stockholm, og hostes via Vercel sin europeiske region. Vi selger ikke data, vi bruker dem ikke til markedsføring og vi deler dem ikke med tredjepart utover det som er nødvendig for å levere tjenesten (Stripe for betaling, OpenAI for AI-funksjoner under streng databehandlingsavtale).",
