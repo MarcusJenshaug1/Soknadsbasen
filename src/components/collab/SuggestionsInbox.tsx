@@ -70,21 +70,30 @@ export function SuggestionsInbox({
   async function resolve(id: string, action: "accept" | "reject") {
     setResolvingId(id);
     setError(null);
-    try {
-      // Ved accept: anvend endringen i den levende CV-storen FØR vi markerer
-      // forslaget. Feiler applyen (feltet er slettet/flyttet), avbryter vi —
-      // forslaget skal aldri stå som godtatt uten å ha hatt effekt.
-      if (action === "accept") {
-        const target = suggestions.find((s) => s.id === id);
-        if (!target) throw new Error("Forslaget finnes ikke lenger");
-        const applied = applyToResumeStore(target.fieldPath, target.afterValue);
-        if (!applied) {
-          throw new Error(
-            "Feltet finnes ikke lenger i CV-en, så forslaget kan ikke brukes. Avslå det for å rydde opp.",
-          );
-        }
-      }
 
+    const target = suggestions.find((s) => s.id === id);
+
+    // Ved accept: anvend endringen i den levende CV-storen FØR vi markerer
+    // forslaget. Feiler applyen (feltet er slettet/flyttet), avbryter vi —
+    // forslaget skal aldri stå som godtatt uten å ha hatt effekt.
+    let appliedAccept = false;
+    if (action === "accept") {
+      if (!target) {
+        setError("Forslaget finnes ikke lenger");
+        setResolvingId(null);
+        return;
+      }
+      appliedAccept = applyToResumeStore(target.fieldPath, target.afterValue);
+      if (!appliedAccept) {
+        setError(
+          "Feltet finnes ikke lenger i CV-en, så forslaget kan ikke brukes. Avslå det for å rydde opp.",
+        );
+        setResolvingId(null);
+        return;
+      }
+    }
+
+    try {
       const res = await fetch(`/api/collab/suggest/${id}/resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,6 +109,12 @@ export function SuggestionsInbox({
         return next;
       });
     } catch (e) {
+      // Rull tilbake klient-applyen hvis server-markeringen feilet — ellers
+      // beholder CV-en en endring som aldri ble godtatt server-side, mens
+      // forslaget fortsatt står som pending.
+      if (appliedAccept && target) {
+        applyToResumeStore(target.fieldPath, target.beforeValue);
+      }
       setError(e instanceof Error ? e.message : "Kunne ikke behandle forslaget");
     } finally {
       setResolvingId(null);

@@ -135,8 +135,12 @@ export function PipelineView({
   const visibleColumns = showCompleted ? KANBAN_COLUMNS : ACTIVE_KANBAN_COLUMNS;
   const notArchivedApps = apps.filter((a) => !a.archivedAt);
   const archivedCount = apps.length - notArchivedApps.length;
-  const completedCount = notArchivedApps.filter((a) =>
-    TERMINAL_STATUSES.includes(a.status as StatusKey),
+  // Tell akkurat de kortene byColumn legger i "completed"-kolonnen — både
+  // terminale utfall OG kolonneløse statuser (f.eks. "withdrawn") som faller
+  // tilbake dit. Ellers ville withdrawn-kort uten andre avsluttede apper la
+  // "Vis avsluttede"-bryteren forbli skjult, og kortet ville forsvinne igjen.
+  const completedCount = notArchivedApps.filter(
+    (a) => (columnForStatus(a.status)?.id ?? "completed") === "completed",
   ).length;
 
   const sensors = useSensors(
