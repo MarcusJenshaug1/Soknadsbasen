@@ -566,7 +566,7 @@ function buildEditableFields(data: ResumeData): EditableField[] {
     currentValue: data.summary ?? "",
   });
 
-  data.experience?.forEach((exp, i) => {
+  data.experience?.forEach((exp) => {
     if (!exp.id) return; // uten id kan ikke eieren matche forslaget trygt
     fields.push({
       key: `experience-${exp.id}`,

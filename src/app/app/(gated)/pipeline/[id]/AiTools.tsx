@@ -289,9 +289,25 @@ function InterviewView({ data }: { data: InterviewPrep }) {
   );
 }
 
+/** Plain-tekst som matcher den rendrede body-en brukeren ser — ikke rå markdown
+ *  (ellers får mottakeren «**uthevet**» og bindestrek-punkter i e-posten). */
+function followUpPlainText(data: FollowUp): string {
+  const html = (data.body ?? "").trim();
+  if (!html || typeof DOMParser === "undefined") {
+    return (data.markdown ?? "").trim();
+  }
+  const withBreaks = html
+    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n\n")
+    .replace(/<br\s*\/?>/gi, "\n");
+  const text =
+    new DOMParser().parseFromString(withBreaks, "text/html").body
+      .textContent ?? "";
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function FollowUpView({ data }: { data: FollowUp }) {
   const [copied, setCopied] = useState(false);
-  const plain = (data.markdown ?? "").trim();
+  const plain = followUpPlainText(data);
 
   function copy() {
     const text = [

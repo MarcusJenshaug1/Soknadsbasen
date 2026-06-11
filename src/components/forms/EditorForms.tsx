@@ -714,6 +714,7 @@ export function DesignExportForm() {
   const [versions, setVersions] = useState<Array<{ id: string; versionNum: number; templateId: string; createdAt: string; content: ResumeData }>>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [versionActionLoading, setVersionActionLoading] = useState(false);
+  const [versionError, setVersionError] = useState<string | null>(null);
   const [previewVersion, setPreviewVersion] = useState<{ id: string; versionNum: number; templateId: string; createdAt: string; content: ResumeData } | null>(null);
   const [activeTab, setActiveTab] = useState<"design" | "optimaliser" | "eksport">("design");
   const [moreExportOpen, setMoreExportOpen] = useState(false);
@@ -1137,6 +1138,7 @@ export function DesignExportForm() {
             disabled={versionActionLoading}
             onClick={async () => {
               setVersionActionLoading(true);
+              setVersionError(null);
               try {
                 const res = await fetch("/api/resume-versions", {
                   method: "POST",
@@ -1148,10 +1150,18 @@ export function DesignExportForm() {
                     content: data,
                   }),
                 });
-                const payload = await res.json();
-                if (res.ok && payload.version) {
+                const payload = await res.json().catch(() => null);
+                if (res.ok && payload?.version) {
                   setVersions((current) => [payload.version, ...current]);
+                } else {
+                  // Tidligere ble feil svelget i stillhet — brukeren trodde
+                  // snapshotet var lagret. Vis en tydelig melding i stedet.
+                  setVersionError(
+                    payload?.error ?? "Kunne ikke lagre snapshot. Prøv igjen.",
+                  );
                 }
+              } catch {
+                setVersionError("Kunne ikke lagre snapshot. Sjekk nettforbindelsen og prøv igjen.");
               } finally {
                 setVersionActionLoading(false);
               }
@@ -1161,6 +1171,12 @@ export function DesignExportForm() {
             {versionActionLoading ? "Lagrer…" : "Lagre snapshot"}
           </button>
         </div>
+
+        {versionError && (
+          <p className="text-xs text-accent" role="alert">
+            {versionError}
+          </p>
+        )}
 
         {versionsLoading ? (
           <div className="text-sm text-ink/55">Laster versjoner…</div>

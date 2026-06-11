@@ -6,6 +6,7 @@ import { FileText, Sparkles, ListChecks, Wand2 } from "lucide-react";
 import { useResumeStore, type Experience, type Education, type Language, type Certification, type Project } from "@/store/useResumeStore";
 import { IconClose, IconArrowRight, IconCheck } from "@/components/ui/Icons";
 import { SectionLabel } from "@/components/ui/Pill";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/cn";
 
 type Step = "upload" | "parsing" | "preview" | "error";
@@ -224,78 +225,74 @@ export function ImportCVModal({
     reset();
   }, [parsed, onClose]);
 
-  if (!open) return null;
+  const handleClose = () => {
+    onClose();
+    reset();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-bg rounded-3xl w-full max-w-[620px] max-h-[85vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
-          <div>
-            <SectionLabel>Importer CV</SectionLabel>
-            <h2 className="text-[20px] font-medium tracking-tight mt-1">
-              {step === "preview" ? "Vi fant følgende" : "Last opp CV"}
-            </h2>
-          </div>
-          <button
-            onClick={() => {
-              onClose();
-              reset();
-            }}
-            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60"
-            aria-label="Lukk"
-          >
-            <IconClose size={18} />
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {step === "upload" && (
-            <UploadStep
-              dragOver={dragOver}
-              setDragOver={setDragOver}
-              onFile={handleFile}
-              inputRef={inputRef}
-            />
-          )}
-          {step === "parsing" && <ParsingStep fileName={fileName} />}
-          {step === "preview" && parsed && <PreviewStep parsed={parsed} />}
-          {step === "error" && <ErrorStep message={error} onRetry={reset} />}
+    <Modal
+      open={open}
+      onClose={handleClose}
+      ariaLabel="Importer CV"
+      panelClassName="bg-bg rounded-3xl w-full max-w-[620px] max-h-[85vh] overflow-hidden flex flex-col border border-black/8 dark:border-white/8"
+    >
+      <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
+        <div>
+          <SectionLabel>Importer CV</SectionLabel>
+          <h2 className="text-[20px] font-medium tracking-tight mt-1">
+            {step === "preview" ? "Vi fant følgende" : "Last opp CV"}
+          </h2>
         </div>
+        <button
+          onClick={handleClose}
+          className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60"
+          aria-label="Lukk"
+        >
+          <IconClose size={18} />
+        </button>
+      </header>
 
-        {step === "preview" && parsed && (
-          <footer className="px-6 py-4 border-t border-black/8 dark:border-white/8 flex items-center justify-between gap-3 bg-panel/50">
-            <button
-              onClick={reset}
-              className="text-[12px] text-ink/60 hover:text-ink"
-            >
-              Prøv en annen fil
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  onClose();
-                  reset();
-                }}
-                className="px-4 py-2 rounded-full text-[12px] border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={applyToStore}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover"
-              >
-                Bruk denne CVen
-                <IconArrowRight size={14} />
-              </button>
-            </div>
-          </footer>
+      <div className="flex-1 overflow-y-auto p-6">
+        {step === "upload" && (
+          <UploadStep
+            dragOver={dragOver}
+            setDragOver={setDragOver}
+            onFile={handleFile}
+            inputRef={inputRef}
+          />
         )}
+        {step === "parsing" && <ParsingStep fileName={fileName} />}
+        {step === "preview" && parsed && <PreviewStep parsed={parsed} />}
+        {step === "error" && <ErrorStep message={error} onRetry={reset} />}
       </div>
-    </div>
+
+      {step === "preview" && parsed && (
+        <footer className="px-6 py-4 border-t border-black/8 dark:border-white/8 flex items-center justify-between gap-3 bg-panel/50">
+          <button
+            onClick={reset}
+            className="text-[12px] text-ink/60 hover:text-ink"
+          >
+            Prøv en annen fil
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 rounded-full text-[12px] border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={applyToStore}
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover"
+            >
+              Bruk denne CVen
+              <IconArrowRight size={14} />
+            </button>
+          </div>
+        </footer>
+      )}
+    </Modal>
   );
 }
 

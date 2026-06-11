@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/auth";
-import { getActiveSession } from "@/lib/session-context";
+import { getActiveSession, getAllSessions } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { SectionLabel } from "@/components/ui/Pill";
 import { STATUS_LABEL, type StatusKey } from "@/components/ui/StatusDot";
@@ -25,10 +25,11 @@ export default async function SelskaperPage({
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
-  const [userId, sp, activeJobSession] = await Promise.all([
+  const [userId, sp, activeJobSession, allSessions] = await Promise.all([
     getSessionUserId(),
     searchParams,
     getActiveSession(),
+    getAllSessions(),
   ]);
   if (!userId) redirect("/logg-inn");
 
@@ -36,6 +37,9 @@ export default async function SelskaperPage({
   const isHistorical =
     !!requestedSessionId && requestedSessionId !== activeJobSession?.id;
   const scopedSessionId = requestedSessionId ?? activeJobSession?.id;
+  const historicalSession = isHistorical
+    ? (allSessions.find((s) => s.id === requestedSessionId) ?? null)
+    : null;
 
   const apps = await prisma.jobApplication.findMany({
     where: {
@@ -93,9 +97,9 @@ export default async function SelskaperPage({
   if (companies.length === 0) {
     return (
       <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
-        {isHistorical && requestedSessionId && (
+        {historicalSession && (
           <div className="mb-6">
-            <SessionBanner sessionId={requestedSessionId} />
+            <SessionBanner session={historicalSession} />
           </div>
         )}
         <SectionLabel className="mb-3">Selskaper</SectionLabel>
@@ -118,9 +122,9 @@ export default async function SelskaperPage({
 
   return (
     <div className="max-w-[1100px] mx-auto px-5 md:px-10 py-6 md:py-10">
-      {isHistorical && requestedSessionId && (
+      {historicalSession && (
         <div className="mb-6">
-          <SessionBanner sessionId={requestedSessionId} />
+          <SessionBanner session={historicalSession} />
         </div>
       )}
       <SectionLabel className="mb-3">Selskaper</SectionLabel>

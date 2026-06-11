@@ -21,7 +21,9 @@ export default async function BrevPage() {
       companyName: true,
       title: true,
       status: true,
-      coverLetter: { select: { id: true, updatedAt: true, body: true } },
+      // Kun eksistens + dato brukes i lista — body er en tung HTML-blob vi
+      // aldri rendrer her, så den hentes ikke (spar baudbredde per søknad).
+      coverLetter: { select: { id: true, updatedAt: true } },
     },
   });
 
@@ -104,7 +106,7 @@ function LetterRow({
     companyName: string;
     title: string;
     status: string;
-    coverLetter: { id: string; updatedAt: Date; body: string | null } | null;
+    coverLetter: { id: string; updatedAt: Date } | null;
   };
   hasLetter: boolean;
 }) {

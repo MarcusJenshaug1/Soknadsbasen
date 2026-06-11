@@ -158,8 +158,11 @@ export function PipelineView({
     const map = new Map<string, Application[]>();
     for (const col of visibleColumns) map.set(col.id, []);
     for (const a of filtered) {
-      const col = columnForStatus(a.status);
-      if (col && map.has(col.id)) map.get(col.id)!.push(a);
+      // Statuser uten egen kolonne (f.eks. "withdrawn") havner i "Avsluttet"
+      // i stedet for å droppes — ellers forsvant kort sporløst etter en
+      // bulk-«Trekk tilbake». Status-pillen viser fortsatt "Trukket tilbake".
+      const colId = columnForStatus(a.status)?.id ?? "completed";
+      if (map.has(colId)) map.get(colId)!.push(a);
     }
     return map;
   }, [filtered, visibleColumns]);

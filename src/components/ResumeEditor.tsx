@@ -11,6 +11,7 @@ import { InviteButton } from "@/components/collab/InviteButton";
 import { OwnerCollabBridge } from "@/components/collab/OwnerCollabBridge";
 import { SuggestionsInbox } from "@/components/collab/SuggestionsInbox";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ImportCVModal } from "./ImportCVModal";
 import { AvatarCropper } from "./AvatarCropper";
 import {
@@ -886,6 +887,7 @@ function CVSwitcher() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [resumeToDelete, setResumeToDelete] = useState<ResumeEntry | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeName = resumes.find((r) => r.id === activeResumeId)?.name ?? "CV";
@@ -987,7 +989,7 @@ function CVSwitcher() {
                         </button>
                         {resumes.length > 1 && (
                           <button
-                            onClick={() => removeResume(r.id)}
+                            onClick={() => setResumeToDelete(r)}
                             className="p-1 hover:text-[#D5592E]"
                             title="Slett"
                           >
@@ -1013,6 +1015,23 @@ function CVSwitcher() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={resumeToDelete !== null}
+        onClose={() => setResumeToDelete(null)}
+        onConfirm={() => {
+          if (resumeToDelete) removeResume(resumeToDelete.id);
+          setResumeToDelete(null);
+        }}
+        title="Slette denne CV-en?"
+        message={
+          <>
+            «{resumeToDelete?.name}» slettes permanent og kan ikke gjenopprettes.
+          </>
+        }
+        confirmLabel="Slett CV"
+        danger
+      />
     </div>
   );
 }

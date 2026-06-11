@@ -7,6 +7,12 @@ import { cn } from "@/lib/cn";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Stack over åpne modaler. Begge nivåer lytter på `document`, så Escape ville
+// ellers nå begge lyttere samtidig (stopPropagation virker ikke mellom to
+// document-lyttere) og lukke både en nested ConfirmDialog OG forelderen. Kun
+// den øverste modalen i stacken reagerer på Escape.
+const modalStack: object[] = [];
+
 /**
  * Tynn a11y-wrapper rundt eksisterende modal-markup. Gir scrim, role="dialog",
  * aria-modal, Escape-til-lukk, focus-trap, scroll-lock og fokus-retur — slik at
@@ -32,6 +38,8 @@ export function Modal({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  // Stabil token som identifiserer denne modalen i modalStack.
+  const stackTokenRef = useRef<object>({});
   // onClose holdes i en ref så fokus-/scroll-effekten kun avhenger av [open].
   // Ellers re-kjører effekten hver gang en konsument sender en ny onClose-
   // identitet (inline-arrow), og cleanup/re-run stjeler fokus ut av input-felt
@@ -45,6 +53,8 @@ export function Modal({
     if (!open) return;
     restoreFocusRef.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
+    const token = stackTokenRef.current;
+    modalStack.push(token);
 
     const preferred = panel?.querySelector<HTMLElement>("[data-autofocus]");
     const focusables = panel?.querySelectorAll<HTMLElement>(FOCUSABLE);
@@ -52,6 +62,9 @@ export function Modal({
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        // Bare den øverste modalen reagerer — ellers lukker Escape også
+        // en eventuell forelder-modal under denne.
+        if (modalStack[modalStack.length - 1] !== token) return;
         e.stopPropagation();
         onCloseRef.current();
         return;
@@ -76,6 +89,8 @@ export function Modal({
 
     return () => {
       document.removeEventListener("keydown", onKey);
+      const idx = modalStack.indexOf(token);
+      if (idx !== -1) modalStack.splice(idx, 1);
       document.body.style.overflow = prevOverflow;
       restoreFocusRef.current?.focus?.();
     };

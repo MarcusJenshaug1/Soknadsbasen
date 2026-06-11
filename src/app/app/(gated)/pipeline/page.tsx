@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/auth";
-import { getActiveSession } from "@/lib/session-context";
+import { getActiveSession, getAllSessions } from "@/lib/session-context";
 import { prisma } from "@/lib/prisma";
 import { PipelineView } from "./PipelineView";
 import { PIPELINE_STATUSES } from "@/lib/pipeline";
@@ -13,16 +13,20 @@ export default async function PipelinePage({
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
-  const [userId, sp, activeJobSession] = await Promise.all([
+  const [userId, sp, activeJobSession, allSessions] = await Promise.all([
     getSessionUserId(),
     searchParams,
     getActiveSession(),
+    getAllSessions(),
   ]);
   if (!userId) redirect("/logg-inn");
 
   const requestedSessionId = sp.session ?? undefined;
   const isHistorical =
     !!requestedSessionId && requestedSessionId !== activeJobSession?.id;
+  const historicalSession = isHistorical
+    ? (allSessions.find((s) => s.id === requestedSessionId) ?? null)
+    : null;
 
   // Scope til ønsket sesjon, eller aktiv sesjon som default
   const scopedSessionId = requestedSessionId ?? activeJobSession?.id;
@@ -52,9 +56,9 @@ export default async function PipelinePage({
 
   return (
     <>
-      {isHistorical && requestedSessionId && (
+      {historicalSession && (
         <div className="px-4 md:px-10 pt-6">
-          <SessionBanner sessionId={requestedSessionId} />
+          <SessionBanner session={historicalSession} />
         </div>
       )}
       <PipelineView initialApplications={applications} readOnly={isHistorical} />

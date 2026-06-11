@@ -118,21 +118,31 @@ export function OppgaverView({ initial }: { initial: Task[] }) {
           : t,
       ),
     );
-    const res = await fetch(`/api/tasks/${task.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        completedAt: completed ? new Date().toISOString() : null,
-      }),
-    });
-    if (!res.ok) setTasks(prev);
+    // Rull tilbake både ved HTTP-feil OG nettverksfeil — uten catch ville en
+    // kastet fetch latt UI vise endringen som om den var lagret.
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          completedAt: completed ? new Date().toISOString() : null,
+        }),
+      });
+      if (!res.ok) setTasks(prev);
+    } catch {
+      setTasks(prev);
+    }
   }
 
   async function remove(task: Task) {
     const prev = tasks;
     setTasks((xs) => xs.filter((t) => t.id !== task.id));
-    const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
-    if (!res.ok) setTasks(prev);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+      if (!res.ok) setTasks(prev);
+    } catch {
+      setTasks(prev);
+    }
   }
 
   function handleCreated(task: Task) {

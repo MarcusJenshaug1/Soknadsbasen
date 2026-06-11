@@ -22,20 +22,40 @@ export function ShareLinkWidget() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/share")
-      .then((r) => r.json())
-      .then((d) => setLink(d.link ?? null))
-      .catch(() => setLink(null));
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/share");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = (await res.json()) as { link?: LinkData | null };
+        if (!cancelled) setLink(d.link ?? null);
+      } catch {
+        // Vis widgeten med en feilmelding heller enn å skjule den (undefined)
+        // — ellers ser brukeren ingenting og vet ikke at noe gikk galt.
+        if (!cancelled) {
+          setError("Kunne ikke laste del-lenken. Last siden på nytt.");
+          setLink(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function generate() {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json() as { link: LinkData };
       setLink(d.link);
+    } catch {
+      setError("Kunne ikke generere lenken. Prøv igjen.");
     } finally {
       setLoading(false);
     }
@@ -43,9 +63,13 @@ export function ShareLinkWidget() {
 
   async function revoke() {
     setLoading(true);
+    setError(null);
     try {
-      await fetch("/api/share", { method: "DELETE" });
+      const res = await fetch("/api/share", { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setLink(null);
+    } catch {
+      setError("Kunne ikke trekke tilbake lenken. Prøv igjen.");
     } finally {
       setLoading(false);
       setConfirmRevoke(false);
@@ -112,6 +136,12 @@ export function ShareLinkWidget() {
         >
           {loading ? "Genererer …" : "Generer del-lenke"}
         </button>
+      )}
+
+      {error && (
+        <p className="text-[11px] text-accent mt-3" role="alert">
+          {error}
+        </p>
       )}
 
       <ConfirmDialog

@@ -151,9 +151,9 @@ export function InviteModal({
       open={open}
       onClose={onClose}
       ariaLabel="Inviter hjelper"
-      panelClassName="w-full max-w-[600px] max-h-[88vh] overflow-y-auto rounded-2xl bg-bg shadow-2xl border border-black/10"
+      panelClassName="w-full max-w-[600px] max-h-[88vh] overflow-y-auto rounded-2xl bg-bg shadow-2xl border border-black/10 dark:border-white/10"
     >
-      <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 px-6 py-4 flex items-start justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 dark:border-white/8 px-6 py-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-[0.2em] text-accent mb-1">
               Inviter hjelper
@@ -161,7 +161,7 @@ export function InviteModal({
             <h2 className="text-[18px] md:text-[20px] font-medium tracking-tight text-ink truncate">
               {resourceTitle}
             </h2>
-            <p className="text-[12px] text-[#14110e]/60 mt-1 leading-[1.5]">
+            <p className="text-[12px] text-ink/60 mt-1 leading-[1.5]">
               Alle med lenken kan foreslå endringer. Du må godkjenne eller avvise hvert forslag.
             </p>
           </div>
@@ -169,7 +169,7 @@ export function InviteModal({
             type="button"
             onClick={onClose}
             aria-label="Lukk"
-            className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#14110e]/60 hover:text-ink transition-colors shrink-0"
+            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60 hover:text-ink transition-colors shrink-0"
           >
             <X size={16} />
           </button>
@@ -178,12 +178,12 @@ export function InviteModal({
         <div className="px-6 py-5 space-y-6">
           {/* Opprett ny lenke */}
           <section className="space-y-3">
-            <h3 className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 font-medium">
+            <h3 className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-medium">
               Ny lenke
             </h3>
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
-                <label className="block text-[11px] text-[#14110e]/55 mb-1">
+                <label className="block text-[11px] text-ink/55 mb-1">
                   Navn på lenken (valgfritt)
                 </label>
                 <input
@@ -191,12 +191,12 @@ export function InviteModal({
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder="Mamma, Per fra karriere-kontoret …"
-                  className="w-full border-b border-black/15 bg-transparent py-2 text-[13px] outline-none focus:border-ink"
+                  className="w-full border-b border-black/15 dark:border-white/15 bg-transparent py-2 text-[13px] outline-none focus:border-ink"
                   maxLength={80}
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-[#14110e]/55 mb-1">
+                <label className="block text-[11px] text-ink/55 mb-1">
                   Utløper
                 </label>
                 <select
@@ -204,7 +204,7 @@ export function InviteModal({
                   onChange={(e) =>
                     setTtlHours(e.target.value === "null" ? null : Number(e.target.value))
                   }
-                  className="border border-black/15 rounded-lg px-3 py-2 text-[13px] bg-bg outline-none focus:border-ink"
+                  className="border border-black/15 dark:border-white/15 rounded-lg px-3 py-2 text-[13px] bg-bg outline-none focus:border-ink"
                 >
                   {COLLAB_INVITE_TTL_OPTIONS.map((opt) => (
                     <option key={opt.label} value={String(opt.hours)}>
@@ -220,7 +220,7 @@ export function InviteModal({
               disabled={creating}
               className={cn(
                 "w-full inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-[13px] font-medium",
-                "bg-accent text-bg hover:bg-[#a94424] transition-colors",
+                "bg-accent text-bg hover:bg-accent-hover transition-colors",
                 "disabled:opacity-40",
               )}
             >
@@ -234,14 +234,14 @@ export function InviteModal({
 
           {/* Aktive lenker */}
           <section className="space-y-3">
-            <h3 className="text-[11px] uppercase tracking-[0.18em] text-[#14110e]/55 font-medium">
+            <h3 className="text-[11px] uppercase tracking-[0.18em] text-ink/55 font-medium">
               Aktive lenker {activeInvites.length > 0 && `(${activeInvites.length})`}
             </h3>
             {loading && invites.length === 0 && (
-              <p className="text-[12px] text-[#14110e]/45">Laster …</p>
+              <p className="text-[12px] text-ink/45">Laster …</p>
             )}
             {!loading && activeInvites.length === 0 && (
-              <p className="text-[12px] text-[#14110e]/45 italic">Ingen aktive invitasjoner.</p>
+              <p className="text-[12px] text-ink/45 italic">Ingen aktive invitasjoner.</p>
             )}
             <ul className="space-y-2">
               {activeInvites.map((inv) => {
@@ -250,14 +250,14 @@ export function InviteModal({
                 return (
                   <li
                     key={inv.id}
-                    className="rounded-xl border border-black/8 bg-surface p-3 space-y-2"
+                    className="rounded-xl border border-black/8 dark:border-white/8 bg-surface p-3 space-y-2"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="text-[13px] font-medium text-ink truncate">
                           {inv.label ?? "Uten navn"}
                         </div>
-                        <div className="text-[11px] text-[#14110e]/55 mt-0.5 flex items-center gap-3 flex-wrap">
+                        <div className="text-[11px] text-ink/55 mt-0.5 flex items-center gap-3 flex-wrap">
                           {exp ? (
                             <span className={expSoon ? "text-amber-600" : ""}>
                               Utløper {exp.toLocaleDateString("nb-NO", { day: "numeric", month: "short" })}
@@ -284,7 +284,7 @@ export function InviteModal({
                           type="button"
                           onClick={() => copy(inv.token)}
                           title="Kopier lenke"
-                          className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#14110e]/60 hover:text-ink"
+                          className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60 hover:text-ink"
                         >
                           {copiedToken === inv.token ? (
                             <Check size={14} className="text-emerald-600" />
@@ -317,14 +317,14 @@ export function InviteModal({
                 aria-expanded={showArchived}
                 className="w-full flex items-center justify-between gap-2 text-left group"
               >
-                <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#14110e]/40 font-medium group-hover:text-[#14110e]/60 transition-colors">
+                <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-ink/40 font-medium group-hover:text-ink/60 transition-colors">
                   <Archive size={12} />
                   Utløpte og tilbakekalte ({archivedInvites.length})
                 </span>
                 <ChevronDown
                   size={14}
                   className={cn(
-                    "text-[#14110e]/40 transition-transform",
+                    "text-ink/40 transition-transform",
                     showArchived && "rotate-180",
                   )}
                 />
@@ -337,20 +337,20 @@ export function InviteModal({
                     return (
                       <li
                         key={inv.id}
-                        className="rounded-xl border border-black/8 bg-surface/50 p-3 opacity-70"
+                        className="rounded-xl border border-black/8 dark:border-white/8 bg-surface/50 p-3 opacity-70"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <div className="text-[13px] font-medium text-[#14110e]/55 truncate">
+                            <div className="text-[13px] font-medium text-ink/55 truncate">
                               {inv.label ?? "Uten navn"}
                             </div>
-                            <div className="text-[11px] text-[#14110e]/45 mt-0.5 flex items-center gap-2 flex-wrap">
+                            <div className="text-[11px] text-ink/45 mt-0.5 flex items-center gap-2 flex-wrap">
                               {revoked ? (
                                 <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-[10px] font-medium">
                                   Tilbakekalt
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center rounded-full bg-black/8 text-[#14110e]/60 px-2 py-0.5 text-[10px] font-medium">
+                                <span className="inline-flex items-center rounded-full bg-black/8 dark:bg-white/10 text-ink/60 px-2 py-0.5 text-[10px] font-medium">
                                   Utløpt
                                 </span>
                               )}

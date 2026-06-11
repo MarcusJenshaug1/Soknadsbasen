@@ -1,25 +1,28 @@
-"use client";
-
 import Link from "next/link";
-import { useSessionStore } from "@/store/useSessionStore";
 
-interface Props {
-  sessionId: string;
+/**
+ * "Arkiv"-banner som vises når brukeren ser på en historisk (ikke-aktiv) sesjon.
+ * Presentasjonell: sesjonen mates inn fra server-komponenten som rendrer siden.
+ * Tidligere leste den useSessionStore.sessions, men den lista hydreres ikke på
+ * alle ruter (f.eks. /app/selskaper), så banneret ble usynlig der.
+ */
+interface BannerSession {
+  name: string;
+  startedAt: Date | string;
+  closedAt: Date | string | null;
+  _count: { applications: number };
 }
 
-export function SessionBanner({ sessionId }: Props) {
-  const sessions = useSessionStore((s) => s.sessions);
-  const session = sessions.find((s) => s.id === sessionId);
+const DATE_OPTS: Intl.DateTimeFormatOptions = {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+};
 
-  if (!session) return null;
-
-  const start = new Date(session.startedAt).toLocaleDateString("nb-NO", {
-    day: "numeric", month: "short", year: "numeric",
-  });
+export function SessionBanner({ session }: { session: BannerSession }) {
+  const start = new Date(session.startedAt).toLocaleDateString("nb-NO", DATE_OPTS);
   const end = session.closedAt
-    ? new Date(session.closedAt).toLocaleDateString("nb-NO", {
-        day: "numeric", month: "short", year: "numeric",
-      })
+    ? new Date(session.closedAt).toLocaleDateString("nb-NO", DATE_OPTS)
     : null;
 
   return (
