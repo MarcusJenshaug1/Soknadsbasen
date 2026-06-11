@@ -1,23 +1,21 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { applySuggestionToResume } from "@/lib/collab/applySuggestion";
 
 /**
  * POST /api/collab/suggest/[id]/resolve
  * Body: { action: "accept" | "reject" }
- * Eier-endpoint. Endrer status på et CollabSuggestion.
+ * Eier-endpoint. Endrer KUN status på et CollabSuggestion.
  *
- * Når status="accepted": dette endepunktet markerer KUN suggestion-en.
- * Den faktiske endringen til Y.Doc / Postgres-raden gjøres av eier-
- * klienten lokalt (siden eier allerede har Y.Doc + Hocuspocus-tilkobling
- * via useYjsSync). Klienten kaller dette EFTER å ha applyet endringen,
- * slik at vi får atomicitet: feiler den server-side oppdateringen,
- * gjøres heller ingen klient-side write.
+ * Den faktiske CV-endringen gjøres klient-side i SuggestionsInbox via de
+ * vanlige store-actionene (useResumeStore.updateRole/updateExperience/…),
+ * som propagerer videre til Y.Doc (useYjsSync) eller Supabase (useCloudSync).
+ * Eier-klienten anvender endringen FØR den kaller dette endepunktet — feiler
+ * applyen lokalt (slettet/flyttet felt), markeres forslaget aldri som godtatt.
  *
- * Hvis vi i fremtiden vil ha full server-driven apply (uavhengig av om
- * eier-klienten er på), må vi instansiere Y.Doc server-side og pushe
- * mutasjonen via Hocuspocus directConnection. Det er Fase 4-polish.
+ * Et tidligere forsøk skrev endringen direkte til UserData.resumeData her,
+ * men når Hocuspocus er aktiv er Y.Doc sannhet, så snapshotet overskrev den
+ * direkte Postgres-writen. Derfor: status-only her, apply hos klienten.
  */
 export async function POST(
   req: Request,
@@ -51,9 +49,6 @@ export async function POST(
     select: {
       id: true,
       status: true,
-      fieldPath: true,
-      afterValue: true,
-      resourceKind: true,
       invite: { select: { ownerId: true } },
     },
   });
@@ -65,30 +60,6 @@ export async function POST(
       { error: "Forslaget er allerede behandlet" },
       { status: 409 },
     );
-  }
-
-  // Server-drevet apply: for CV anvendes den godkjente endringen direkte i
-  // eierens lagrede CV, så forslaget får effekt uavhengig av om eier har
-  // editoren åpen. (Tidligere markerte ruten kun status, og endringen ble
-  // aldri synlig for eier.)
-  if (action === "accept" && suggestion.resourceKind === "cv") {
-    const userData = await prisma.userData.findUnique({
-      where: { userId: session.userId },
-      select: { resumeData: true },
-    });
-    if (userData) {
-      const next = applySuggestionToResume(
-        userData.resumeData,
-        suggestion.fieldPath,
-        suggestion.afterValue,
-      );
-      if (next) {
-        await prisma.userData.update({
-          where: { userId: session.userId },
-          data: { resumeData: next },
-        });
-      }
-    }
   }
 
   const updated = await prisma.collabSuggestion.update({

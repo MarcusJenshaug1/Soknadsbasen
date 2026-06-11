@@ -3,12 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, X, ArrowRight, Inbox } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useResumeStore } from "@/store/useResumeStore";
 
 /**
  * Eier-innboks for collab-forslag. Lister pending CollabSuggestion for en
- * ressurs og lar eier godta/avslå. Ved accept anvender serveren endringen i
- * CV-en (server-drevet via /resolve), og vi kaller onApplied så editoren kan
- * re-hydrere fersk CV-data.
+ * ressurs og lar eier godta/avslå.
+ *
+ * Ved accept anvendes endringen klient-side i den levende CV-storen via de
+ * vanlige store-actionene (samme vei som eierens egne redigeringer), som
+ * propagerer til Y.Doc (useYjsSync) eller Supabase (useCloudSync). Først når
+ * applyen lyktes kaller vi /resolve for å markere forslaget som godtatt — er
+ * feltet slettet/flyttet bort, markeres det aldri, og eier får beskjed.
  *
  * For CV er resourceId = eierens user.id (samme konvensjon som InviteButton).
  */
@@ -27,12 +32,9 @@ type SuggestionRow = {
 
 export function SuggestionsInbox({
   resourceId,
-  onApplied,
   onCountChange,
 }: {
   resourceId: string;
-  /** Kalles etter en vellykket accept, så eier-editoren kan re-hydrere CV-en. */
-  onApplied?: () => void;
   /** Rapporterer antall pending tilbake til knappen sin teller. */
   onCountChange?: (count: number) => void;
 }) {
@@ -69,6 +71,20 @@ export function SuggestionsInbox({
     setResolvingId(id);
     setError(null);
     try {
+      // Ved accept: anvend endringen i den levende CV-storen FØR vi markerer
+      // forslaget. Feiler applyen (feltet er slettet/flyttet), avbryter vi —
+      // forslaget skal aldri stå som godtatt uten å ha hatt effekt.
+      if (action === "accept") {
+        const target = suggestions.find((s) => s.id === id);
+        if (!target) throw new Error("Forslaget finnes ikke lenger");
+        const applied = applyToResumeStore(target.fieldPath, target.afterValue);
+        if (!applied) {
+          throw new Error(
+            "Feltet finnes ikke lenger i CV-en, så forslaget kan ikke brukes. Avslå det for å rydde opp.",
+          );
+        }
+      }
+
       const res = await fetch(`/api/collab/suggest/${id}/resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,9 +99,6 @@ export function SuggestionsInbox({
         onCountChange?.(next.length);
         return next;
       });
-      // Serveren har allerede skrevet endringen til CV-JSON ved accept, så
-      // eier-editoren må re-hydrere for å vise den.
-      if (action === "accept") onApplied?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Kunne ikke behandle forslaget");
     } finally {
@@ -266,9 +279,56 @@ function toDisplayItems(value: unknown): string[] {
   return [String(value)];
 }
 
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : String(value ?? "");
+}
+
+/**
+ * Anvender en godkjent forslagsverdi i den levende CV-storen via de vanlige
+ * store-actionene. fieldPath er id-basert for liste-elementer
+ * ("experience.id:<uuid>.description"). Returnerer false hvis feltet ikke
+ * lenger finnes, så vi unngår å markere et forslag som godtatt uten effekt.
+ */
+function applyToResumeStore(fieldPath: string, afterValue: unknown): boolean {
+  const store = useResumeStore.getState();
+
+  if (fieldPath === "role") {
+    store.updateRole(asString(afterValue));
+    return true;
+  }
+  if (fieldPath === "summary") {
+    store.updateSummary(asString(afterValue));
+    return true;
+  }
+  if (fieldPath === "skills") {
+    const skills = Array.isArray(afterValue)
+      ? afterValue.map((v) => asString(v).trim()).filter(Boolean)
+      : asString(afterValue)
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+    store.updateSkills(skills);
+    return true;
+  }
+
+  const m = fieldPath.match(/^(experience|education)\.id:([^.]+)\.description$/);
+  if (m) {
+    const [, section, id] = m;
+    if (section === "experience") {
+      if (!store.data.experience.some((e) => e.id === id)) return false;
+      store.updateExperience(id, { description: asString(afterValue) });
+      return true;
+    }
+    if (!store.data.education.some((e) => e.id === id)) return false;
+    store.updateEducation(id, { description: asString(afterValue) });
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Oversetter en CollabSuggestion.fieldPath til en menneskelig norsk label.
- * Indekserte stier ("experience.2.description") får 1-basert nummer i labelen.
  */
 function labelForFieldPath(fieldPath: string): string {
   const direct: Record<string, string> = {
@@ -278,11 +338,10 @@ function labelForFieldPath(fieldPath: string): string {
   };
   if (fieldPath in direct) return direct[fieldPath];
 
-  const expMatch = fieldPath.match(/^experience\.(\d+)\.description$/);
-  if (expMatch) return `Erfaring #${Number(expMatch[1]) + 1} – beskrivelse`;
-
-  const eduMatch = fieldPath.match(/^education\.(\d+)\.description$/);
-  if (eduMatch) return `Utdanning #${Number(eduMatch[1]) + 1}`;
+  if (/^experience\.id:[^.]+\.description$/.test(fieldPath))
+    return "Erfaring, beskrivelse";
+  if (/^education\.id:[^.]+\.description$/.test(fieldPath))
+    return "Utdanning, beskrivelse";
 
   return fieldPath;
 }

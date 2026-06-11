@@ -194,6 +194,29 @@ export function ImportCVModal({
       if (parsed.interests?.length) {
         next.interests = parsed.interests;
       }
+
+      // Importerte seksjoner som certifications/projects/interests er skjult i
+      // defaultVisibility. Uten dette lagres dataen, men forsvinner sporløst fra
+      // CV-en og eksporten. Slå på synlighet + sørg for plass i rekkefølgen for
+      // alt vi faktisk fylte.
+      const populated = [
+        parsed.experience?.length && "experience",
+        parsed.education?.length && "education",
+        parsed.languages?.length && "languages",
+        parsed.certifications?.length && "certifications",
+        parsed.projects?.length && "projects",
+        parsed.interests?.length && "interests",
+      ].filter(Boolean) as (keyof typeof next.sectionVisibility)[];
+
+      if (populated.length) {
+        next.sectionVisibility = { ...next.sectionVisibility };
+        next.sectionOrder = [...next.sectionOrder];
+        for (const key of populated) {
+          next.sectionVisibility[key] = true;
+          if (!next.sectionOrder.includes(key)) next.sectionOrder.push(key);
+        }
+      }
+
       return { data: next };
     });
 

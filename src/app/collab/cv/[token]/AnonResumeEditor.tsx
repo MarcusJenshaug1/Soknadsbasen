@@ -543,8 +543,10 @@ function toSkillsArray(text: string): string[] {
     .filter(Boolean);
 }
 
-/** Utleder de redigerbare tekstfeltene fra en ResumeData. fieldPath matcher
- * eierens forventede struktur (role, summary, experience.<i>.description, …). */
+/** Utleder de redigerbare tekstfeltene fra en ResumeData. fieldPath er
+ * id-basert for liste-elementer ("experience.id:<uuid>.description"), slik at
+ * et forslag treffer riktig element selv om eieren har rokkert om eller slettet
+ * andre rader mellom invitasjon og godkjenning. */
 function buildEditableFields(data: ResumeData): EditableField[] {
   const fields: EditableField[] = [];
 
@@ -565,21 +567,23 @@ function buildEditableFields(data: ResumeData): EditableField[] {
   });
 
   data.experience?.forEach((exp, i) => {
+    if (!exp.id) return; // uten id kan ikke eieren matche forslaget trygt
     fields.push({
-      key: `experience-${exp.id ?? i}`,
-      fieldPath: `experience.${i}.description`,
-      label: "Erfaring — beskrivelse",
+      key: `experience-${exp.id}`,
+      fieldPath: `experience.id:${exp.id}.description`,
+      label: "Erfaring, beskrivelse",
       context: experienceContext(exp.title, exp.company),
       kind: "experience",
       currentValue: exp.description ?? "",
     });
   });
 
-  data.education?.forEach((edu, i) => {
+  data.education?.forEach((edu) => {
+    if (!edu.id) return;
     fields.push({
-      key: `education-${edu.id ?? i}`,
-      fieldPath: `education.${i}.description`,
-      label: "Utdanning — beskrivelse",
+      key: `education-${edu.id}`,
+      fieldPath: `education.id:${edu.id}.description`,
+      label: "Utdanning, beskrivelse",
       context: educationContext(edu.degree, edu.field, edu.school),
       kind: "education",
       currentValue: edu.description ?? "",

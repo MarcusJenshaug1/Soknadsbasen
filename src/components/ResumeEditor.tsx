@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool, MessageSquare, X } from "lucide-react";
 import { LivePreview, PrintOutput } from "./LivePreview";
@@ -676,14 +676,6 @@ function SuggestionsButton({ resourceId }: { resourceId: string }) {
     };
   }, [resourceId]);
 
-  // Etter en accept har serveren allerede skrevet endringen til eierens lagrede
-  // CV-JSON. useCloudSync eksponerer ingen loadFromServer/reload utad (den er
-  // intern i hooken og returnerer void), så en full reload er den robuste måten
-  // å re-hydrere useResumeStore på uten å duplisere fetch-/hydrerings-logikken.
-  const handleApplied = useCallback(() => {
-    window.location.reload();
-  }, []);
-
   return (
     <>
       <button
@@ -731,7 +723,6 @@ function SuggestionsButton({ resourceId }: { resourceId: string }) {
         {open && (
           <SuggestionsInbox
             resourceId={resourceId}
-            onApplied={handleApplied}
             onCountChange={setPendingCount}
           />
         )}
