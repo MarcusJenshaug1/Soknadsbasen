@@ -17,17 +17,19 @@ import { extractJobKeywords } from "./format";
  *
  * Score = scoreAtsFromNormalized (src/lib/ats.ts):
  *   min(1, keyword-dekning × 0.68 + summary-bonus 0.08 + kompletthet ≤ 0.12) × 100.
- * Realistisk tak er ~88 (full dekning + alle bonuser). En CV som dekker
- * halvparten av nøkkelordene med komplett profil lander rundt 50.
+ * Teoretisk tak ~88, men empirisk topper en reell, komplett CV rundt 45-50:
+ * jobbenes keyword-sett er 15-30 termer og substring-dekning over 60 % av dem
+ * forekommer ikke i praksis.
  *
- * Terskler (samme bånd som dagens UI brukte for 60/40-grensene):
- *   Høy ≥ 60 — godt over halvparten av kravene dekket.
- *   Middels 40–59 — delvis dekning, verdt å vurdere.
- *   Lav < 40 — svak dekning.
- * Valideres mot faktisk persentilfordeling etter backfill (se Fase 0.5-plan)
- * før Fase 2 hardkoder labels i UI.
+ * Terskler KALIBRERT MOT FAKTISK PROD-FORDELING etter backfill 2026-06-11
+ * (9 822 aktive jobber; reell CV: max=47, p99=36, 38 jobber >= 40):
+ *   Høy ≥ 40 — topp ~0,5 % av stillingene for en god CV; sjelden og reell.
+ *   Middels 25-39 — omtrent topp 1-5 %; verdt å vurdere.
+ *   Lav < 25 — svak dekning.
+ * Re-kalibrer når brukermassen vokser (persentil-query i
+ * scripts/harvest-job-facets.ts) — n=1 reell CV er tynt grunnlag.
  */
-export const MATCH_THRESHOLDS = { hoy: 60, middels: 40 } as const;
+export const MATCH_THRESHOLDS = { hoy: 40, middels: 25 } as const;
 
 export type MatchTier = "hoy" | "middels" | "lav";
 
@@ -63,8 +65,22 @@ type ResumeProfile = { normalized: NormalizedResume; cvHash: string };
 
 /** Parser resumeData-blob → normalisert tekst + hash. null hvis ingen CV. */
 function buildProfile(resumeData: string): ResumeProfile | null {
-  const resume = parseActiveResume(resumeData);
-  if (!resume) return null;
+  const parsed = parseActiveResume(resumeData);
+  if (!parsed) return null;
+  // parseActiveResume normaliserer IKKE formen — eldre/delvise blobs kan
+  // mangle arrays (skills, experience, …), og buildNormalizedResume antar
+  // full ResumeData. Defensive defaults her, ikke i den delte hot-pathen.
+  const resume = {
+    ...parsed,
+    role: parsed.role ?? "",
+    summary: parsed.summary ?? "",
+    templateId: parsed.templateId ?? "",
+    skills: parsed.skills ?? [],
+    experience: parsed.experience ?? [],
+    education: parsed.education ?? [],
+    projects: parsed.projects ?? [],
+    certifications: parsed.certifications ?? [],
+  };
   const summary = buildResumeSummary(resume as unknown as Record<string, unknown>);
   return {
     normalized: buildNormalizedResume(resume),

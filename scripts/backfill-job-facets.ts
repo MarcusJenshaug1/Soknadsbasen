@@ -3,10 +3,11 @@
  * Anthropic Message Batches API (50 % rabatt vs. synkrone kall), og bygger
  * deretter JobMatch for alle brukere med CV-keywords.
  *
- * Kjøring (fra maskin med DATABASE_URL + ANTHROPIC_API_KEY, f.eks. mot prod):
- *   npx tsx --conditions=react-server --env-file=.env scripts/backfill-job-facets.ts
+ * Kjøring (fra maskin med DATABASE_URL/DIRECT_URL + ANTHROPIC_API_KEY i env):
+ *   npx tsx --tsconfig scripts/tsconfig.json scripts/backfill-job-facets.ts
  *
- * --conditions=react-server kreves fordi libs-ene importerer "server-only".
+ * scripts/tsconfig.json mapper "server-only" til en tom stub — pakka finnes
+ * ikke på toppnivå i node_modules (Next håndterer importen internt).
  * Scriptet er idempotent: avbrutt kjøring plukker opp der den slapp
  * (utvalget er aiFacetsAt IS NULL). Kostnad ~$0.0015/jobb via Batches.
  */
