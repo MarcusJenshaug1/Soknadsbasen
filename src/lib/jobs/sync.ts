@@ -223,14 +223,15 @@ async function saveCursor(c: Cursor): Promise<void> {
 
 // ─── Item-prosessering ──────────────────────────────────────
 
-type ItemBatchResult = {
+export type ItemBatchResult = {
   inserted: number;
   updated: number;
   deactivated: number;
   errors: string[];
 };
 
-async function processItems(
+/** Eksportert for scripts/full-feed-walk.ts (egen cursor, delt prosessering). */
+export async function processItems(
   items: FeedItem[],
   token: string,
   deadline?: number,
