@@ -64,8 +64,10 @@ export function jobWhereSql(f: JobbFilter): Prisma.Sql {
   const kategori = nonEmpty(f.kategori);
   if (kategori) conds.push(Prisma.sql`lower(j."category") = ANY(${kategori}::text[])`);
 
+  // ::timestamp-cast: Prisma sender Date som timestamptz; uten cast kastes
+  // KOLONNEN til timestamptz (sesjons-TZ) og publishedAt-indeksen ryker.
   const cutoff = publisertCutoff(f.publisert);
-  if (cutoff) conds.push(Prisma.sql`j."publishedAt" >= ${cutoff}`);
+  if (cutoff) conds.push(Prisma.sql`j."publishedAt" >= ${cutoff}::timestamp`);
 
   const utdanning = nonEmpty(f.utdanning);
   if (utdanning) conds.push(Prisma.sql`j."aiEducation" && ${utdanning}::text[]`);

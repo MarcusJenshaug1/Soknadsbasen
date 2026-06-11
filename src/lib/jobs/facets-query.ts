@@ -27,19 +27,22 @@ export const getFacetCounts = cache(
   async (filter: JobbFilter): Promise<FacetCounts> => {
     const p = facetRpcParams(filter);
 
+    // Eksplisitte casts på ALLE parametre: Prisma sender Date som timestamptz
+    // og null som unknown — uten casts matcher ikke funksjonssignaturen
+    // (verifisert i prod: 42883 «does not exist»).
     const rows = await prisma.$queryRaw<FacetCountRow[]>`
       SELECT facet, value, n FROM job_facet_counts(
-        ${p.q},
+        ${p.q}::text,
         ${p.fylke}::text[],
         ${p.kommune}::text[],
         ${p.kategori}::text[],
-        ${p.publisertEtter},
+        ${p.publisertEtter}::timestamp,
         ${p.utdanning}::text[],
         ${p.erfaring}::text[],
         ${p.forerkort}::text[],
         ${p.sprak}::text[],
         ${p.omfang}::text[],
-        ${p.sommerjobb},
+        ${p.sommerjobb}::boolean,
         ${p.ansettelsesform}::text[],
         ${p.sektor}::text[],
         ${p.hjemmekontor}::text[]
