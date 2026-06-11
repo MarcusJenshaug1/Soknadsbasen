@@ -9,6 +9,7 @@ import {
   getNavToken,
   invalidateNavToken,
   isDetailActive,
+  pickAllLocations,
   pickCategory,
   pickEmployerName,
   pickKommune,
@@ -36,8 +37,11 @@ export type SyncResult = {
 };
 
 // Hvor langt tilbake går vi første gang (cursor mangler).
-// 200 dager dekker NAVs maks aktive periode (~6 mnd) med margin.
-const INITIAL_LOOKBACK_DAYS = 200;
+// 400 dager dekker NAVs maks aktive periode (6 mnd) med god margin —
+// 200 + fast-forward 60 ga 3 200 manglende aktive annonser (25 %) ved
+// førstegangssyncen 2026-04-29 (annonser publisert jan–mars, fortsatt aktive,
+// lå på feed-sider som ble hoppet over).
+const INITIAL_LOOKBACK_DAYS = 400;
 
 // Default tidsbudsjett. Caller kan overstyre. Holdes godt under Vercel
 // maxDuration (300 s) slik at responsen rekker tilbake til pg_net.
@@ -53,12 +57,16 @@ const FAST_FORWARD_DAYS = 60;
 /**
  * Walker pam-stilling-feed via cursor. Resumable og idempotent.
  * Stopper ved tail (next_url=null) eller når budsjett er brukt.
+ *
+ * fullSync=true slår av fast-forward slik at HVER side prosesseres — brukes
+ * ved re-walk for å plukke opp gamle-men-aktive annonser (jf. 25 %-hullet).
  */
 export async function syncNavJobs(
-  opts: { budgetMs?: number } = {},
+  opts: { budgetMs?: number; fullSync?: boolean } = {},
 ): Promise<SyncResult> {
   const start = Date.now();
   const budget = opts.budgetMs ?? DEFAULT_BUDGET_MS;
+  const fullSync = opts.fullSync ?? false;
 
   const result: SyncResult = {
     pagesProcessed: 0,
@@ -127,7 +135,7 @@ export async function syncNavJobs(
     // kan ha bumpet date_modified pga. status-events.
     const cutoff = Date.now() - FAST_FORWARD_DAYS * 86400_000;
     const pageTime = lastModified ? new Date(lastModified).getTime() : NaN;
-    const skipPage = !Number.isNaN(pageTime) && pageTime < cutoff;
+    const skipPage = !fullSync && !Number.isNaN(pageTime) && pageTime < cutoff;
 
     if (skipPage) {
       // Sida er for gammel, advance cursor uten prosessering
@@ -303,6 +311,7 @@ async function upsertJob(
   );
   const kommuneRaw = pickKommune(detail, item._feed_entry.municipal);
   const kommune = kommuneRaw ? displayPlace(kommuneRaw) || null : null;
+  const { regioner, kommuner } = pickAllLocations(detail, item._feed_entry.municipal);
   const isSummerJob = isSummerJobHeuristic(detail);
   const { category, occupation } = pickCategory(detail);
 
@@ -366,6 +375,8 @@ async function upsertJob(
       location,
       region,
       kommune,
+      regioner,
+      kommuner,
       isSummerJob,
       postalCode,
       country,
@@ -408,6 +419,8 @@ async function upsertJob(
       location,
       region,
       kommune,
+      regioner,
+      kommuner,
       isSummerJob,
       postalCode,
       country,

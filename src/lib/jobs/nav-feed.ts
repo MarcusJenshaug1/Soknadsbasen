@@ -345,6 +345,30 @@ export function pickKommune(
   return raw || null;
 }
 
+/**
+ * ALLE lokasjoner som lowercase-arrays for filtrering/facetter — annonser
+ * med flere arbeidssteder (7 % av aktive) skal treffe i alle sine fylker/
+ * kommuner, ikke bare det første. kommune/region-kolonnene forblir primær-
+ * lokasjon for visning.
+ */
+export function pickAllLocations(
+  detail: FeedEntryDetail,
+  fallbackMunicipal?: string,
+): { regioner: string[]; kommuner: string[] } {
+  const regioner = new Set<string>();
+  const kommuner = new Set<string>();
+  for (const loc of detail.workLocations ?? []) {
+    const county = loc.county?.trim();
+    const municipal = loc.municipal?.trim() || loc.city?.trim();
+    if (county) regioner.add(county.toLocaleLowerCase("nb-NO"));
+    if (municipal) kommuner.add(municipal.toLocaleLowerCase("nb-NO"));
+  }
+  if (kommuner.size === 0 && fallbackMunicipal?.trim()) {
+    kommuner.add(fallbackMunicipal.trim().toLocaleLowerCase("nb-NO"));
+  }
+  return { regioner: [...regioner], kommuner: [...kommuner] };
+}
+
 export function pickCategory(detail: FeedEntryDetail): {
   category: string | null;
   occupation: string | null;

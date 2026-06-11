@@ -43,22 +43,28 @@ function dedupeSlugs(entries: RegisterEntry[]): RegisterEntry[] {
 
 export const getKommuneRegister = unstable_cache(
   async (): Promise<RegisterEntry[]> => {
-    const rows = await prisma.job.groupBy({
-      by: ["kommune", "region"],
-      where: { isActive: true, kommune: { not: null } },
-    });
+    // Per-element-par fra workLocations: (kommune, fylke) fra SAMME lokasjon —
+    // dekker alle arbeidssteder, ikke bare primærkolonnen. lowercase matcher
+    // kommuner[]-arrayen som filtre/RPC bruker.
+    const rows = await prisma.$queryRaw<{ kommune: string; region: string | null }[]>`
+      SELECT DISTINCT
+        lower(trim(COALESCE(nullif(trim(el->>'municipal'), ''), el->>'city'))) AS kommune,
+        lower(trim(el->>'county')) AS region
+      FROM "Job", jsonb_array_elements("workLocations") el
+      WHERE "isActive" AND "workLocations" IS NOT NULL
+        AND COALESCE(nullif(trim(el->>'municipal'), ''), nullif(trim(el->>'city'), '')) IS NOT NULL
+    `;
     const seen = new Map<string, RegisterEntry>();
     for (const row of rows) {
       if (!isValidFacet(row.kommune)) continue;
-      const dbValue = row.kommune.trim().toLocaleLowerCase("nb-NO");
-      if (seen.has(dbValue)) continue;
-      const fylke = row.region
-        ? fylkeByDbValue(row.region.trim().toLocaleLowerCase("nb-NO"))
-        : undefined;
+      const dbValue = row.kommune;
+      if (seen.has(dbValue) && seen.get(dbValue)?.fylkeSlug) continue;
+      const fylke = row.region ? fylkeByDbValue(row.region) : undefined;
       seen.set(dbValue, {
         slug: slugifyNb(dbValue),
         dbValue,
-        label: displayPlace(row.kommune),
+        // displayPlace normaliserer kun UPPERCASE → løft først.
+        label: displayPlace(dbValue.toLocaleUpperCase("nb-NO")),
         fylkeSlug: fylke?.slug,
       });
     }
@@ -106,22 +112,24 @@ export const getCuratedCombos = unstable_cache(
     const MIN_PAIR = 5;
     const MAX_PAIRS = 500;
 
+    // Fylke-tellinger over regioner[] (alle arbeidssteder), jf. RPC v2.
     const [fylkeRows, kategoriRows, pairRows, kategorier] = await Promise.all([
-      prisma.job.groupBy({
-        by: ["region"],
-        where: { isActive: true, region: { not: null } },
-        _count: { region: true },
-      }),
+      prisma.$queryRaw<{ region: string; n: bigint }[]>`
+        SELECT r AS region, count(*) AS n
+        FROM "Job", unnest("regioner") r
+        WHERE "isActive" GROUP BY r
+      `,
       prisma.job.groupBy({
         by: ["category"],
         where: { isActive: true, category: { not: null } },
         _count: { category: true },
       }),
-      prisma.job.groupBy({
-        by: ["region", "category"],
-        where: { isActive: true, region: { not: null }, category: { not: null } },
-        _count: { _all: true },
-      }),
+      prisma.$queryRaw<{ region: string; category: string; n: bigint }[]>`
+        SELECT r AS region, lower("category") AS category, count(*) AS n
+        FROM "Job", unnest("regioner") r
+        WHERE "isActive" AND "category" IS NOT NULL
+        GROUP BY r, lower("category")
+      `,
       getKategoriRegister(),
     ]);
 
@@ -136,22 +144,27 @@ export const getCuratedCombos = unstable_cache(
     const combos: { fylke?: string; kategori?: string }[] = [];
     for (const row of fylkeRows) {
       const fylke = toFylkeSlug(row.region);
-      if (fylke && row._count.region > 0) combos.push({ fylke });
+      if (fylke && Number(row.n) > 0) combos.push({ fylke });
     }
     for (const row of kategoriRows) {
       const kategori = toKategoriSlug(row.category);
       if (kategori && row._count.category >= MIN_KATEGORI) combos.push({ kategori });
     }
     const pairs = pairRows
-      .filter((r) => r._count._all >= MIN_PAIR)
-      .sort((a, b) => b._count._all - a._count._all)
+      .filter((r) => Number(r.n) >= MIN_PAIR)
+      .sort((a, b) => Number(b.n) - Number(a.n))
       .slice(0, MAX_PAIRS);
     for (const row of pairs) {
       const fylke = toFylkeSlug(row.region);
       const kategori = toKategoriSlug(row.category);
       if (fylke && kategori) combos.push({ fylke, kategori });
     }
-    return combos;
+    // Dedup (kasing-varianter av samme region kan mappe til samme slug).
+    return [
+      ...new Map(
+        combos.map((c) => [`${c.fylke ?? ""}|${c.kategori ?? ""}`, c]),
+      ).values(),
+    ];
   },
   ["jobb-curated-combos"],
   { revalidate: 3600 },

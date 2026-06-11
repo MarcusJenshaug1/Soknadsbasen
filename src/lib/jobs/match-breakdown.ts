@@ -3,11 +3,18 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
-import { scoreAtsFromNormalized, buildNormalizedResume } from "@/lib/ats";
 
 import { ERFARING_LABELS, type ErfaringCode } from "./facets";
-import { extractJobKeywords } from "./format";
-import { normalizeResumeData } from "./match";
+import {
+  buildCvMatchText,
+  normalizeResumeData,
+  toJobMatchSide,
+} from "./match";
+import {
+  normalizeMatchText,
+  scoreJobMatch,
+  termMatches,
+} from "./match-scoring";
 
 export type MatchFactor = {
   label: string;
@@ -28,22 +35,25 @@ const word = (v: number): MatchFactor["word"] =>
   v >= 70 ? "Sterk" : v >= 40 ? "Delvis" : "Svak";
 
 /**
- * Match-breakdown for detaljsiden: faktorer beregnet REELT fra CV-en mot
- * annonsens krav — kun dimensjoner vi faktisk har data for (ferdigheter,
- * erfaring, utdanning, språk). Geografi/omfang utelates bevisst: vi kjenner
- * ikke brukerens bosted eller ønsket stillingsprosent, og en oppdiktet faktor
- * er verre enn en utelatt. cache(): quick view + full side deler beregningen.
+ * Match-breakdown for detaljsiden: hovedscore fra scoreJobMatch (samme som
+ * precompute — kort og detaljside viser ALDRI ulike tall) + faktorer beregnet
+ * reelt fra CV mot annonsens krav. Geografi/omfang utelates bevisst: vi
+ * kjenner ikke brukerens bosted eller ønsket stillingsprosent.
+ * cache(): quick view + full side deler beregningen.
  */
 export const computeMatchBreakdown = cache(
   async (userId: string, jobId: string): Promise<MatchBreakdown | null> => {
     const [userData, job] = await Promise.all([
       prisma.userData.findUnique({
         where: { userId },
-        select: { resumeData: true },
+        select: { resumeData: true, aiKeywords: true },
       }),
       prisma.job.findUnique({
         where: { id: jobId },
         select: {
+          id: true,
+          title: true,
+          jobTitle: true,
           category: true,
           occupation: true,
           categoryList: true,
@@ -59,12 +69,27 @@ export const computeMatchBreakdown = cache(
     const resume = normalizeResumeData(userData.resumeData);
     if (!resume) return null;
 
-    const normalized = buildNormalizedResume(resume);
-    const keywords = extractJobKeywords(job);
-    if (keywords.length === 0) return null;
+    const side = toJobMatchSide(job);
+    if (side.keywords.length === 0) return null;
 
-    const score = scoreAtsFromNormalized(normalized, keywords);
-    const factors: MatchFactor[] = [skillsFactor(normalized.text, keywords)];
+    const cvText = buildCvMatchText(resume);
+    const score = scoreJobMatch(
+      {
+        text: cvText,
+        role: normalizeMatchText(resume.role),
+        cvKeywords: userData.aiKeywords,
+      },
+      side,
+    );
+
+    const factors: MatchFactor[] = [
+      skillsFactor(cvText, side.keywords),
+      affinityFactor(
+        resume.role,
+        userData.aiKeywords,
+        normalizeMatchText([side.title, ...side.occupationTerms].join(" ")),
+      ),
+    ];
 
     const erfaring = experienceFactor(resume.experience.length, job.aiExperience);
     if (erfaring) factors.push(erfaring);
@@ -72,26 +97,16 @@ export const computeMatchBreakdown = cache(
     const utdanning = educationFactor(resume, job.aiEducation);
     if (utdanning) factors.push(utdanning);
 
-    const sprak = languageFactor(normalized.text, job.aiWorkLanguages);
+    const sprak = languageFactor(cvText, job.aiWorkLanguages);
     if (sprak) factors.push(sprak);
 
     return { score, factors };
   },
 );
 
-function normalizeTerm(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9+#./ -]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function skillsFactor(resumeText: string, keywords: string[]): MatchFactor {
-  const matched = keywords.filter((k) => resumeText.includes(normalizeTerm(k)));
-  const missing = keywords.filter((k) => !resumeText.includes(normalizeTerm(k)));
+function skillsFactor(cvText: string, keywords: string[]): MatchFactor {
+  const matched = keywords.filter((k) => termMatches(cvText, k));
+  const missing = keywords.filter((k) => !termMatches(cvText, k));
   const value = Math.round((matched.length / keywords.length) * 100);
   return {
     label: "Ferdigheter",
@@ -103,6 +118,26 @@ function skillsFactor(resumeText: string, keywords: string[]): MatchFactor {
             .slice(0, 3)
             .join(", ")}.`
         : `Dekker alle ${keywords.length} nøkkelordene fra annonsen.`,
+  };
+}
+
+/** Motsatt retning: CV-ens yrkestermer søkt i jobbens yrkesside. */
+function affinityFactor(
+  role: string,
+  cvKeywords: string[],
+  jobOccText: string,
+): MatchFactor {
+  const terms = [role, ...cvKeywords].map((t) => t.trim()).filter(Boolean).slice(0, 15);
+  const hits = terms.filter((t) => termMatches(jobOccText, t));
+  const value = terms.length > 0 ? Math.round((hits.length / terms.length) * 100) : 0;
+  return {
+    label: "Yrkesretning",
+    value,
+    word: word(value),
+    detail:
+      value >= 40
+        ? `Profilen din (${hits.slice(0, 2).join(", ")}) treffer stillingens yrkesfelt.`
+        : "Stillingen ligger utenfor yrkesfeltet CV-en din peker mot.",
   };
 }
 
@@ -142,8 +177,8 @@ const EDU_HINTS: Record<string, RegExp> = {
   videregaende: /videreg|vgs/,
   fagbrev: /fagbrev|svennebrev/,
   fagskole: /fagskole/,
-  bachelor: /bachelor|høgskole|hogskole|universitet|b\.?sc/,
-  master: /master|sivil(økonom|ingeniør)|m\.?sc|ph\.?d/,
+  bachelor: /bachelor|hogskole|universitet|b\.?sc/,
+  master: /master|sivil(okonom|ingenior)|m\.?sc|ph\.?d/,
 };
 
 function educationFactor(
@@ -153,7 +188,7 @@ function educationFactor(
   const reqs = required.filter((r) => r !== "ingen-krav");
   if (reqs.length === 0) return null;
 
-  const eduText = normalizeTerm(
+  const eduText = normalizeMatchText(
     resume.education.map((e) => [e.degree, e.field, e.school].join(" ")).join(" "),
   );
   let cvRank = resume.education.length > 0 ? 1 : 0;
@@ -181,9 +216,9 @@ const LANG_HINTS: Record<string, RegExp> = {
   samisk: /samisk/,
 };
 
-function languageFactor(resumeText: string, required: string[]): MatchFactor | null {
+function languageFactor(cvText: string, required: string[]): MatchFactor | null {
   if (required.length === 0) return null;
-  const covered = required.filter((lang) => LANG_HINTS[lang]?.test(resumeText));
+  const covered = required.filter((lang) => LANG_HINTS[lang]?.test(cvText));
   // Norsk antas dekket når CV-en er skrevet på norsk men ikke nevner språk.
   const effective = new Set(covered);
   if (required.includes("norsk") && !effective.has("norsk")) effective.add("norsk");

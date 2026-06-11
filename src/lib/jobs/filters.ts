@@ -55,11 +55,13 @@ export function jobWhereSql(f: JobbFilter): Prisma.Sql {
     );
   }
 
+  // Arrays (alle arbeidssteder) — annonser med flere lokasjoner treffer på
+  // hvilken som helst av dem. Speiler f_fylke/f_kommune i RPC v2.
   const fylke = nonEmpty(f.fylke);
-  if (fylke) conds.push(Prisma.sql`lower(j."region") = ANY(${fylke}::text[])`);
+  if (fylke) conds.push(Prisma.sql`j."regioner" && ${fylke}::text[]`);
 
   const kommune = nonEmpty(f.kommune);
-  if (kommune) conds.push(Prisma.sql`lower(j."kommune") = ANY(${kommune}::text[])`);
+  if (kommune) conds.push(Prisma.sql`j."kommuner" && ${kommune}::text[]`);
 
   const kategori = nonEmpty(f.kategori);
   if (kategori) conds.push(Prisma.sql`lower(j."category") = ANY(${kategori}::text[])`);

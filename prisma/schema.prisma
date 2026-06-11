@@ -920,8 +920,13 @@ model Job {
 
   // Facett-kolonner for filtrering (Fase 0.5).
   // Kommune fra workLocations[0].municipal ?? city, normalisert til Title Case
-  // ved skriving (sync + backfill). RPC grupperer på lower(kommune).
+  // ved skriving (sync + backfill) — primærlokasjon for VISNING.
   kommune       String?
+  // ALLE lokasjoner, lowercase — kilden for filtrering og facett-counts.
+  // Annonser med flere arbeidssteder (7 % av aktive) treffer i alle sine
+  // fylker/kommuner, ikke bare første.
+  regioner      String[]  @default([])
+  kommuner      String[]  @default([])
   // Heuristikk: engagementType='Sesong' ELLER sommerjobb-nøkkelord i tittel/tekst.
   isSummerJob   Boolean   @default(false)
 

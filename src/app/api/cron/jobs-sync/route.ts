@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
   // på nytt og oppdaterer eksisterende rader med ny data. Brukes etter
   // schema-endringer der nye felter må backfilles på gamle stillinger.
   const reset = url.searchParams.get("reset") === "1";
+  // ?fullSync=1 slår av fast-forward så HVER side prosesseres (gamle-men-
+  // aktive annonser). Kombineres med reset=1 for komplett re-walk.
+  const fullSync = url.searchParams.get("fullSync") === "1";
   let didReset = false;
   if (reset) {
     await prisma.navFeedCursor.deleteMany({ where: { id: "singleton" } });
@@ -36,7 +39,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await syncNavJobs({ budgetMs });
+    const result = await syncNavJobs({ budgetMs, fullSync });
     return NextResponse.json(
       { ...result, didReset },
       { status: result.errors.length > 0 ? 207 : 200 },

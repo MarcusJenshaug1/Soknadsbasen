@@ -3,33 +3,30 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import { prisma } from "@/lib/prisma";
-import {
-  buildNormalizedResume,
-  scoreAtsFromNormalized,
-  type NormalizedResume,
-} from "@/lib/ats";
 import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
 
 import { extractJobKeywords } from "./format";
+import {
+  normalizeMatchText,
+  scoreJobMatch,
+  type CvMatchProfile,
+  type JobMatchSide,
+} from "./match-scoring";
 
 /**
  * Forhåndsberegnede match-scores per (bruker, jobb) i JobMatch-tabellen.
  *
- * Score = scoreAtsFromNormalized (src/lib/ats.ts):
- *   min(1, keyword-dekning × 0.68 + summary-bonus 0.08 + kompletthet ≤ 0.12) × 100.
- * Teoretisk tak ~88, men empirisk topper en reell, komplett CV rundt 45-50:
- * jobbenes keyword-sett er 15-30 termer og substring-dekning over 60 % av dem
- * forekommer ikke i praksis.
+ * Score = scoreJobMatch (match-scoring.ts, v2): vektet ferdighetsdekning
+ * (jobb → CV) + yrkesaffinitet (CV → jobb) + titteltreff, ordgrense-matchet
+ * og UTEN CV-globale bonuser — en irrelevant jobb scorer nær 0, en topisk
+ * riktig jobb med god dekning lander 55–85.
  *
- * Terskler KALIBRERT MOT FAKTISK PROD-FORDELING etter backfill 2026-06-11
- * (9 822 aktive jobber; reell CV: max=47, p99=36, 38 jobber >= 40):
- *   Høy ≥ 40 — topp ~0,5 % av stillingene for en god CV; sjelden og reell.
- *   Middels 25-39 — omtrent topp 1-5 %; verdt å vurdere.
- *   Lav < 25 — svak dekning.
- * Re-kalibrer når brukermassen vokser (persentil-query i
- * scripts/harvest-job-facets.ts) — n=1 reell CV er tynt grunnlag.
+ * Terskler kalibrert mot prod-fordelingen etter v2-omregning 2026-06-12
+ * (se scripts/recompute-matches.ts som printer persentiler):
+ *   Høy ≥ 55, Middels ≥ 30, Lav < 30.
+ * Re-kalibrer når brukermassen vokser.
  */
-export const MATCH_THRESHOLDS = { hoy: 40, middels: 25 } as const;
+export const MATCH_THRESHOLDS = { hoy: 55, middels: 30 } as const;
 
 export type MatchTier = "hoy" | "middels" | "lav";
 
@@ -45,6 +42,8 @@ const CREATE_CHUNK = 2000;
 
 type ScorableJob = {
   id: string;
+  title: string;
+  jobTitle: string | null;
   category: string | null;
   occupation: string | null;
   categoryList: unknown;
@@ -54,6 +53,8 @@ type ScorableJob = {
 
 const SCORABLE_JOB_SELECT = {
   id: true,
+  title: true,
+  jobTitle: true,
   category: true,
   occupation: true,
   categoryList: true,
@@ -61,7 +62,7 @@ const SCORABLE_JOB_SELECT = {
   aiKeywords: true,
 } as const;
 
-type ResumeProfile = { normalized: NormalizedResume; cvHash: string };
+type ResumeProfile = { cv: CvMatchProfile; cvHash: string };
 
 /**
  * Normalisert CV med defensive defaults — gjenbrukes av match-breakdown på
@@ -83,18 +84,65 @@ export function normalizeResumeData(resumeData: string) {
   };
 }
 
-/** Parser resumeData-blob → normalisert tekst + hash. null hvis ingen CV. */
-function buildProfile(resumeData: string): ResumeProfile | null {
-  // parseActiveResume normaliserer IKKE formen — eldre/delvise blobs kan
-  // mangle arrays (skills, experience, …), og buildNormalizedResume antar
-  // full ResumeData. Defensive defaults i normalizeResumeData.
+/** Komponerer CV-fulltekst for matching — samme felter som v1, ny normalisering. */
+export function buildCvMatchText(
+  resume: NonNullable<ReturnType<typeof normalizeResumeData>>,
+): string {
+  return normalizeMatchText(
+    [
+      resume.role,
+      resume.summary,
+      resume.skills.join(" "),
+      resume.experience
+        .map((e) => [e.title, e.company, e.description].join(" "))
+        .join(" "),
+      resume.education
+        .map((e) => [e.degree, e.field, e.school, e.description].join(" "))
+        .join(" "),
+      resume.projects.map((p) => [p.name, p.role, p.description].join(" ")).join(" "),
+      resume.certifications.map((c) => [c.name, c.issuer].join(" ")).join(" "),
+    ].join(" "),
+  );
+}
+
+/** Parser resumeData-blob → match-profil + hash. null hvis ingen CV. */
+function buildProfile(resumeData: string, cvKeywords: string[]): ResumeProfile | null {
   const resume = normalizeResumeData(resumeData);
   if (!resume) return null;
   const summary = buildResumeSummary(resume as unknown as Record<string, unknown>);
   return {
-    normalized: buildNormalizedResume(resume),
+    cv: {
+      text: buildCvMatchText(resume),
+      role: normalizeMatchText(resume.role),
+      cvKeywords,
+    },
     cvHash: createHash("sha256").update(summary).digest("hex").slice(0, 32),
   };
+}
+
+export function toJobMatchSide(job: ScorableJob): JobMatchSide {
+  return {
+    keywords: extractJobKeywords(job),
+    title: job.title,
+    occupationTerms: [
+      job.category ?? "",
+      job.occupation ?? "",
+      job.jobTitle ?? "",
+      ...asNames(job.categoryList),
+      ...asNames(job.occupationList),
+    ].filter(Boolean),
+  };
+}
+
+function asNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((v) =>
+      typeof v === "object" && v !== null && "name" in v
+        ? String((v as { name?: unknown }).name ?? "")
+        : "",
+    )
+    .filter(Boolean);
 }
 
 function scoreRows(
@@ -103,13 +151,13 @@ function scoreRows(
 ): { userId: string; jobId: string; score: number; cvHash: string }[] {
   const rows: { userId: string; jobId: string; score: number; cvHash: string }[] = [];
   for (const job of jobs) {
-    const keywords = extractJobKeywords(job);
-    if (keywords.length === 0) continue;
+    const side = toJobMatchSide(job);
+    if (side.keywords.length === 0) continue;
     for (const u of users) {
       rows.push({
         userId: u.userId,
         jobId: job.id,
-        score: scoreAtsFromNormalized(u.profile.normalized, keywords),
+        score: scoreJobMatch(u.profile.cv, side),
         cvHash: u.profile.cvHash,
       });
     }
@@ -139,7 +187,7 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
   const [userRows, jobs] = await Promise.all([
     prisma.userData.findMany({
       where: { aiKeywordsHash: { not: null } },
-      select: { userId: true, resumeData: true },
+      select: { userId: true, resumeData: true, aiKeywords: true },
     }),
     prisma.job.findMany({
       where: { id: { in: jobIds }, isActive: true },
@@ -148,7 +196,10 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
   ]);
 
   const users = userRows
-    .map((u) => ({ userId: u.userId, profile: buildProfile(u.resumeData) }))
+    .map((u) => ({
+      userId: u.userId,
+      profile: buildProfile(u.resumeData, u.aiKeywords),
+    }))
     .filter((u): u is { userId: string; profile: ResumeProfile } => u.profile !== null);
   if (users.length === 0 || jobs.length === 0) return 0;
 
@@ -169,11 +220,11 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
 export async function computeMatchesForUser(userId: string): Promise<number> {
   const userData = await prisma.userData.findUnique({
     where: { userId },
-    select: { resumeData: true },
+    select: { resumeData: true, aiKeywords: true },
   });
   if (!userData) return 0;
 
-  const profile = buildProfile(userData.resumeData);
+  const profile = buildProfile(userData.resumeData, userData.aiKeywords);
   if (!profile) return 0;
 
   const jobs = await prisma.job.findMany({
