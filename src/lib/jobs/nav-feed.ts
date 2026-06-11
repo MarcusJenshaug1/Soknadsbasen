@@ -331,6 +331,20 @@ export function pickPrimaryAddress(detail: FeedEntryDetail): string | null {
   return detail.workLocations?.[0]?.address?.trim() || null;
 }
 
+/**
+ * Kommune fra workLocations[0].municipal ?? city. Rå feed-verdi (ofte
+ * UPPERCASE) — caller normaliserer med displayPlace før DB-skriving, samme
+ * semantikk som initcap-backfillen i 20260611192500_backfill_kommune_summerjob.
+ */
+export function pickKommune(
+  detail: FeedEntryDetail,
+  fallbackMunicipal?: string,
+): string | null {
+  const loc = detail.workLocations?.[0];
+  const raw = loc?.municipal?.trim() || loc?.city?.trim() || fallbackMunicipal?.trim();
+  return raw || null;
+}
+
 export function pickCategory(detail: FeedEntryDetail): {
   category: string | null;
   occupation: string | null;

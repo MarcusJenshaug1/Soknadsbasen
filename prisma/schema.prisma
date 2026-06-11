@@ -57,6 +57,8 @@ model User {
   impersonationsTarget  ImpersonationSession[] @relation("ImpersonationTarget")
 
   collabInvites         CollabInvite[]
+  jobMatches            JobMatch[]
+  jobsSeen              JobSeen[]
 
   @@index([role])
 }
@@ -108,6 +110,10 @@ model UserData {
   aiKeywords       String[]  @default([])
   aiKeywordsAt     DateTime?
   aiKeywordsHash   String?
+  /// Tetthetsvalg i /jobb-listen: "komfortabel" | "kompakt". null = default.
+  jobListDensity  String?
+  /// Forrige /jobb-besøk — «Ny»-markering på stillinger publisert etterpå.
+  lastJobVisitAt  DateTime?
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -911,6 +917,30 @@ model Job {
   aiKeywords     String[] @default([])
   aiKeywordsAt   DateTime?
 
+  // Facett-kolonner for filtrering (Fase 0.5).
+  // Kommune fra workLocations[0].municipal ?? city, normalisert til Title Case
+  // ved skriving (sync + backfill). RPC grupperer på lower(kommune).
+  kommune       String?
+  // Heuristikk: engagementType='Sesong' ELLER sommerjobb-nøkkelord i tittel/tekst.
+  isSummerJob   Boolean   @default(false)
+
+  // AI-utvunne facetter fra annonseteksten (Claude Haiku, samme call som
+  // aiKeywords i enrich-pipelinen). Egne ai*-kolonner — IKKE gjenbruk av
+  // remote/workLanguages, som nulles av feed-sync ved hver oppdatering.
+  // Kanoniske verdisett: se src/lib/jobs/facets.ts.
+  aiEducation      String[]  @default([]) // ingen-krav|videregaende|fagbrev|fagskole|bachelor|master
+  aiExperience     String?               // ingen|noe|mye
+  aiDriversLicense String[]  @default([]) // B|BE|C|D; tom array = ingen krav
+  aiWorkLanguages  String[]  @default([]) // norsk|engelsk|skandinavisk|samisk
+  aiRemote         String?               // hjemmekontor|hybrid|ikke-mulig; null = ikke oppgitt
+  /// null = ikke beriket ennå; < sourceUpdatedAt = stale, re-berikes av cron.
+  aiFacetsAt       DateTime?
+
+  /// Fulltekst-søk + relevans-rangering. Generated column (norwegian-config,
+  /// vektet title > employerName > kategori > description) — defineres i raw
+  /// SQL-migrasjon siden Prisma ikke kan uttrykke GENERATED ALWAYS AS.
+  searchVector Unsupported("tsvector")?
+
   // Stillingsdetaljer
   employmentType String?  // bakoverkomp.: engagementType ?? extent
   engagementType String?  // f.eks. "Fast", "Vikariat", "Sesong"
@@ -944,6 +974,9 @@ model Job {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  matches JobMatch[]
+  seenBy  JobSeen[]
+
   @@index([slug])
   @@index([employerSlug])
   @@index([region, category])
@@ -951,7 +984,44 @@ model Job {
   @@index([isActive, region])
   @@index([isActive, category])
   @@index([isActive, employerSlug])
+  @@index([isActive, applicationDueAt])
   @@index([externalId])
+}
+
+/// Forhåndsberegnet match-score per (bruker, jobb). Skrives av
+/// src/lib/jobs/match.ts: ved jobb-berikelse (computeMatchesForJobs) og ved
+/// CV-keyword-refresh (computeMatchesForUser). Per-user, ikke per-resume —
+/// én kanonisk CV per bruker (UserData 1:1).
+model JobMatch {
+  userId     String   @db.Uuid
+  jobId      String
+  /// 0–100 fra scoreAtsFromNormalized. Labels: Høy >= 60, Middels >= 40 —
+  /// se MATCH_THRESHOLDS i src/lib/jobs/match.ts.
+  score      Int      @db.SmallInt
+  /// UserData.aiKeywordsHash da scoren ble beregnet — staleness-sjekk uten join.
+  cvHash     String
+  computedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@id([userId, jobId])
+  @@index([userId, score(sort: Desc)])
+  @@index([jobId])
+}
+
+/// Sett-status for innloggede brukere (Fase 2: dimming av sette kort).
+/// Anonyme brukere bruker localStorage i stedet.
+model JobSeen {
+  userId String   @db.Uuid
+  jobId  String
+  seenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@id([userId, jobId])
+  @@index([jobId])
 }
 
 /// Cursor for NAV pam-stilling-feed walking. Singleton-rad (id = 'singleton').

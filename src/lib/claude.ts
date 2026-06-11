@@ -44,6 +44,14 @@ export type ClaudeOptions = {
   maxOutputTokens?: number;
   /** Be modellen svare med ren JSON (ingen markdown-fences). */
   json?: boolean;
+  /**
+   * Structured output: API-en garanterer gyldig JSON som matcher skjemaet
+   * (output_config.format). Sterkere enn `json` (som bare nudger via prompt) —
+   * bruk for ekstraksjon der enum-verdier må holde. Husk
+   * `additionalProperties: false` på alle objekter; min/max-constraints
+   * støttes ikke av API-et.
+   */
+  jsonSchema?: Record<string, unknown>;
 };
 
 const JSON_NUDGE =
@@ -82,6 +90,16 @@ export async function claudeGenerate(
       max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
       system: buildSystem(opts),
       messages: [{ role: "user", content: userPrompt }],
+      ...(opts.jsonSchema
+        ? {
+            output_config: {
+              format: {
+                type: "json_schema" as const,
+                schema: opts.jsonSchema,
+              },
+            },
+          }
+        : {}),
     });
   } catch (err) {
     throw toFriendlyError(err);

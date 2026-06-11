@@ -11,6 +11,7 @@ import {
   isDetailActive,
   pickCategory,
   pickEmployerName,
+  pickKommune,
   pickLocation,
   pickPrimaryAddress,
   pickPrimaryContact,
@@ -20,6 +21,7 @@ import {
   type FeedEntryDetail,
   type FeedItem,
 } from "./nav-feed";
+import { displayPlace } from "./format";
 
 export type SyncResult = {
   pagesProcessed: number;
@@ -299,6 +301,9 @@ async function upsertJob(
     detail,
     item._feed_entry.municipal,
   );
+  const kommuneRaw = pickKommune(detail, item._feed_entry.municipal);
+  const kommune = kommuneRaw ? displayPlace(kommuneRaw) || null : null;
+  const isSummerJob = isSummerJobHeuristic(detail);
   const { category, occupation } = pickCategory(detail);
 
   const workLocations = serializeLocations(detail);
@@ -360,6 +365,8 @@ async function upsertJob(
       description: description.slice(0, 50_000),
       location,
       region,
+      kommune,
+      isSummerJob,
       postalCode,
       country,
       workLocations: workLocations.length > 0 ? (workLocations as Prisma.InputJsonValue) : Prisma.DbNull,
@@ -400,6 +407,8 @@ async function upsertJob(
       description: description.slice(0, 50_000),
       location,
       region,
+      kommune,
+      isSummerJob,
       postalCode,
       country,
       workLocations: workLocations.length > 0 ? (workLocations as Prisma.InputJsonValue) : Prisma.DbNull,
@@ -433,6 +442,19 @@ async function upsertJob(
   });
 
   return "updated";
+}
+
+/**
+ * Sommerjobb-facetten finnes ikke som felt i feeden — utledes fra
+ * engagementtype «Sesong» eller sommerjobb-nøkkelord. Samme heuristikk som
+ * SQL-backfillen i 20260611192500_backfill_kommune_summerjob.
+ */
+const SUMMER_JOB_RE = /\b(sommerjobb|sommervikar|sommervikariat|feriejobb)/i;
+
+function isSummerJobHeuristic(detail: FeedEntryDetail): boolean {
+  if (detail.engagementtype?.trim().toLowerCase() === "sesong") return true;
+  if (SUMMER_JOB_RE.test(detail.title ?? "")) return true;
+  return SUMMER_JOB_RE.test(detail.description ?? "");
 }
 
 function errMsg(err: unknown): string {

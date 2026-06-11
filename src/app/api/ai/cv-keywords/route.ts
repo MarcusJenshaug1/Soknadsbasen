@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createHash } from "node:crypto";
 import { getSession } from "@/lib/auth";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
 import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
+import { computeMatchesForUser } from "@/lib/jobs/match";
 
 /**
  * POST /api/ai/cv-keywords
@@ -103,6 +104,20 @@ REGLER:
           aiKeywordsAt: new Date(),
           aiKeywordsHash: hash,
         },
+      });
+
+      // Re-scor brukeren mot alle aktive jobber utenfor responstiden.
+      // Fyrer maks ~1×/dag/bruker — gated av TTL+hash-sjekken over.
+      const userId = session.userId;
+      after(async () => {
+        try {
+          await computeMatchesForUser(userId);
+        } catch (err) {
+          console.error(
+            `computeMatchesForUser(${userId}) feilet:`,
+            err instanceof Error ? err.message : err,
+          );
+        }
       });
     }
 
