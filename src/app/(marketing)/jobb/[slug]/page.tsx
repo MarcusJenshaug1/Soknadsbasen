@@ -17,23 +17,27 @@ import {
   Mail,
   MapPin,
   Phone,
-  Sun,
   User2,
   Users,
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLdScript } from "@/components/seo/JsonLd";
 import { CompanyLogo } from "@/components/ui/CompanyLogo";
+import { DetailCtas } from "@/components/jobb/detail/DetailCtas";
+import { KeyInfoBox } from "@/components/jobb/detail/KeyInfoBox";
+import { MatchBreakdownCard } from "@/components/jobb/detail/MatchBreakdownCard";
+import { SimilarJobs } from "@/components/jobb/detail/SimilarJobs";
+import { SeenOnMount } from "@/components/jobb/SeenMarker";
 import { breadcrumbJsonLd, type JsonLd } from "@/lib/seo/jsonld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { absoluteUrl } from "@/lib/seo/siteConfig";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getJobBySlug } from "@/lib/jobs/get-job";
+import { HJEMMEKONTOR_LABELS, type HjemmekontorCode } from "@/lib/jobs/facets";
 import { displayPlace, formatCategory, formatPhones } from "@/lib/jobs/format";
-import { getCachedMatch } from "@/lib/jobs/match-cache";
-import { JobActions } from "./JobActions";
-import { JobAtsCard } from "./JobAtsCard";
+import { computeMatchBreakdown } from "@/lib/jobs/match-breakdown";
+import { getRelatedJobs } from "@/lib/jobs/related";
+import { getSavedApplicationId } from "@/lib/jobs/saved";
 
 export const revalidate = 1800;
 
@@ -220,87 +224,16 @@ export default async function JobDetailPage({ params }: Props) {
   const job = await getJobBySlug(slug);
   if (!job) notFound();
 
-  // Bygg OR-filter for relaterte før Promise.all så vi kan starte spørringen
-  // i parallell med session/saved.
-  const orFilters: Array<Record<string, string>> = [];
-  if (job.category) orFilters.push({ category: job.category });
-  if (job.employerSlug) orFilters.push({ employerSlug: job.employerSlug });
-  if (job.region) orFilters.push({ region: job.region });
-
-  // Fan-out: session, related-jobs, saved-app, og cached AI-match kjører
-  // alle parallelt. Saved-app + match-cache leses fra DB direkte basert på
-  // userId fra session-promise — ingen sequential venting.
+  // Fan-out: session, lignende stillinger, pipeline-kladd og match-breakdown
+  // kjører parallelt. Breakdown bruker forhåndsberegnet keyword-data — ingen
+  // klient-fetching eller LLM-kall i request-path lenger.
   const sessionPromise = getSession();
-  const [session, candidates, savedApplication, initialMatch] = await Promise.all([
+  const [session, related, savedId, breakdown] = await Promise.all([
     sessionPromise,
-    orFilters.length === 0
-      ? Promise.resolve(
-          [] as Array<{
-            slug: string;
-            title: string;
-            employerName: string;
-            location: string | null;
-            category: string | null;
-            employerSlug: string;
-            region: string | null;
-            publishedAt: Date;
-          }>,
-        )
-      : prisma.job.findMany({
-          where: {
-            isActive: true,
-            slug: { not: job.slug },
-            OR: orFilters,
-          },
-          select: {
-            slug: true,
-            title: true,
-            employerName: true,
-            location: true,
-            category: true,
-            employerSlug: true,
-            region: true,
-            publishedAt: true,
-          },
-          orderBy: { publishedAt: "desc" },
-          take: 6,
-        }),
-    sessionPromise.then((s) =>
-      s
-        ? prisma.jobApplication.findFirst({
-            where: {
-              userId: s.userId,
-              OR: [
-                { jobUrl: absoluteUrl(`/jobb/${slug}`) },
-                { jobUrl: `/jobb/${slug}` },
-              ],
-            },
-            select: { id: true },
-          })
-        : null,
-    ),
-    sessionPromise.then((s) => (s ? getCachedMatch(s.userId, slug) : null)),
+    getRelatedJobs(job, 4),
+    sessionPromise.then((s) => (s ? getSavedApplicationId(s.userId, slug) : null)),
+    sessionPromise.then((s) => (s ? computeMatchBreakdown(s.userId, job.id) : null)),
   ]);
-
-  // Rangér relaterte: kategori-match veier mest, deretter arbeidsgiver, så region.
-  const related = candidates
-    .map((r) => ({
-      slug: r.slug,
-      title: r.title,
-      employerName: r.employerName,
-      location: r.location,
-      score:
-        (r.category === job.category ? 4 : 0) +
-        (r.employerSlug === job.employerSlug ? 2 : 0) +
-        (r.region === job.region ? 1 : 0),
-      publishedAt: r.publishedAt,
-    }))
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        b.publishedAt.getTime() - a.publishedAt.getTime(),
-    )
-    .slice(0, 4);
 
   const breadcrumbs = [
     { name: "Søknadsbasen", path: "/" },
@@ -345,8 +278,10 @@ export default async function JobDetailPage({ params }: Props) {
   // applicationDueAt er den autoritative søknadsfristen. expiresAt brukes som
   // fallback når NAV ikke har eksplisitt frist (f.eks. løpende rekruttering).
   const dueAt = job.applicationDueAt ?? job.expiresAt;
+  // eslint-disable-next-line react-hooks/purity -- server component, én render per request; «dager til frist» MÅ leses fra klokka
+  const nowMs = Date.now();
   const daysToExpiry = dueAt
-    ? Math.floor((dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    ? Math.floor((dueAt.getTime() - nowMs) / (1000 * 60 * 60 * 24))
     : null;
 
   const tagSet = new Set<string>();
@@ -441,30 +376,21 @@ export default async function JobDetailPage({ params }: Props) {
               </div>
             )}
 
-            <JobActions
+            <div className="mb-6">
+              <KeyInfoBox job={job} />
+            </div>
+
+            <DetailCtas
               slug={job.slug}
               isLoggedIn={Boolean(session)}
-              initialSavedId={savedApplication?.id ?? null}
+              initialSavedId={savedId}
               applyUrl={job.applyUrl}
               employerName={job.employerName}
             />
 
-            {session && (
-              <div className="mt-6">
-                <JobAtsCard
-                  slug={job.slug}
-                  jobTitle={job.title}
-                  employerName={job.employerName}
-                  navKeywords={tags}
-                  initialMatch={
-                    initialMatch
-                      ? {
-                          cvKeywords: initialMatch.cvKeywords,
-                          jobKeywords: initialMatch.jobKeywords,
-                        }
-                      : null
-                  }
-                />
+            {breakdown && (
+              <div className="mt-6 rounded-2xl border border-border bg-surface p-5 md:p-6">
+                <MatchBreakdownCard breakdown={breakdown} />
               </div>
             )}
           </header>
@@ -476,11 +402,15 @@ export default async function JobDetailPage({ params }: Props) {
             employmentType={job.employmentType}
             sector={job.sector}
             positionCount={job.positionCount}
-            workhours={job.workhours}
-            workdays={job.workdays}
             starttime={job.starttime}
-            remote={job.remote}
-            workLanguages={job.workLanguages}
+            remote={
+              job.aiRemote
+                ? (HJEMMEKONTOR_LABELS[job.aiRemote as HjemmekontorCode] ?? null)
+                : null
+            }
+            workLanguages={job.aiWorkLanguages.map(
+              (l) => l.charAt(0).toLocaleUpperCase("nb-NO") + l.slice(1),
+            )}
             workLocations={workLocations}
             location={job.location}
             region={job.region}
@@ -544,35 +474,12 @@ export default async function JobDetailPage({ params }: Props) {
         </article>
 
         {related.length > 0 && (
-          <section
-            aria-label="Liknende stillinger"
-            className="border-t border-black/10 pt-10"
-          >
-            <h2 className="text-[20px] md:text-[24px] font-medium mb-5">
-              Liknende stillinger
-            </h2>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {related.map((r) => (
-                <li key={r.slug}>
-                  <Link
-                    prefetch
-                    href={`/jobb/${r.slug}`}
-                    className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 transition-colors px-5 py-4"
-                  >
-                    <div className="text-[14px] font-medium tracking-tight mb-1">
-                      {r.title}
-                    </div>
-                    <div className="text-[12px] text-[#14110e]/65">
-                      {r.employerName}
-                      {r.location ? ` · ${displayPlace(r.location)}` : ""}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <div className="border-t border-black/10 pt-10">
+            <SimilarJobs jobs={related} />
+          </div>
         )}
       </main>
+      <SeenOnMount jobId={job.id} slug={job.slug} />
     </>
   );
 }
@@ -635,8 +542,6 @@ function FactsPanel({
   employmentType,
   sector,
   positionCount,
-  workhours,
-  workdays,
   starttime,
   remote,
   workLanguages,
@@ -657,8 +562,6 @@ function FactsPanel({
   employmentType: string | null;
   sector: string | null;
   positionCount: number | null;
-  workhours: string | null;
-  workdays: string | null;
   starttime: string | null;
   remote: string | null;
   workLanguages: string[];
@@ -694,13 +597,6 @@ function FactsPanel({
       icon: Users,
       label: "Antall stillinger",
       value: positionCount.toString(),
-    });
-  }
-  if (workhours || workdays) {
-    facts.push({
-      icon: Sun,
-      label: "Arbeidstid",
-      value: [workhours, workdays].filter(Boolean).join(" · "),
     });
   }
   if (starttime) {

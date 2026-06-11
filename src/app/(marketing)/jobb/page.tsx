@@ -3,20 +3,26 @@ import { permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { ActiveChips } from "@/components/jobb/ActiveChips";
+import { AnonCvBanner, CvStatusCard } from "@/components/jobb/CvStatusCard";
 import { EmptyState } from "@/components/jobb/EmptyState";
-import { JobCard } from "@/components/jobb/JobCard";
+import { JobCard, type Density } from "@/components/jobb/JobCard";
 import { ListHeader } from "@/components/jobb/ListHeader";
 import { Pagination } from "@/components/jobb/Pagination";
+import { RecommendedRow } from "@/components/jobb/RecommendedRow";
+import { SeenCardWrapper } from "@/components/jobb/SeenMarker";
 import { JobListSkeleton, SidebarSkeleton } from "@/components/jobb/Skeletons";
 import { FilterNavProvider } from "@/components/jobb/filters/FilterNav";
 import { FilterSidebar } from "@/components/jobb/filters/FilterSidebar";
 import { MobileFilterSheet } from "@/components/jobb/filters/MobileFilterSheet";
 import { SearchTypeahead } from "@/components/jobb/search/SearchTypeahead";
 import { getSession } from "@/lib/auth";
+import { getCvStatus, type CvStatus } from "@/lib/jobs/cv-status";
+import { readDensity, readLastVisit } from "@/lib/jobs/density";
 import { getFacetCounts, type FacetCounts } from "@/lib/jobs/facets-query";
 import {
   getJobbContext,
   getJobList,
+  getTopMatches,
   serializeRawParams,
   type JobListItem,
   type JobbContext,
@@ -64,6 +70,12 @@ export default async function JobbPage({ searchParams }: Props) {
   const session = await getSession();
   const userId = session?.userId ?? null;
   const sort: SortKey = ctx.params.sortering ?? (userId ? "match" : "nyeste");
+  const activeFilters = countActiveFilters(ctx.params);
+
+  const [density, lastVisit] = await Promise.all([
+    readDensity(userId),
+    readLastVisit(),
+  ]);
 
   // Start uavhengige kilder parallelt — await skjer i Suspense-seksjonene.
   const facetsPromise = getFacetCounts(ctx.filter);
@@ -73,7 +85,12 @@ export default async function JobbPage({ searchParams }: Props) {
     side: ctx.params.side,
     userId,
   });
-  const listKey = `${buildJobbUrl(ctx.params)}|${sort}`;
+  const cvStatusPromise = userId ? getCvStatus(userId) : null;
+  const showRecommended = Boolean(
+    userId && activeFilters === 0 && ctx.params.side === 1,
+  );
+  const recommendedPromise = showRecommended ? getTopMatches(userId!, 3) : null;
+  const listKey = `${buildJobbUrl(ctx.params)}|${sort}|${density}`;
 
   return (
     <FilterNavProvider>
@@ -100,7 +117,11 @@ export default async function JobbPage({ searchParams }: Props) {
           <aside className="hidden lg:block" aria-label="Filtre">
             <div className="sticky top-[88px] max-h-[calc(100dvh-104px)] overflow-y-auto pb-4">
               <Suspense fallback={<SidebarSkeleton />}>
-                <SidebarSection ctx={ctx} facetsPromise={facetsPromise} />
+                <SidebarSection
+                  ctx={ctx}
+                  facetsPromise={facetsPromise}
+                  cvStatusPromise={cvStatusPromise}
+                />
               </Suspense>
             </div>
           </aside>
@@ -114,14 +135,18 @@ export default async function JobbPage({ searchParams }: Props) {
             </Suspense>
 
             <ActiveChips params={ctx.params} index={ctx.index} />
+            {!userId && <AnonCvBanner />}
 
             <Suspense key={listKey} fallback={<JobListSkeleton />}>
               <ListSection
                 ctx={ctx}
                 sort={sort}
                 loggedIn={Boolean(userId)}
+                density={density}
+                lastVisit={lastVisit}
                 listPromise={listPromise}
                 facetsPromise={facetsPromise}
+                recommendedPromise={recommendedPromise}
               />
             </Suspense>
           </section>
@@ -134,18 +159,23 @@ export default async function JobbPage({ searchParams }: Props) {
 async function SidebarSection({
   ctx,
   facetsPromise,
+  cvStatusPromise,
 }: {
   ctx: JobbContext;
   facetsPromise: Promise<FacetCounts>;
+  cvStatusPromise: Promise<CvStatus> | null;
 }) {
-  const counts = await facetsPromise;
+  const [counts, cvStatus] = await Promise.all([facetsPromise, cvStatusPromise]);
   return (
-    <FilterSidebar
-      params={ctx.params}
-      counts={counts}
-      index={ctx.index}
-      total={counts.total}
-    />
+    <>
+      {cvStatus && <CvStatusCard status={cvStatus} />}
+      <FilterSidebar
+        params={ctx.params}
+        counts={counts}
+        index={ctx.index}
+        total={counts.total}
+      />
+    </>
   );
 }
 
@@ -173,33 +203,60 @@ async function ListSection({
   ctx,
   sort,
   loggedIn,
+  density,
+  lastVisit,
   listPromise,
   facetsPromise,
+  recommendedPromise,
 }: {
   ctx: JobbContext;
   sort: SortKey;
   loggedIn: boolean;
+  density: Density;
+  lastVisit: Date | null;
   listPromise: Promise<JobListItem[]>;
   facetsPromise: Promise<FacetCounts>;
+  recommendedPromise: Promise<JobListItem[]> | null;
 }) {
-  const [jobs, counts] = await Promise.all([listPromise, facetsPromise]);
+  const [jobs, counts, recommended] = await Promise.all([
+    listPromise,
+    facetsPromise,
+    recommendedPromise,
+  ]);
   const now = new Date();
 
   return (
     <>
+      {recommended && <RecommendedRow jobs={recommended} />}
       <ListHeader
         total={counts.total}
         params={ctx.params}
         sort={sort}
         loggedIn={loggedIn}
+        density={density}
       />
       {jobs.length === 0 ? (
         <EmptyState params={ctx.params} counts={counts} index={ctx.index} />
       ) : (
-        <ul className="flex flex-col gap-2.5">
+        <ul
+          className={`flex flex-col ${density === "kompakt" ? "gap-2" : "gap-2.5"}`}
+        >
           {jobs.map((job) => (
             <li key={job.id}>
-              <JobCard job={job} density="komfortabel" loggedIn={loggedIn} now={now} />
+              <SeenCardWrapper
+                jobId={job.id}
+                slug={job.slug}
+                loggedIn={loggedIn}
+                seenOnServer={job.seen}
+              >
+                <JobCard
+                  job={job}
+                  density={density}
+                  loggedIn={loggedIn}
+                  now={now}
+                  isNew={lastVisit !== null && job.publishedAt > lastVisit}
+                />
+              </SeenCardWrapper>
             </li>
           ))}
         </ul>

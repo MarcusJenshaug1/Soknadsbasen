@@ -63,14 +63,14 @@ const SCORABLE_JOB_SELECT = {
 
 type ResumeProfile = { normalized: NormalizedResume; cvHash: string };
 
-/** Parser resumeData-blob → normalisert tekst + hash. null hvis ingen CV. */
-function buildProfile(resumeData: string): ResumeProfile | null {
+/**
+ * Normalisert CV med defensive defaults — gjenbrukes av match-breakdown på
+ * detaljsiden (samme form som precompute scorer mot).
+ */
+export function normalizeResumeData(resumeData: string) {
   const parsed = parseActiveResume(resumeData);
   if (!parsed) return null;
-  // parseActiveResume normaliserer IKKE formen — eldre/delvise blobs kan
-  // mangle arrays (skills, experience, …), og buildNormalizedResume antar
-  // full ResumeData. Defensive defaults her, ikke i den delte hot-pathen.
-  const resume = {
+  return {
     ...parsed,
     role: parsed.role ?? "",
     summary: parsed.summary ?? "",
@@ -81,6 +81,15 @@ function buildProfile(resumeData: string): ResumeProfile | null {
     projects: parsed.projects ?? [],
     certifications: parsed.certifications ?? [],
   };
+}
+
+/** Parser resumeData-blob → normalisert tekst + hash. null hvis ingen CV. */
+function buildProfile(resumeData: string): ResumeProfile | null {
+  // parseActiveResume normaliserer IKKE formen — eldre/delvise blobs kan
+  // mangle arrays (skills, experience, …), og buildNormalizedResume antar
+  // full ResumeData. Defensive defaults i normalizeResumeData.
+  const resume = normalizeResumeData(resumeData);
+  if (!resume) return null;
   const summary = buildResumeSummary(resume as unknown as Record<string, unknown>);
   return {
     normalized: buildNormalizedResume(resume),

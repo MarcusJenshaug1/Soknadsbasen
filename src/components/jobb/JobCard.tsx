@@ -5,6 +5,7 @@ import { CompanyLogo } from "@/components/ui/CompanyLogo";
 import type { JobListItem } from "@/lib/jobs/queries";
 import { cn } from "@/lib/cn";
 
+import { AddToPipelineButton } from "./AddToPipelineButton";
 import { MatchLabel } from "./MatchLabel";
 
 export type Density = "komfortabel" | "kompakt";
@@ -29,11 +30,14 @@ export function JobCard({
   density,
   loggedIn,
   now,
+  isNew = false,
 }: {
   job: JobListItem;
   density: Density;
   loggedIn: boolean;
   now: Date;
+  /** Publisert etter forrige besøk («Ny»-markering). */
+  isNew?: boolean;
 }) {
   const compact = density === "kompakt";
   const sted = job.kommune ?? job.region;
@@ -62,15 +66,20 @@ export function JobCard({
         <div className="min-w-0 flex-1">
           <h3
             className={cn(
-              "truncate font-medium leading-snug text-ink",
+              "flex items-center gap-2 font-medium leading-snug text-ink",
               compact ? "text-[14px]" : "text-[15.5px]",
             )}
           >
+            {isNew && !job.seen && (
+              <span className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-accent px-2 text-[9.5px] font-bold uppercase tracking-wide text-white">
+                Ny
+              </span>
+            )}
             <Link
               href={`/jobb/${job.slug}`}
               prefetch
               scroll={false}
-              className="text-left outline-none after:absolute after:inset-0 after:content-[''] hover:text-accent-ink focus-visible:after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-accent/50"
+              className="truncate text-left outline-none after:absolute after:inset-0 after:content-[''] hover:text-accent-ink focus-visible:after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-accent/50"
             >
               {job.title}
             </Link>
@@ -125,6 +134,7 @@ export function JobCard({
               Frist {FRIST_FMT.format(job.applicationDueAt)}
             </span>
           )}
+          {!compact && <AddToPipelineButton slug={job.slug} loggedIn={loggedIn} />}
         </div>
       </div>
     </article>
