@@ -8,6 +8,14 @@ type BuildMetadataArgs = {
   ogImage?: string;
   ogImageAlt?: string;
   noindex?: boolean;
+  /**
+   * Overstyrer robots-direktivet. "noindex-follow" brukes av /jobb-filtre:
+   * ikke-kuraterte kombinasjoner skal ikke indekseres, men lenkene skal
+   * fortsatt følges (kanonisk peker mot nærmeste indekserte side).
+   */
+  robots?: "index" | "noindex-follow" | "noindex-nofollow";
+  /** Overstyrer canonical-path når den avviker fra `path` (filter-URL-er). */
+  canonicalPath?: string;
 };
 
 const DEFAULT_OG_IMAGE = "/og-default.png";
@@ -19,12 +27,14 @@ export function buildMetadata({
   ogImage,
   ogImageAlt,
   noindex,
+  robots,
+  canonicalPath,
 }: BuildMetadataArgs): Metadata {
   const fullTitle = title
     ? `${title} | ${siteConfig.name}`
     : `${siteConfig.name}: ${siteConfig.tagline}`;
   const desc = description ?? siteConfig.description;
-  const canonical = absoluteUrl(path);
+  const canonical = absoluteUrl(canonicalPath ?? path);
   const image = ogImage ?? DEFAULT_OG_IMAGE;
   const imageAlt = ogImageAlt ?? fullTitle;
 
@@ -59,19 +69,31 @@ export function buildMetadata({
     alternates: { canonical },
     openGraph,
     twitter,
-    robots: noindex
-      ? { index: false, follow: false, nocache: true }
-      : {
-          index: true,
-          follow: true,
-          googleBot: {
-            index: true,
-            follow: true,
-            "max-video-preview": -1,
-            "max-image-preview": "large",
-            "max-snippet": -1,
-          },
-        },
+    robots: resolveRobots(noindex, robots),
+  };
+}
+
+function resolveRobots(
+  noindex: boolean | undefined,
+  robots: BuildMetadataArgs["robots"],
+): Metadata["robots"] {
+  const mode = robots ?? (noindex ? "noindex-nofollow" : "index");
+  if (mode === "noindex-nofollow") {
+    return { index: false, follow: false, nocache: true };
+  }
+  if (mode === "noindex-follow") {
+    return { index: false, follow: true };
+  }
+  return {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   };
 }
 

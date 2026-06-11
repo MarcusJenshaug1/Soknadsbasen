@@ -1,605 +1,210 @@
-import Link from "next/link";
-import { preconnect } from "react-dom";
-import {
-  Briefcase,
-  Building2,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  Users,
-} from "lucide-react";
-import { SectionLabel } from "@/components/ui/Pill";
-import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
-import { JsonLdScript } from "@/components/seo/JsonLd";
-import { CompanyLogo } from "@/components/ui/CompanyLogo";
-import { breadcrumbJsonLd } from "@/lib/seo/jsonld";
-import { buildMetadata } from "@/lib/seo/metadata";
-import { prisma } from "@/lib/prisma";
+import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
+import { Suspense } from "react";
+
+import { ActiveChips } from "@/components/jobb/ActiveChips";
+import { EmptyState } from "@/components/jobb/EmptyState";
+import { JobCard } from "@/components/jobb/JobCard";
+import { ListHeader } from "@/components/jobb/ListHeader";
+import { Pagination } from "@/components/jobb/Pagination";
+import { JobListSkeleton, SidebarSkeleton } from "@/components/jobb/Skeletons";
+import { FilterNavProvider } from "@/components/jobb/filters/FilterNav";
+import { FilterSidebar } from "@/components/jobb/filters/FilterSidebar";
+import { MobileFilterSheet } from "@/components/jobb/filters/MobileFilterSheet";
+import { SearchTypeahead } from "@/components/jobb/search/SearchTypeahead";
 import { getSession } from "@/lib/auth";
+import { getFacetCounts, type FacetCounts } from "@/lib/jobs/facets-query";
 import {
-  displayPlace,
-  extractJobKeywords,
-  formatCategory,
-  isValidFacet,
-} from "@/lib/jobs/format";
-import { parseActiveResume } from "@/lib/resume-server";
-import { buildNormalizedResume, scoreAtsFromNormalized } from "@/lib/ats";
-import { JobsFilterBar } from "./JobsFilterBar";
-import { SaveButton } from "./SaveButton";
+  getJobbContext,
+  getJobList,
+  serializeRawParams,
+  type JobListItem,
+  type JobbContext,
+} from "@/lib/jobs/queries";
+import { jobbSeoDecision } from "@/lib/jobs/seo";
+import {
+  buildJobbUrl,
+  countActiveFilters,
+  type SortKey,
+} from "@/lib/jobs/search-params";
+import { buildMetadata } from "@/lib/seo/metadata";
 
-// `revalidate` har ingen effekt her — searchParams gjør ruten dynamic per
-// request. Beholder ikke direktivet for å unngå falsk inntrykk av ISR.
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export const metadata = buildMetadata({
-  path: "/jobb",
-  title: "Stillinger i Norge",
-  description:
-    "Stillinger fra Arbeidsplassen.no, kuratert med klare URL-er og automatisk Match Score mot CV-en din. Finn og søk på relevante stillinger.",
-});
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const ctx = await getJobbContext(serializeRawParams(await searchParams));
+  if (ctx.redirectTo) return buildMetadata({ path: "/jobb" });
 
-const breadcrumbs = [
-  { name: "Søknadsbasen", path: "/" },
-  { name: "Stillinger", path: "/jobb" },
-];
+  const { total } = await getFacetCounts(ctx.filter);
+  const decision = jobbSeoDecision(ctx.params, ctx.index, total);
+  const path = buildJobbUrl(ctx.params);
 
-type SearchParams = Promise<{
-  q?: string;
-  region?: string;
-  kategori?: string;
-  side?: string;
-  sort?: string;
-}>;
-
-type SortMode = "recent" | "match";
-
-// Match-sort pull. Vi henter aiKeywords (compact string[]) først; tunge
-// JSON-felter (categoryList/occupationList) er droppet siden ~alle aktive
-// jobs har aiKeywords populert via cron. 240 = 12 sider × 20.
-const MATCH_CANDIDATE_LIMIT = 240;
-
-/** NAV gir samme kategori i ulike case ("butikkmedarbeider" vs "Butikkmedarbeider").
- *  Behold første variant per case-insensitive nøkkel — første treff er typisk
- *  den med flest jobber siden groupBy returnerer i count desc. */
-function dedupCaseInsensitive(items: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const item of items) {
-    const key = item.toLocaleLowerCase("nb-NO");
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(item);
+  if (decision.mode === "index") {
+    return buildMetadata({
+      path,
+      canonicalPath: decision.canonicalPath,
+      title: decision.title,
+      description: decision.description,
+    });
   }
-  return out;
+  return buildMetadata({
+    path,
+    canonicalPath: decision.canonicalPath,
+    title: "Ledige stillinger",
+    robots: "noindex-follow",
+  });
 }
 
-const PAGE_SIZE = 20;
+export default async function JobbPage({ searchParams }: Props) {
+  const ctx = await getJobbContext(serializeRawParams(await searchParams));
+  if (ctx.redirectTo) permanentRedirect(ctx.redirectTo);
 
-export default async function JobsHubPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  // 20 CompanyLogo client-islands henter favicons fra Google S2 — preconnect
-  // sparer DNS+TLS for første logo-load.
-  preconnect("https://www.google.com");
+  const session = await getSession();
+  const userId = session?.userId ?? null;
+  const sort: SortKey = ctx.params.sortering ?? (userId ? "match" : "nyeste");
 
-  const params = await searchParams;
-  const q = (params.q ?? "").trim();
-  const region = (params.region ?? "").trim();
-  const kategori = (params.kategori ?? "").trim();
-  const side = Math.max(1, Number(params.side) || 1);
-  const requestedSort: SortMode = params.sort === "match" ? "match" : "recent";
-
-  const where = {
-    isActive: true,
-    ...(q
-      ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" as const } },
-            { employerName: { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
-    ...(region ? { region: { equals: region, mode: "insensitive" as const } } : {}),
-    ...(kategori
-      ? { category: { equals: kategori, mode: "insensitive" as const } }
-      : {}),
-  };
-
-  // Start session-fetch i parallell med jobs-spørringene. Match-sort triggers
-  // en stør re query (kategori-JSON for opp til 800 jobber); recent-sort
-  // er minimal payload.
-  const sessionPromise = getSession();
-  const wantsMatchSort = requestedSort === "match";
-
-  // For match-sort må vi ha resume og full categoryList per kandidat.
-  // Recent-sort dropper begge for raskere TTFB.
-  const baseSelect = {
-    slug: true,
-    title: true,
-    employerName: true,
-    employerHomepage: true,
-    location: true,
-    region: true,
-    category: true,
-    publishedAt: true,
-    expiresAt: true,
-    applicationDueAt: true,
-    positionCount: true,
-    engagementType: true,
-    extent: true,
-    sector: true,
-  } as const;
-  const matchSelect = {
-    ...baseSelect,
-    occupation: true,
-    aiKeywords: true,
-  } as const;
-
-  // Pre-resolve userId så saved-state-query kan kjøre parallelt med jobs-fetch.
-  const userIdPromise = sessionPromise.then((s) => s?.userId ?? null);
-  const baseSavedSlugsPromise = userIdPromise.then(async (userId) => {
-    if (!userId) return null as string[] | null;
-    // Vi vet ikke hvilke slugs som blir vist før jobs-fetch er ferdig, så
-    // hent alle drafts for brukeren én gang. Drafts holder seg i lavt
-    // antall for de fleste brukere; mye billigere enn IN-query etter at
-    // jobs er resolvet.
-    const rows = await prisma.jobApplication.findMany({
-      where: { userId, source: "Søknadsbasen" },
-      select: { jobUrl: true },
-    });
-    return rows
-      .map((r) => r.jobUrl?.match(/\/jobb\/([^/?#]+)/)?.[1] ?? null)
-      .filter((s): s is string => Boolean(s));
+  // Start uavhengige kilder parallelt — await skjer i Suspense-seksjonene.
+  const facetsPromise = getFacetCounts(ctx.filter);
+  const listPromise = getJobList({
+    filter: ctx.filter,
+    sort,
+    side: ctx.params.side,
+    userId,
   });
+  const listKey = `${buildJobbUrl(ctx.params)}|${sort}`;
 
-  const [recentJobs, total, regionsRaw, categoriesRaw, session, userResumeData, savedSlugs] = await Promise.all([
-    wantsMatchSort
-      ? prisma.job.findMany({
-          where,
-          select: matchSelect,
-          orderBy: { publishedAt: "desc" },
-          take: MATCH_CANDIDATE_LIMIT,
-        })
-      : prisma.job.findMany({
-          where,
-          select: baseSelect,
-          orderBy: { publishedAt: "desc" },
-          take: PAGE_SIZE,
-          skip: (side - 1) * PAGE_SIZE,
-        }),
-    prisma.job.count({ where }),
-    prisma.job.groupBy({
-      by: ["region"],
-      where: { isActive: true, region: { not: null } },
-      _count: { region: true },
-      orderBy: { _count: { region: "desc" } },
-      take: 20,
-    }),
-    prisma.job.groupBy({
-      by: ["category"],
-      where: { isActive: true, category: { not: null } },
-      _count: { category: true },
-      orderBy: { _count: { category: "desc" } },
-      take: 20,
-    }),
-    sessionPromise,
-    sessionPromise.then((s) =>
-      wantsMatchSort && s
-        ? prisma.userData.findUnique({
-            where: { userId: s.userId },
-            select: { resumeData: true },
-          })
-        : null,
-    ),
-    baseSavedSlugsPromise,
-  ]);
+  return (
+    <FilterNavProvider>
+      <header className="border-b border-border bg-bg">
+        <div className="mx-auto max-w-[1280px] px-6 pb-2 pt-9 lg:px-10">
+          <h1 className="text-[30px] font-medium tracking-[-0.025em] text-ink">
+            Ledige stillinger
+          </h1>
+          <p className="mt-1 text-[13.5px] text-ink-soft">
+            Hele Norge, oppdatert hver time, sortert etter hva som faktisk passer deg.
+          </p>
+        </div>
+        <div className="sticky top-0 z-30 bg-bg/95 backdrop-blur-sm">
+          <div className="mx-auto max-w-[1280px] px-6 py-3 lg:px-10">
+            <div className="max-w-[640px]">
+              <SearchTypeahead params={ctx.params} />
+            </div>
+          </div>
+        </div>
+      </header>
 
-  const userResume = wantsMatchSort
-    ? parseActiveResume(userResumeData?.resumeData)
-    : null;
-  const normalizedResume = userResume ? buildNormalizedResume(userResume) : null;
+      <main className="mx-auto max-w-[1280px] px-6 py-7 lg:px-10">
+        <div className="grid grid-cols-1 gap-7 lg:grid-cols-[280px_1fr]">
+          <aside className="hidden lg:block" aria-label="Filtre">
+            <div className="sticky top-[88px] max-h-[calc(100dvh-104px)] overflow-y-auto pb-4">
+              <Suspense fallback={<SidebarSkeleton />}>
+                <SidebarSection ctx={ctx} facetsPromise={facetsPromise} />
+              </Suspense>
+            </div>
+          </aside>
 
-  const effectiveSort: SortMode =
-    wantsMatchSort && normalizedResume ? "match" : "recent";
+          <section
+            className="flex min-w-0 flex-col gap-4 transition-opacity [[data-filter-pending]_&]:opacity-60"
+            aria-label="Stillinger"
+          >
+            <Suspense fallback={null}>
+              <MobileSection ctx={ctx} facetsPromise={facetsPromise} />
+            </Suspense>
 
-  // Skår jobber kun når match-sort er aktiv. Recent-sort dropper score for
-  // å holde anonyme/recent-cases lette. Bruker pre-normalisert resume så
-  // vi normaliserer teksten én gang per render istedenfor N×.
-  const scoreJob = (job: {
-    category: string | null;
-    occupation?: string | null;
-    aiKeywords?: string[];
-  }) => {
-    if (!normalizedResume) return null;
-    const keywords = extractJobKeywords({
-      category: job.category,
-      occupation: job.occupation ?? null,
-      aiKeywords: job.aiKeywords,
-    });
-    if (keywords.length === 0) return null;
-    return scoreAtsFromNormalized(normalizedResume, keywords);
-  };
+            <ActiveChips params={ctx.params} index={ctx.index} />
 
-  const jobs =
-    effectiveSort === "match" && normalizedResume
-      ? recentJobs
-          .map((job) => ({ ...job, matchScore: scoreJob(job) }))
-          .sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1))
-          .slice((side - 1) * PAGE_SIZE, side * PAGE_SIZE)
-      : recentJobs.map((job) => ({ ...job, matchScore: null as number | null }));
-
-  const regions = dedupCaseInsensitive(
-    regionsRaw.map((r) => r.region).filter(isValidFacet),
+            <Suspense key={listKey} fallback={<JobListSkeleton />}>
+              <ListSection
+                ctx={ctx}
+                sort={sort}
+                loggedIn={Boolean(userId)}
+                listPromise={listPromise}
+                facetsPromise={facetsPromise}
+              />
+            </Suspense>
+          </section>
+        </div>
+      </main>
+    </FilterNavProvider>
   );
-  const categories = dedupCaseInsensitive(
-    categoriesRaw.map((c) => c.category).filter(isValidFacet),
+}
+
+async function SidebarSection({
+  ctx,
+  facetsPromise,
+}: {
+  ctx: JobbContext;
+  facetsPromise: Promise<FacetCounts>;
+}) {
+  const counts = await facetsPromise;
+  return (
+    <FilterSidebar
+      params={ctx.params}
+      counts={counts}
+      index={ctx.index}
+      total={counts.total}
+    />
   );
+}
 
-  // Match-sort kan bare paginere innen kandidat-poolen
-  const totalPages =
-    effectiveSort === "match"
-      ? Math.ceil(Math.min(total, MATCH_CANDIDATE_LIMIT) / PAGE_SIZE)
-      : Math.ceil(total / PAGE_SIZE);
+async function MobileSection({
+  ctx,
+  facetsPromise,
+}: {
+  ctx: JobbContext;
+  facetsPromise: Promise<FacetCounts>;
+}) {
+  const counts = await facetsPromise;
+  return (
+    <MobileFilterSheet total={counts.total} activeCount={countActiveFilters(ctx.params)}>
+      <FilterSidebar
+        params={ctx.params}
+        counts={counts}
+        index={ctx.index}
+        total={counts.total}
+      />
+    </MobileFilterSheet>
+  );
+}
 
-  const savedSlugSet = new Set<string>(savedSlugs ?? []);
-  const isLoggedIn = Boolean(session);
+async function ListSection({
+  ctx,
+  sort,
+  loggedIn,
+  listPromise,
+  facetsPromise,
+}: {
+  ctx: JobbContext;
+  sort: SortKey;
+  loggedIn: boolean;
+  listPromise: Promise<JobListItem[]>;
+  facetsPromise: Promise<FacetCounts>;
+}) {
+  const [jobs, counts] = await Promise.all([listPromise, facetsPromise]);
+  const now = new Date();
 
   return (
     <>
-      <JsonLdScript data={breadcrumbJsonLd(breadcrumbs)} />
-
-      <main id="main" className="max-w-[1100px] mx-auto px-5 md:px-10 pb-24">
-        <div className="pt-10 mb-10">
-          <Breadcrumbs items={breadcrumbs} />
-        </div>
-
-        <section className="pt-6 md:pt-10 pb-10 max-w-[680px]">
-          <SectionLabel tone="accent" className="mb-4">
-            Stillinger
-          </SectionLabel>
-          <h1 className="text-[40px] md:text-[60px] leading-[1.02] tracking-[-0.035em] font-medium mb-6">
-            Stillinger i Norge, kuratert.
-          </h1>
-          <p className="text-[16px] md:text-[18px] leading-[1.65] text-[#14110e]/75">
-            {total > 0
-              ? `${total.toLocaleString("nb-NO")} aktive stillinger fra Arbeidsplassen.no.`
-              : "Stillinger fra Arbeidsplassen.no."}{" "}
-            Klare URL-er, ren tekst, og direkte kobling til Søknadsbasens
-            CV-bygger og søknadsbrev-modul.
-          </p>
-        </section>
-
-        <JobsFilterBar
-          q={q}
-          region={region}
-          kategori={kategori}
-          regions={regions}
-          categories={categories}
-          sort={effectiveSort}
-          isLoggedIn={isLoggedIn}
-          resultCount={total}
-        />
-
-        <section
-          aria-label="Stillinger"
-          className="mt-8"
-        >
-          {jobs.length === 0 ? (
-            <NoResults q={q} hasFilters={Boolean(q || region || kategori)} />
-          ) : (
-            <ul className="space-y-3">
-              {jobs.map((job) => (
-                <li key={job.slug}>
-                  <JobCard
-                    slug={job.slug}
-                    title={job.title}
-                    employerName={job.employerName}
-                    employerHomepage={job.employerHomepage}
-                    location={job.location}
-                    category={job.category}
-                    publishedAt={job.publishedAt}
-                    expiresAt={job.expiresAt}
-                    applicationDueAt={job.applicationDueAt}
-                    positionCount={job.positionCount}
-                    engagementType={job.engagementType}
-                    extent={job.extent}
-                    sector={job.sector}
-                    matchScore={job.matchScore}
-                    isLoggedIn={isLoggedIn}
-                    saved={savedSlugSet.has(job.slug)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {totalPages > 1 && (
-          <Pagination
-            current={side}
-            total={totalPages}
-            params={{
-              q,
-              region,
-              kategori,
-              ...(effectiveSort === "match" ? { sort: "match" } : {}),
-            }}
-          />
-        )}
-      </main>
+      <ListHeader
+        total={counts.total}
+        params={ctx.params}
+        sort={sort}
+        loggedIn={loggedIn}
+      />
+      {jobs.length === 0 ? (
+        <EmptyState params={ctx.params} counts={counts} index={ctx.index} />
+      ) : (
+        <ul className="flex flex-col gap-2.5">
+          {jobs.map((job) => (
+            <li key={job.id}>
+              <JobCard job={job} density="komfortabel" loggedIn={loggedIn} now={now} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Pagination params={ctx.params} total={counts.total} />
     </>
-  );
-}
-
-function JobCard({
-  slug,
-  title,
-  employerName,
-  employerHomepage,
-  location,
-  category,
-  publishedAt,
-  expiresAt,
-  applicationDueAt,
-  positionCount,
-  engagementType,
-  extent,
-  sector,
-  matchScore,
-  isLoggedIn,
-  saved,
-}: {
-  slug: string;
-  title: string;
-  employerName: string;
-  employerHomepage: string | null;
-  location: string | null;
-  category: string | null;
-  publishedAt: Date;
-  expiresAt: Date | null;
-  applicationDueAt: Date | null;
-  positionCount: number | null;
-  engagementType: string | null;
-  extent: string | null;
-  sector: string | null;
-  matchScore: number | null;
-  isLoggedIn: boolean;
-  saved: boolean;
-}) {
-  const daysAgo = Math.floor(
-    (Date.now() - publishedAt.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  const dueAt = applicationDueAt ?? expiresAt;
-  const daysToExpiry = dueAt
-    ? Math.floor((dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
-
-  const employmentLabel = [engagementType, extent]
-    .filter((p): p is string => Boolean(p))
-    .join(" · ");
-
-  const isFresh = daysAgo <= 1;
-  const isUrgent = daysToExpiry !== null && daysToExpiry >= 0 && daysToExpiry <= 3;
-
-  return (
-    <div className="relative group">
-      <Link
-        prefetch
-        href={`/jobb/${slug}`}
-        className="block rounded-2xl border border-black/10 bg-white hover:border-[#14110e]/30 hover:bg-[#eee9df]/40 hover:shadow-[0_2px_12px_rgba(20,17,14,0.04)] outline-none focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-all px-5 py-4 md:py-5 pr-16"
-      >
-        <div className="flex items-start gap-4 mb-3">
-          <CompanyLogo website={employerHomepage} name={employerName} size="md" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              {isFresh && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-800 uppercase tracking-wide">
-                  Ny
-                </span>
-              )}
-              {isUrgent && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#D5592E]/10 text-[#D5592E] uppercase tracking-wide">
-                  {daysToExpiry === 0
-                    ? "Frist i dag"
-                    : daysToExpiry === 1
-                      ? "Frist i morgen"
-                      : `${daysToExpiry} dager igjen`}
-                </span>
-              )}
-            </div>
-            <h3 className="text-[16px] md:text-[18px] font-medium tracking-tight mb-1.5 line-clamp-2 group-hover:text-[#D5592E] transition-colors">
-              {title}
-            </h3>
-            <div className="text-[13px] text-[#14110e]/70 font-medium truncate">
-              {employerName}
-            </div>
-          </div>
-          <div className="shrink-0 flex flex-col items-end gap-1.5">
-            {matchScore !== null && (
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
-                style={{
-                  background:
-                    matchScore >= 80
-                      ? "rgba(22, 163, 74, 0.10)"
-                      : matchScore >= 60
-                        ? "rgba(213, 89, 46, 0.10)"
-                        : matchScore >= 40
-                          ? "rgba(245, 158, 11, 0.10)"
-                          : "rgba(148, 163, 184, 0.15)",
-                  color:
-                    matchScore >= 80
-                      ? "#16a34a"
-                      : matchScore >= 60
-                        ? "#D5592E"
-                        : matchScore >= 40
-                          ? "#b45309"
-                          : "#475569",
-                }}
-                title={`${matchScore}% match mot CV-en din`}
-              >
-                <span
-                  className="size-1.5 rounded-full"
-                  style={{
-                    background:
-                      matchScore >= 80
-                        ? "#16a34a"
-                        : matchScore >= 60
-                          ? "#D5592E"
-                          : matchScore >= 40
-                            ? "#f59e0b"
-                            : "#94a3b8",
-                  }}
-                  aria-hidden
-                />
-                {matchScore}% match
-              </span>
-            )}
-            {category && (
-              <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full text-[11px] bg-[#eee9df] text-[#14110e]/70">
-                {formatCategory(category)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[#14110e]/60">
-          {location && (
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="size-3.5 text-[#14110e]/40" aria-hidden />
-              {displayPlace(location)}
-            </span>
-          )}
-          {employmentLabel && (
-            <span className="inline-flex items-center gap-1.5">
-              <Briefcase className="size-3.5 text-[#14110e]/40" aria-hidden />
-              {employmentLabel}
-            </span>
-          )}
-          {sector && (
-            <span className="inline-flex items-center gap-1.5">
-              <Building2 className="size-3.5 text-[#14110e]/40" aria-hidden />
-              {sector}
-            </span>
-          )}
-          {typeof positionCount === "number" && positionCount > 1 && (
-            <span className="inline-flex items-center gap-1.5">
-              <Users className="size-3.5 text-[#14110e]/40" aria-hidden />
-              {positionCount} stillinger
-            </span>
-          )}
-          {daysToExpiry !== null && daysToExpiry >= 0 && !isUrgent && (
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar className="size-3.5 text-[#14110e]/40" aria-hidden />
-              {daysToExpiry === 0
-                ? "Frist i dag"
-                : `${daysToExpiry} dager til frist`}
-            </span>
-          )}
-          <span className="ml-auto text-[11px] text-[#14110e]/45">
-            {daysAgo === 0 ? "I dag" : `${daysAgo}d siden`}
-          </span>
-        </div>
-      </Link>
-
-      <div className="absolute top-3 right-3 md:top-4 md:right-4">
-        <SaveButton
-          slug={slug}
-          isLoggedIn={isLoggedIn}
-          initialSaved={saved}
-        />
-      </div>
-    </div>
-  );
-}
-
-function NoResults({ q, hasFilters }: { q: string; hasFilters: boolean }) {
-  return (
-    <div className="rounded-2xl border border-black/10 bg-[#eee9df]/40 p-8 md:p-12 text-center">
-      <h3 className="text-[20px] md:text-[24px] font-medium mb-3 text-balance">
-        {q
-          ? `Ingen stillinger matcher "${q}"`
-          : hasFilters
-            ? "Ingen stillinger matcher filteret"
-            : "Ingen stillinger akkurat nå"}
-      </h3>
-      <p className="text-[14px] text-[#14110e]/65 max-w-[480px] mx-auto mb-6">
-        {hasFilters
-          ? "Prøv et bredere søk, et annet område, eller nullstill filteret for å se alle stillinger."
-          : "Vi henter nye stillinger automatisk fra Arbeidsplassen.no hver time. Kom tilbake snart."}
-      </p>
-      {hasFilters && (
-        <Link
-          prefetch
-          href="/jobb"
-          className="inline-flex min-h-11 items-center justify-center px-5 py-2.5 rounded-full bg-[#D5592E] text-[#faf8f5] text-[13px] font-medium outline-none hover:bg-[#a94424] active:bg-[#8f3a1e] focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8f5] transition-colors"
-        >
-          Nullstill filteret
-        </Link>
-      )}
-    </div>
-  );
-}
-
-function Pagination({
-  current,
-  total,
-  params,
-}: {
-  current: number;
-  total: number;
-  params: { q: string; region: string; kategori: string; sort?: string };
-}) {
-  const buildUrl = (page: number) => {
-    const sp = new URLSearchParams();
-    if (params.q) sp.set("q", params.q);
-    if (params.region) sp.set("region", params.region);
-    if (params.kategori) sp.set("kategori", params.kategori);
-    if (params.sort) sp.set("sort", params.sort);
-    if (page > 1) sp.set("side", String(page));
-    const qs = sp.toString();
-    return `/jobb${qs ? `?${qs}` : ""}`;
-  };
-
-  const isFirst = current === 1;
-  const isLast = current === total;
-  const linkClass =
-    "inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full text-[#14110e]/70 outline-none hover:bg-black/5 hover:text-[#14110e] focus-visible:ring-2 focus-visible:ring-[#D5592E]/50 transition-colors";
-  const disabledClass =
-    "inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full text-[#14110e]/30 cursor-default select-none";
-
-  return (
-    <nav
-      aria-label="Sidenavigasjon"
-      className="mt-10 flex items-center justify-between gap-3 text-[13px]"
-    >
-      {isFirst ? (
-        <span aria-disabled="true" className={disabledClass}>
-          <ChevronLeft className="size-4" aria-hidden />
-          Forrige
-        </span>
-      ) : (
-        <Link prefetch href={buildUrl(current - 1)} rel="prev" className={linkClass}>
-          <ChevronLeft className="size-4" aria-hidden />
-          Forrige
-        </Link>
-      )}
-      <span className="text-[12px] text-[#14110e]/55">
-        Side {current} av {total}
-      </span>
-      {isLast ? (
-        <span aria-disabled="true" className={disabledClass}>
-          Neste
-          <ChevronRight className="size-4" aria-hidden />
-        </span>
-      ) : (
-        <Link prefetch href={buildUrl(current + 1)} rel="next" className={linkClass}>
-          Neste
-          <ChevronRight className="size-4" aria-hidden />
-        </Link>
-      )}
-    </nav>
   );
 }

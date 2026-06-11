@@ -28,6 +28,7 @@ export function Modal({
   ariaLabel,
   panelClassName,
   closeOnBackdrop = true,
+  placement = "center",
 }: {
   open: boolean;
   onClose: () => void;
@@ -35,6 +36,8 @@ export function Modal({
   ariaLabel?: string;
   panelClassName?: string;
   closeOnBackdrop?: boolean;
+  /** "bottom" = bottom sheet (mobilfiltre); panelet ankres mot bunnen. */
+  placement?: "center" | "bottom";
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
@@ -99,7 +102,12 @@ export function Modal({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className={cn(
+        "fixed inset-0 z-50 flex",
+        placement === "bottom" ? "items-end justify-stretch" : "items-center justify-center p-4",
+      )}
+    >
       <div
         className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
         onClick={closeOnBackdrop ? onClose : undefined}

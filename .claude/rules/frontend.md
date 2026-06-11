@@ -19,7 +19,7 @@ Tokens live in `src/lib/design-tokens.ts` and `src/app/globals.css`. Never hardc
 | Category | Use |
 |---|---|
 | CSS | Tailwind 4 + `tailwind-merge` + `clsx` via `src/lib/cn.ts` |
-| Icons | `lucide-react` — named imports only |
+| Icons | `lucide-react` — named imports only. UNNTAK: stillingsmodulen (`src/components/jobb/**`, `src/app/(marketing)/jobb/**`) bruker `react-icons/fi` konsekvent (eier-krav, ombyggingen 2026-06) — ikke «fiks» tilbake til lucide der |
 | Animation | Framer Motion (dynamic import for heavy panels) |
 | State | Zustand. `persist` middleware only when state must survive reload |
 | Forms/DnD | `@dnd-kit/*` for drag-and-drop |

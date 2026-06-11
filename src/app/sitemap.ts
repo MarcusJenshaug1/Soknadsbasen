@@ -3,6 +3,8 @@ import { absoluteUrl } from "@/lib/seo/siteConfig";
 import { getAllGuides } from "@/lib/guide/loader";
 import { COMPETITORS } from "@/lib/sammenligning/competitors";
 import { INDUSTRIES } from "@/lib/cv-mal/industries";
+import { getCuratedCombos } from "@/lib/jobs/registers";
+import { EMPTY_PARAMS, buildJobbUrl } from "@/lib/jobs/search-params";
 import { prisma } from "@/lib/prisma";
 
 // Revalidate sitemap hver 30 min slik at nye jobs surfacer i søkemotorer
@@ -29,6 +31,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: j.updatedAt,
     changeFrequency: "weekly",
     priority: 0.5,
+  }));
+
+  // Kuraterte filterkombinasjoner (fylke / kategori / fylke+kategori) —
+  // de eneste /jobb-param-URL-ene som indekseres (jf. jobbSeoDecision).
+  const combos = await getCuratedCombos().catch(() => []);
+  const comboEntries: MetadataRoute.Sitemap = combos.map((c) => ({
+    url: absoluteUrl(
+      buildJobbUrl({
+        ...EMPTY_PARAMS,
+        fylke: c.fylke ? [c.fylke] : [],
+        kategori: c.kategori ? [c.kategori] : [],
+      }),
+    ),
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: c.fylke && c.kategori ? 0.6 : 0.7,
   }));
 
   const guideEntries: MetadataRoute.Sitemap = guides.map((g) => ({
@@ -100,6 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 0.8,
     },
+    ...comboEntries,
     ...jobEntries,
     {
       url: absoluteUrl("/om"),
