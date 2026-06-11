@@ -5,6 +5,7 @@ import {
   recordSuggest,
 } from "@/lib/collabToken";
 import { claudeGenerate } from "@/lib/claude";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -44,6 +45,21 @@ export async function POST(req: Request) {
     );
   }
   recordSuggest(claims.sessionId);
+
+  // Sjekk at inviten fortsatt er gyldig FØR vi bruker betalte Claude-credits.
+  // JWT-en lever i 1 time, så uten dette kunne en tilbaketrukket/utløpt
+  // medhjelper brenne API-kvote til token-en utløper (samme sjekk som
+  // /api/collab/suggest).
+  const invite = await prisma.collabInvite.findUnique({
+    where: { id: claims.inviteId },
+    select: { revokedAt: true, expiresAt: true },
+  });
+  if (!invite || invite.revokedAt) {
+    return NextResponse.json({ error: "Lenken er trukket tilbake" }, { status: 410 });
+  }
+  if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {
+    return NextResponse.json({ error: "Lenken er utløpt" }, { status: 410 });
+  }
 
   let body: { text?: string; kind?: string };
   try {

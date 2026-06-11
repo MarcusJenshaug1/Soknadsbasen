@@ -40,7 +40,7 @@ export function OrgInnstillingerBruker({ org }: { org: OrgContext }) {
             onClick={toggle}
             disabled={saving}
             className={`shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
-              shares ? "bg-ink" : "bg-black/15"
+              shares ? "bg-accent" : "bg-black/15 dark:bg-white/20"
             }`}
           >
             <div

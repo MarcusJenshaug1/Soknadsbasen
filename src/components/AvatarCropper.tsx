@@ -69,28 +69,28 @@ export function AvatarCropper({ file, onCancel, onConfirm }: Props) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-[#14110e]/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-ink/60 backdrop-blur-sm"
         onClick={onCancel}
       />
-      <div className="relative bg-[#faf8f5] rounded-3xl w-full max-w-[520px] overflow-hidden border border-black/8 flex flex-col">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8">
+      <div className="relative bg-bg rounded-3xl w-full max-w-[520px] overflow-hidden border border-black/8 dark:border-white/8 flex flex-col">
+        <header className="flex items-center justify-between px-6 py-4 border-b border-black/8 dark:border-white/8">
           <div>
             <SectionLabel>Beskjær bilde</SectionLabel>
-            <h2 className="text-[18px] font-medium tracking-tight mt-1">
+            <h2 className="text-[18px] font-medium tracking-tight mt-1 text-ink">
               Velg fokus
             </h2>
           </div>
           <button
             onClick={onCancel}
-            className="size-8 rounded-full hover:bg-black/5 flex items-center justify-center text-[#14110e]/60"
+            className="size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-ink/60"
             aria-label="Lukk"
           >
             <IconClose size={18} />
           </button>
         </header>
 
-        <div className="p-6 bg-[#eee9df]/40 flex flex-col items-center gap-4">
-          <div className="max-w-full overflow-hidden rounded-2xl bg-[#14110e]/5">
+        <div className="p-6 bg-panel/40 flex flex-col items-center gap-4">
+          <div className="max-w-full overflow-hidden rounded-2xl bg-ink/5">
             <ReactCrop
               crop={crop}
               onChange={(c) => setCrop(c)}
@@ -117,7 +117,7 @@ export function AvatarCropper({ file, onCancel, onConfirm }: Props) {
           </div>
 
           <div className="w-full flex items-center gap-3">
-            <span className="text-[11px] uppercase tracking-[0.15em] text-[#14110e]/55 shrink-0">
+            <span className="text-[11px] uppercase tracking-[0.15em] text-ink/55 shrink-0">
               Zoom
             </span>
             <input
@@ -127,22 +127,22 @@ export function AvatarCropper({ file, onCancel, onConfirm }: Props) {
               step="0.05"
               value={scale}
               onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="flex-1 accent-[#D5592E]"
+              className="flex-1 accent-accent"
             />
           </div>
         </div>
 
-        <footer className="px-6 py-4 border-t border-black/8 flex items-center justify-end gap-2 bg-[#faf8f5]">
+        <footer className="px-6 py-4 border-t border-black/8 dark:border-white/8 flex items-center justify-end gap-2 bg-bg">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-full text-[12px] border border-black/15 hover:border-black/30"
+            className="px-4 py-2 rounded-full text-[12px] text-ink border border-black/15 dark:border-white/15 hover:border-black/30 dark:hover:border-white/30"
           >
             Avbryt
           </button>
           <button
             onClick={confirm}
             disabled={!completedCrop || saving}
-            className="px-5 py-2 rounded-full bg-[#D5592E] text-[#faf8f5] text-[12px] font-medium hover:bg-[#a94424] disabled:opacity-50"
+            className="px-5 py-2 rounded-full bg-accent text-bg text-[12px] font-medium hover:bg-accent-hover disabled:opacity-50"
           >
             {saving ? "Beskjærer …" : "Lagre bilde"}
           </button>

@@ -204,12 +204,17 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       type: newTaskType,
       priority: newTaskPriority,
     };
-    const res = await fetch(`/api/applications/${app.id}/tasks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/applications/${app.id}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Kunne ikke opprette oppgaven");
+      }
       const task = await res.json();
       setApp((a) => ({ ...a, tasks: [task, ...a.tasks] }));
       setNewTask("");
@@ -218,6 +223,8 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       setNewTaskType("followup");
       setNewTaskPriority("medium");
       setNewTaskExpanded(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke opprette oppgaven");
     }
   }
 
@@ -231,16 +238,23 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
       note: commNote.trim(),
       occurredAt: commDate ? new Date(commDate).toISOString() : undefined,
     };
-    const res = await fetch(`/api/applications/${app.id}/activity`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/applications/${app.id}/activity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Kunne ikke logge kommunikasjonen");
+      }
       const activity = await res.json();
       setApp((a) => ({ ...a, activities: [activity, ...a.activities] }));
       setCommNote("");
       setCommDate(new Date().toISOString().slice(0, 16));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke logge kommunikasjonen");
     }
   }
 

@@ -19,6 +19,12 @@ import {
 
 const MAX_PENDING_PER_RESOURCE = 100;
 
+// Whitelist av redigerbare felt. Må matche fieldPath-ene AnonResumeEditor
+// produserer og applyToResumeStore i SuggestionsInbox kan anvende. Uten dette
+// kunne en klient lagre vilkårlige (uanvendelige) forslag og forsøple basen.
+const VALID_FIELD_PATH =
+  /^(role|summary|skills|(experience|education)\.id:[^.]+\.description)$/;
+
 /* ─── GET (eier) ─────────────────────────────────────────────── */
 
 import { getSession } from "@/lib/auth";
@@ -124,6 +130,9 @@ export async function POST(req: Request) {
   const fieldPath = body.fieldPath?.trim();
   if (!fieldPath) {
     return NextResponse.json({ error: "Mangler fieldPath" }, { status: 400 });
+  }
+  if (!VALID_FIELD_PATH.test(fieldPath)) {
+    return NextResponse.json({ error: "Ugyldig fieldPath" }, { status: 400 });
   }
   if (body.beforeValue === undefined || body.afterValue === undefined) {
     return NextResponse.json(

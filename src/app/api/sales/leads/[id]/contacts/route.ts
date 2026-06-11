@@ -65,6 +65,14 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const url = new URL(req.url);
   const linkId = url.searchParams.get("linkId");
   if (!linkId) return NextResponse.json({ error: "linkId påkrevd" }, { status: 400 });
-  await prisma.leadContactLink.delete({ where: { id: linkId } });
+  // Scope slettingen til DENNE lead-en. Uten leadId-betingelsen kunne en selger
+  // slette en annen selgers contact-link ved å oppgi egen lead-id + fremmed
+  // linkId (IDOR på tvers av org-grenser).
+  const deleted = await prisma.leadContactLink.deleteMany({
+    where: { id: linkId, leadId: id },
+  });
+  if (deleted.count === 0) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }

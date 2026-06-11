@@ -14,6 +14,7 @@ export function GoalWidget({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(initialGoal ?? 5));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const pct = goal ? Math.min(Math.round((thisWeekSent / goal) * 100), 100) : 0;
   const done = goal !== null && thisWeekSent >= goal;
@@ -22,16 +23,20 @@ export function GoalWidget({
     const n = parseInt(draft, 10);
     if (!n || n < 1) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/user/goal", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weeklyGoal: n }),
       });
-      if (res.ok) {
-        setGoal(n);
-        setEditing(false);
-      }
+      if (!res.ok) throw new Error("lagring feilet");
+      setGoal(n);
+      setEditing(false);
+    } catch {
+      // Uten catch ble en nettverks-reject en uhåndtert promise (save()
+      // floates fra onClick/onKeyDown) og brukeren fikk ingen tilbakemelding.
+      setError("Kunne ikke lagre målet. Prøv igjen.");
     } finally {
       setSaving(false);
     }
@@ -51,6 +56,7 @@ export function GoalWidget({
 
   if (editing) {
     return (
+      <div className="w-full sm:w-auto">
       <div className="inline-flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-2.5 sm:pl-4 rounded-2xl sm:rounded-full bg-surface border border-black/10 dark:border-white/10 w-full sm:w-auto">
         <div className="flex items-center gap-2">
           <Target className="size-4 text-accent shrink-0" />
@@ -93,6 +99,12 @@ export function GoalWidget({
             <X className="size-3.5" />
           </button>
         </div>
+      </div>
+      {error && (
+        <p className="text-[11px] text-accent mt-1.5 sm:ml-4" role="alert">
+          {error}
+        </p>
+      )}
       </div>
     );
   }
