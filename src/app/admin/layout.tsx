@@ -17,7 +17,7 @@ const NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  if (!session) redirect("/logg-inn");
+  if (!session) redirect("/logg-inn?redirect=/admin");
   const profile = await prisma.user.findUnique({
     where: { id: session.userId },
     select: { role: true, isAdmin: true },
@@ -26,7 +26,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     session.email === process.env.ADMIN_EMAIL ||
     profile?.role === "admin" ||
     profile?.isAdmin === true;
-  if (!isInternalAdmin) redirect("/logg-inn");
+  // Innlogget uten admin-rolle → plattformen, ikke login (login ville bare
+  // sendt en allerede innlogget bruker i loop).
+  if (!isInternalAdmin) redirect("/app");
 
   return (
     <div className="min-h-dvh bg-[#f9f9f8] flex">

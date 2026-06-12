@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HotKeyListener } from "@/components/HotKeyListener";
-import { getSelgerPanelAccess } from "@/lib/auth";
+import { getSelgerPanelAccess, getSession } from "@/lib/auth";
 import { SelgerSidebar } from "./SelgerSidebar";
 
 export default async function SelgerLayout({
@@ -9,9 +9,12 @@ export default async function SelgerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // getSelgerPanelAccess gir null både uten sesjon og uten selger-rolle —
+  // innloggede uten rolle skal til plattformen, ikke login-loop.
   const access = await getSelgerPanelAccess();
   if (!access) {
-    redirect("/logg-inn?redirect=/selger");
+    const session = await getSession();
+    redirect(session ? "/app" : "/logg-inn?redirect=/selger");
   }
 
   return (
