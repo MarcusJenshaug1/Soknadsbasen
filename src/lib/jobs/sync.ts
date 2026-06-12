@@ -38,9 +38,14 @@ export type SyncResult = {
 
 // Hvor langt tilbake går vi første gang (cursor mangler).
 // 400 dager dekker NAVs maks aktive periode (6 mnd) med god margin —
-// 200 + fast-forward 60 ga 3 200 manglende aktive annonser (25 %) ved
-// førstegangssyncen 2026-04-29 (annonser publisert jan–mars, fortsatt aktive,
-// lå på feed-sider som ble hoppet over).
+// 200 + fast-forward 60 ga ~570 manglende aktive annonser ved førstegangs-
+// syncen 2026-04-29 (gjenopprettet av re-walk 2026-06-12).
+//
+// NB: Resten av gapet mot arbeidsplassen.nav.no sitt totaltall (~13 000 vs
+// våre ~10 400) er STRUKTURELT og kan ikke hentes: ~10–15 % av annonsene der
+// har medium FINN/AMEDIA — kilder NAV viser i eget søk men ikke har rett til
+// å videreformidle i den åpne feeden. Verifisert empirisk 2026-06-12
+// (4 800+ feed-sider walket; de manglende annonsene finnes ikke i feeden).
 const INITIAL_LOOKBACK_DAYS = 400;
 
 // Default tidsbudsjett. Caller kan overstyre. Holdes godt under Vercel
