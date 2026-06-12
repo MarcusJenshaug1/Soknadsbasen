@@ -122,5 +122,10 @@ export function scoreJobMatch(cv: CvMatchProfile, job: JobMatchSide): number {
   }
 
   const raw = 0.5 * coverage + 0.3 * affinity + 0.2 * titleHit;
-  return Math.round(Math.min(1, raw) * 100);
+  // Skala-strekk kalibrert mot prod 2026-06-12: en tydelig topisk riktig jobb
+  // for en reell CV gir raw ~0.22–0.32 (nøkkelorddekning i virkeligheten er
+  // langt under synthetic-perfekt). ×2.5 legger «klart riktig» på 55–80 og
+  // «beslektet» på 30–54 — intuitivt mot 0–100-visningen i kortet. Irrelevante
+  // jobber forblir ~0–10 (ingen bonus-gulv å strekke).
+  return Math.round(Math.min(1, raw * 2.5) * 100);
 }

@@ -22,7 +22,9 @@ import {
  * riktig jobb med god dekning lander 55–85.
  *
  * Terskler kalibrert mot prod-fordelingen etter v2-omregning 2026-06-12
- * (se scripts/recompute-matches.ts som printer persentiler):
+ * (scripts/recompute-matches.ts; skala-strekk ×2.5 i match-scoring.ts):
+ * reell utvikler-CV fikk sine åpenbart riktige jobber på 55–73 og beslektede
+ * på 30–54, irrelevante 0–10.
  *   Høy ≥ 55, Middels ≥ 30, Lav < 30.
  * Re-kalibrer når brukermassen vokser.
  */
