@@ -26,5 +26,7 @@ export default async function ApplicationDetailPage({
 
   if (!app) notFound();
 
-  return <ApplicationDetail initial={JSON.parse(JSON.stringify(app))} />;
+  // key: App Router remonterer ikke ved param-bytte — uten den viser
+  // klient-navigasjon mellom to søknader forrige søknads lokale state.
+  return <ApplicationDetail key={app.id} initial={JSON.parse(JSON.stringify(app))} />;
 }

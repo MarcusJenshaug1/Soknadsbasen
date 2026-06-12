@@ -32,6 +32,7 @@ export default async function SharedPipelinePage({
     where: { token },
     select: {
       userId: true,
+      sessionId: true,
       expiresAt: true,
       revokedAt: true,
       createdAt: true,
@@ -43,9 +44,15 @@ export default async function SharedPipelinePage({
     notFound();
   }
 
+  // Sesjonsbundne lenker viser kun sesjonen de ble laget i; legacy-lenker
+  // (sessionId null) beholder konto-vid visning.
   const [applications, sessions] = await Promise.all([
     prisma.jobApplication.findMany({
-      where: { userId: link.userId, archivedAt: null },
+      where: {
+        userId: link.userId,
+        archivedAt: null,
+        ...(link.sessionId ? { sessionId: link.sessionId } : {}),
+      },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -59,7 +66,10 @@ export default async function SharedPipelinePage({
       },
     }),
     prisma.jobSearchSession.findMany({
-      where: { userId: link.userId },
+      where: {
+        userId: link.userId,
+        ...(link.sessionId ? { id: link.sessionId } : {}),
+      },
       orderBy: { startedAt: "desc" },
       take: 5,
       select: {

@@ -314,6 +314,7 @@ model JobSearchSession {
 
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications JobApplication[]
+  shareLinks   ShareLink[]
 
   @@index([userId, status])
 }
@@ -513,15 +514,20 @@ model ShareLink {
   userId    String    @db.Uuid
   token     String    @unique @default(uuid())
   label     String?
+  /// Sesjonen lenken ble laget i — visningen scopes til den. null = legacy-
+  /// lenke laget før sesjonsbinding, viser hele kontoen (alle sesjoner).
+  sessionId String?
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session JobSearchSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
+  @@index([sessionId])
 }
 
 /// Public-facing CV share link. Live binding to UserData._resumeDataMap[resumeId].

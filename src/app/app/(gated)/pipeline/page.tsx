@@ -61,7 +61,13 @@ export default async function PipelinePage({
           <SessionBanner session={historicalSession} />
         </div>
       )}
-      <PipelineView initialApplications={applications} readOnly={isHistorical} />
+      {/* key: remount ved sesjonsbytte — PipelineView seed-er lokal state fra
+          initialApplications og ville ellers vist forrige sesjons kort. */}
+      <PipelineView
+        key={scopedSessionId ?? "alle"}
+        initialApplications={applications}
+        readOnly={isHistorical}
+      />
     </>
   );
 }

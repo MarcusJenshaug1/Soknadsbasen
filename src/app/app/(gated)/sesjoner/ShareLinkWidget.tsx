@@ -9,6 +9,7 @@ type LinkData = {
   expiresAt: string;
   createdAt: string;
   label: string | null;
+  session: { name: string } | null;
 };
 
 function formatDate(iso: string) {
@@ -92,7 +93,7 @@ export function ShareLinkWidget() {
         <div>
           <h2 className="text-[15px] font-medium">Del med coach / mentor</h2>
           <p className="text-[12px] text-ink/55 mt-0.5">
-            Generer en read-only lenke til din pipeline. Ingen innlogging kreves.
+            Generer en read-only lenke til aktiv jobbsøk-sesjon. Ingen innlogging kreves.
           </p>
         </div>
         {link ? (
@@ -126,6 +127,9 @@ export function ShareLinkWidget() {
           </div>
           <p className="text-[11px] text-ink/40">
             Utløper {formatDate(link.expiresAt)} · Lenken gir kun lesetilgang.
+            {link.session
+              ? ` Viser kun «${link.session.name}».`
+              : " Viser alle sesjoner (laget før sesjonsbinding)."}
           </p>
         </div>
       ) : (
