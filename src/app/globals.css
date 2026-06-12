@@ -236,6 +236,18 @@ body {
 .app-loader-dot {
   animation: app-loader-bounce 1.4s ease-in-out infinite both;
 }
+@keyframes app-loader-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.app-loader-overlay {
+  animation: app-loader-enter 240ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-loader-logo,
+  .app-loader-dot,
+  .app-loader-overlay { animation: none; }
+}
 
 /* Live-collab: dempet pulse på step-tab der annen bruker er aktiv */
 @keyframes collabPulse {

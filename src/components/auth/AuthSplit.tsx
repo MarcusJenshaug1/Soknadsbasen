@@ -122,6 +122,21 @@ function Toggle({
   );
 }
 
+/** GoTrue svarer på engelsk — oversett de vanlige til norsk. */
+function toNorskAuthError(message: string | undefined): string {
+  if (!message) return "Kunne ikke logge inn";
+  if (message.includes("Invalid login credentials")) {
+    return "Feil e-post eller passord.";
+  }
+  if (message.includes("Email not confirmed")) {
+    return "E-posten er ikke bekreftet ennå, sjekk innboksen din.";
+  }
+  if (message.toLowerCase().includes("rate limit")) {
+    return "For mange forsøk, vent litt og prøv igjen.";
+  }
+  return message;
+}
+
 function LoginForm({ redirect }: { redirect: string }) {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
@@ -129,6 +144,10 @@ function LoginForm({ redirect }: { redirect: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Skilles fra submitting: full-skjerm-loaderen skal KUN vises etter
+  // vellykket innlogging (under navigeringen) — et feil passord skal gi
+  // feilmelding i skjemaet, ikke et blaff av oransje loading-skjerm.
+  const [navigating, setNavigating] = useState(false);
 
   // Forhåndshent redirect-route slik at Next har RSC-strømmen klar når
   // window.location.assign trigger full nav. Marginal gevinst, gratis.
@@ -143,9 +162,10 @@ function LoginForm({ redirect }: { redirect: string }) {
     const res = await login(email, password);
     if (!res.ok) {
       setSubmitting(false);
-      setError(res.error ?? "Kunne ikke logge inn");
+      setError(toNorskAuthError(res.error));
       return;
     }
+    setNavigating(true);
     // La overlay-en stå mens browseren tar over med full nav.
     // window.location.assign trigger native loading-state i tab-en og
     // gir en clean overgang inn i /app sin egen loading.tsx (AppLoader).
@@ -154,7 +174,7 @@ function LoginForm({ redirect }: { redirect: string }) {
 
   return (
     <div>
-      {submitting && <AppLoader />}
+      {navigating && <AppLoader label="Logger deg inn …" />}
       <SectionLabel className="mb-4">Logg inn</SectionLabel>
       <h1 className="text-[36px] md:text-[40px] leading-[1] tracking-[-0.03em] font-medium mb-3">
         Velkommen tilbake.
@@ -185,7 +205,11 @@ function LoginForm({ redirect }: { redirect: string }) {
             className={underline}
           />
         </div>
-        {error && <p className="text-[12px] text-accent">{error}</p>}
+        {error && (
+          <p role="alert" className="text-[13px] text-accent">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={submitting} className={primary}>
           {submitting ? "Logger inn…" : "Logg inn"}
         </button>

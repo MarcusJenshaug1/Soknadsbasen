@@ -1,14 +1,21 @@
 import { cn } from "@/lib/cn";
 
-export function AppLoader({ className }: { className?: string }) {
+export function AppLoader({
+  className,
+  label,
+}: {
+  className?: string;
+  /** Kontekst-tekst under prikkene, f.eks. «Logger deg inn …». */
+  label?: string;
+}) {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[100] flex items-center justify-center bg-[#D5592E] px-6",
+        "app-loader-overlay fixed inset-0 z-[100] flex items-center justify-center bg-[#D5592E] px-6",
         className,
       )}
       role="status"
-      aria-label="Laster Søknadsbasen"
+      aria-label={label ?? "Laster Søknadsbasen"}
     >
       <div className="flex flex-col items-center gap-6 sm:gap-8">
         <svg
@@ -36,6 +43,10 @@ export function AppLoader({ className }: { className?: string }) {
           <span className="app-loader-dot h-1.5 w-1.5 rounded-full bg-[#faf8f5]" style={{ animationDelay: "0.16s" }} />
           <span className="app-loader-dot h-1.5 w-1.5 rounded-full bg-[#faf8f5]" style={{ animationDelay: "0.32s" }} />
         </div>
+
+        {label && (
+          <p className="text-[13px] tracking-wide text-[#faf8f5]/80">{label}</p>
+        )}
       </div>
     </div>
   );
