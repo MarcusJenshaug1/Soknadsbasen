@@ -21,16 +21,18 @@ const STEP_INTERVAL_MS = 2800;
  * serveren ser «fresh» → banneret forsvinner.
  */
 export function MatchMeBanner({
-  variant,
+  initialVariant,
   cost,
   totalJobs,
 }: {
-  variant: "never" | "stale";
+  /** Server-rendret tilstand — kan være foreldet pga. router-cachen. */
+  initialVariant: "never" | "stale" | null;
   cost: number;
   totalJobs: number;
 }) {
   const router = useRouter();
   const quota = useAiQuota();
+  const [variant, setVariant] = useState<"never" | "stale" | null>(initialVariant);
   const [phase, setPhase] = useState<Phase>("idle");
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,23 @@ export function MatchMeBanner({
     `Sammenligner med ${totalJobs.toLocaleString("nb-NO")} stillinger …`,
     "Rangerer treffene dine …",
   ];
+
+  // Reconciler mot fersk tilstand: navigasjoner hit kan serveres fra App
+  // Routerens klient-cache (prefetch holder payloaden i opptil 5 min), så
+  // server-tilstanden kan være fra FØR en CV-endring eller en kjøring.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/jobb/match-state")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { state?: "never" | "stale" | "fresh" | null } | null) => {
+        if (cancelled || !d) return;
+        setVariant(d.state === "never" || d.state === "stale" ? d.state : null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -76,13 +95,21 @@ export function MatchMeBanner({
       }
       bustAiQuotaCache();
       setPhase("done");
-      setTimeout(() => router.refresh(), 600);
+      setTimeout(() => {
+        setVariant(null);
+        router.refresh();
+      }, 600);
     } catch {
       if (tickerRef.current) clearInterval(tickerRef.current);
       setPhase("error");
       setError("Matchingen feilet. Prøv igjen om litt.");
     }
   }
+
+  // Skjult når matchingen er oppdatert — men hold komponenten montert under
+  // kjøring/done så loaderen ikke forsvinner under reconciliation.
+  if (variant === null && phase === "idle") return null;
+  const activeVariant = variant ?? "stale";
 
   return (
     <section
@@ -111,18 +138,18 @@ export function MatchMeBanner({
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-[13.5px] font-medium">
               <FiZap size={14} aria-hidden className="text-accent" />
-              {variant === "never"
+              {activeVariant === "never"
                 ? "Match meg med stillinger"
                 : "CV-en din er endret"}
             </p>
             <p className="mt-0.5 text-[12px] opacity-65">
-              {variant === "never"
+              {activeVariant === "never"
                 ? "Vi sammenligner CV-en din med alle aktive stillinger og gir hver av dem en match-score. Gratis, tar under et minutt."
                 : "Oppdater matchingen så scorene speiler den nye CV-en din."}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
-            {variant === "stale" && quota && !quota.unlimited && (
+            {activeVariant === "stale" && quota && !quota.unlimited && (
               <span className="inline-flex items-center gap-1 rounded-full bg-bg/10 px-2 py-0.5 text-[10.5px] font-medium">
                 <FiZap size={10} aria-hidden />
                 {cost} kreditter · {quota.remaining} igjen
@@ -133,7 +160,7 @@ export function MatchMeBanner({
               onClick={run}
               className="flex h-[34px] items-center gap-1.5 rounded-full bg-bg px-4 text-[12px] font-medium text-ink outline-none transition-colors hover:bg-accent hover:text-white focus-visible:ring-2 focus-visible:ring-accent/50"
             >
-              {variant === "never" ? "Match meg" : "Oppdater matching"}
+              {activeVariant === "never" ? "Match meg" : "Oppdater matching"}
               <FiArrowRight size={12} aria-hidden />
             </button>
           </div>

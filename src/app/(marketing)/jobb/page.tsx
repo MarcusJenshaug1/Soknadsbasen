@@ -236,9 +236,13 @@ async function ListSection({
 
   return (
     <>
-      {(matchState === "never" || matchState === "stale") && (
+      {/* Rendres for alle innloggede med CV — banneret reconcilerer selv mot
+          fersk tilstand (router-cachen kan servere foreldet server-state). */}
+      {cvStatus?.hasCv && (
         <MatchMeBanner
-          variant={matchState}
+          initialVariant={
+            matchState === "never" || matchState === "stale" ? matchState : null
+          }
           cost={MATCH_REFRESH_COST}
           totalJobs={counts.total}
         />
