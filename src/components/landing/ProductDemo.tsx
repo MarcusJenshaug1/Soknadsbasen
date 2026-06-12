@@ -16,6 +16,8 @@ import {
   ClipboardPaste,
   PenLine,
   LayoutGrid,
+  Pause,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -122,8 +124,6 @@ export default function ProductDemo() {
     >
       <div
         ref={ref}
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
         className="bg-panel rounded-[24px] md:rounded-[32px] p-5 md:p-10 relative overflow-hidden"
       >
         <div className="flex min-h-[28px] items-center justify-between mb-6 md:mb-8">
@@ -183,9 +183,24 @@ export default function ProductDemo() {
               );
             })}
           </div>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-ink-faint hidden md:block">
-            Live demo
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-ink-faint hidden md:block">
+              Live demo
+            </span>
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              aria-pressed={paused}
+              aria-label={paused ? "Spill av demoen" : "Sett demoen på pause"}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/15 text-ink/60 transition-colors hover:border-ink/40 hover:text-ink outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-panel"
+            >
+              {paused ? (
+                <Play className="h-3 w-3 translate-x-px" fill="currentColor" />
+              ) : (
+                <Pause className="h-3 w-3" fill="currentColor" />
+              )}
+            </button>
+          </div>
         </div>
 
         <LayoutGroup>
