@@ -11,6 +11,7 @@ type User = {
   email: string;
   name: string | null;
   isAdmin: boolean;
+  aiUnlimited: boolean;
   createdAt: string | Date;
   subscription: Subscription | null;
   orgMemberships: { role: string; org: { slug: string; displayName: string } }[];
@@ -319,6 +320,25 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
     }
   }
 
+  async function toggleAiUnlimited(user: User) {
+    setTogglingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/toggle-ai-unlimited`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === user.id ? { ...u, aiUnlimited: data.aiUnlimited } : u,
+          ),
+        );
+      }
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
   function updateSub(userId: string, sub: Subscription | null) {
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, subscription: sub } : u)));
   }
@@ -437,6 +457,9 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
                     {(u.isAdmin || isSuperAdmin) && (
                       <span className="text-[11px] text-amber-600">gratis tilgang</span>
                     )}
+                    {u.aiUnlimited && !u.isAdmin && !isSuperAdmin && (
+                      <span className="text-[11px] text-purple-600 font-medium">evig AI-kvote</span>
+                    )}
                     {u.orgMemberships[0] && (
                       <a href={`/admin/orger/${u.orgMemberships[0].org.slug}`} className="text-[11px] text-ink/40 hover:text-ink">
                         {u.orgMemberships[0].org.displayName}
@@ -461,6 +484,20 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
                       }`}
                     >
                       {togglingId === u.id ? "…" : u.isAdmin ? "Fjern admin" : "Gi admin"}
+                    </button>
+                  )}
+                  {!isSuperAdmin && !u.isAdmin && (
+                    <button
+                      onClick={() => toggleAiUnlimited(u)}
+                      disabled={togglingId === u.id}
+                      title="Evig AI-kvote uavhengig av abonnement"
+                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${
+                        u.aiUnlimited
+                          ? "border-purple-200 text-purple-700 hover:bg-purple-50"
+                          : "border-black/10 text-ink/40 hover:text-ink hover:border-black/20"
+                      }`}
+                    >
+                      {togglingId === u.id ? "…" : u.aiUnlimited ? "Fjern evig AI" : "Gi evig AI"}
                     </button>
                   )}
                   <button

@@ -12,6 +12,7 @@ export default async function AdminBrukerePage() {
       email: true,
       name: true,
       isAdmin: true,
+      aiUnlimited: true,
       createdAt: true,
       subscription: { select: { status: true, type: true, currentPeriodEnd: true } },
       orgMemberships: {
