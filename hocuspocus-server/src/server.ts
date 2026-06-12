@@ -29,9 +29,16 @@ import {
 
 const PORT = Number(process.env.PORT ?? 1234);
 const SUPABASE_URL = required("SUPABASE_URL");
-const JWKS = createRemoteJWKSet(
-  new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
-);
+// Selvhostet Supabase (Coolify) signerer access-tokens med symmetrisk HS256 —
+// JWKS-endepunktet kan ikke brukes da (jose avviser symmetriske nøkler i et
+// key set). Med SUPABASE_JWT_SECRET satt verifiserer vi direkte mot secreten;
+// uten faller vi tilbake til remote JWKS (hostet Supabase, asymmetrisk).
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET
+  ? new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET)
+  : null;
+const JWKS = JWT_SECRET
+  ? null
+  : createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`));
 
 const prisma = new PrismaClient();
 
@@ -55,9 +62,13 @@ const server = new Hocuspocus({
     if (!cvOwnerId) throw new Error("Invalid document name");
     if (!token) throw new Error("Missing auth token");
 
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: `${SUPABASE_URL}/auth/v1`,
-    });
+    const { payload } = JWT_SECRET
+      ? await jwtVerify(token, JWT_SECRET, {
+          issuer: `${SUPABASE_URL}/auth/v1`,
+        })
+      : await jwtVerify(token, JWKS!, {
+          issuer: `${SUPABASE_URL}/auth/v1`,
+        });
     const callerId = payload.sub;
     if (!callerId) throw new Error("Token missing sub");
 
