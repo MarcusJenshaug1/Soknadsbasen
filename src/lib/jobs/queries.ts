@@ -155,32 +155,52 @@ async function loadJobList(
   }));
 }
 
+export type RecommendedJob = JobListItem & {
+  /** Felles ATS-nøkkelord mellom CV og annonse — «hvorfor matcher det». */
+  matchedKeywords: string[];
+};
+
 /** Toppmatcher til «Anbefalt for deg»-raden (innloggede med CV). */
 export const getTopMatches = cache(
-  async (userId: string, limit: number): Promise<JobListItem[]> => {
-    const rows = await prisma.$queryRaw<
-      (Omit<JobListItem, "seen"> & { seen: boolean | null })[]
-    >`
-      SELECT
-        j.id, j.slug, j.title,
-        j."employerName", j."employerHomepage",
-        j.kommune, j.region, j.extent, j."engagementType",
-        j."aiRemote", j."isSummerJob",
-        j."applicationDueAt", j."publishedAt",
-        '' AS excerpt,
-        m.score AS "matchScore",
-        (s."userId" IS NOT NULL) AS seen
-      FROM "JobMatch" m
-      JOIN "Job" j ON j.id = m."jobId" AND j."isActive"
-      LEFT JOIN "JobSeen" s ON s."jobId" = j.id AND s."userId" = m."userId"
-      WHERE m."userId" = ${userId}::uuid
-      ORDER BY m.score DESC, j."publishedAt" DESC
-      LIMIT ${limit}
-    `;
-    return rows.map((r) => ({
+  async (userId: string, limit: number): Promise<RecommendedJob[]> => {
+    const [rows, userData] = await Promise.all([
+      prisma.$queryRaw<
+        (Omit<JobListItem, "seen"> & { seen: boolean | null; aiKeywords: string[] })[]
+      >`
+        SELECT
+          j.id, j.slug, j.title,
+          j."employerName", j."employerHomepage",
+          j.kommune, j.region, j.extent, j."engagementType",
+          j."aiRemote", j."isSummerJob",
+          j."applicationDueAt", j."publishedAt",
+          j."aiKeywords",
+          '' AS excerpt,
+          m.score AS "matchScore",
+          (s."userId" IS NOT NULL) AS seen
+        FROM "JobMatch" m
+        JOIN "Job" j ON j.id = m."jobId" AND j."isActive"
+        LEFT JOIN "JobSeen" s ON s."jobId" = j.id AND s."userId" = m."userId"
+        WHERE m."userId" = ${userId}::uuid
+        ORDER BY m.score DESC, j."publishedAt" DESC
+        LIMIT ${limit}
+      `,
+      prisma.userData.findUnique({
+        where: { userId },
+        select: { aiKeywords: true },
+      }),
+    ]);
+
+    const cvKeywords = new Set(
+      (userData?.aiKeywords ?? []).map((k) => k.toLowerCase()),
+    );
+
+    return rows.map(({ aiKeywords, ...r }) => ({
       ...r,
       matchScore: r.matchScore === null ? null : Number(r.matchScore),
       seen: Boolean(r.seen),
+      matchedKeywords: cvKeywords.size
+        ? aiKeywords.filter((k) => cvKeywords.has(k.toLowerCase())).slice(0, 3)
+        : [],
     }));
   },
 );

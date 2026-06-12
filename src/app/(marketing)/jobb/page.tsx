@@ -26,6 +26,7 @@ import {
   getTopMatches,
   serializeRawParams,
   type JobListItem,
+  type RecommendedJob,
   type JobbContext,
 } from "@/lib/jobs/queries";
 import { jobbSeoDecision, suggestSearchName } from "@/lib/jobs/seo";
@@ -217,7 +218,7 @@ async function ListSection({
   lastVisit: Date | null;
   listPromise: Promise<JobListItem[]>;
   facetsPromise: Promise<FacetCounts>;
-  recommendedPromise: Promise<JobListItem[]> | null;
+  recommendedPromise: Promise<RecommendedJob[]> | null;
 }) {
   const [jobs, counts, recommended] = await Promise.all([
     listPromise,

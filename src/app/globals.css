@@ -279,3 +279,14 @@ body {
   from { opacity: 0; transform: translateY(8px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Anbefalt-rad (stillingsmodulen): forskjøvet entrance + match-bar-fyll.
+   Av ved reduced motion via den globale regelen i @layer utilities. */
+@keyframes recommended-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes match-bar-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
