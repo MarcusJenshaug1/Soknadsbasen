@@ -7,12 +7,14 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 import { jobWhereSql, type JobbFilter } from "./filters";
+import { withHeavyQueryGate } from "./heavy-query-gate";
 import { getRegisterIndex, type RegisterIndex } from "./registers";
 import {
   parseJobbSearchParams,
   type JobbParams,
   type SortKey,
 } from "./search-params";
+import { createSingleFlightCache } from "./single-flight-cache";
 
 export const PAGE_SIZE = 20;
 
@@ -75,6 +77,11 @@ export type JobListItem = {
  * relevans-sortering trenger JOIN/ts_rank. Deler WHERE-fragment med
  * facett-RPC-en (filters.ts) så liste og counts aldri spriker.
  */
+// 60 s single-flight-cache for anonyme lister: bot-crawl av /jobb-URL-er er
+// hoveddelen av trafikken, og listespørringen detoaster description per rad
+// (excerpt) — ugatet og ucachet kvalte den DB-en under hendelsen 2026-06-12.
+const anonListCache = createSingleFlightCache<JobListItem[]>(60_000, 500);
+
 export async function getJobList(opts: {
   filter: JobbFilter;
   sort: SortKey;
@@ -88,6 +95,21 @@ export async function getJobList(opts: {
       ? "nyeste"
       : opts.sort;
 
+  if (!userId) {
+    const key = `${JSON.stringify(filter)}|${sort}|${side}`;
+    return anonListCache(key, () =>
+      withHeavyQueryGate(() => loadJobList(filter, sort, side, null)),
+    );
+  }
+  return withHeavyQueryGate(() => loadJobList(filter, sort, side, userId));
+}
+
+async function loadJobList(
+  filter: JobbFilter,
+  sort: SortKey,
+  side: number,
+  userId: string | null,
+): Promise<JobListItem[]> {
   const userJoins = userId
     ? Prisma.sql`
         LEFT JOIN "JobMatch" m ON m."jobId" = j.id AND m."userId" = ${userId}::uuid
