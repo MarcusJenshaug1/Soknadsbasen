@@ -1,19 +1,22 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
-
 import { prisma } from "@/lib/prisma";
 
 import { displayPlace, formatCategory, isValidFacet } from "./format";
 import { slugifyNb } from "./slug";
 import { fylkeByDbValue } from "./geo";
+import { createSingleFlightCache } from "./single-flight-cache";
 
 /**
  * DB-deriverte registre for kommune og kategori: slug ↔ dbValue ↔ label.
  * Deriveres fra faktiske kolonneverdier (aldri statiske lister) så de ikke
- * kan sprike fra NAVs navneformer. Cachet 1 t — vokabularet endres bare når
- * feeden introduserer nye verdier.
+ * kan sprike fra NAVs navneformer. Cachet 1 t i prosess-lokal single-flight-
+ * cache (IKKE unstable_cache: den deduper ikke samtidige revalideringer, jf.
+ * DB-hendelsen 2026-06-12) — vokabularet endres bare når feeden introduserer
+ * nye verdier.
  */
+
+const registerCache = createSingleFlightCache<RegisterEntry[]>(3_600_000);
 
 export type RegisterEntry = {
   slug: string;
@@ -41,8 +44,8 @@ function dedupeSlugs(entries: RegisterEntry[]): RegisterEntry[] {
   });
 }
 
-export const getKommuneRegister = unstable_cache(
-  async (): Promise<RegisterEntry[]> => {
+export function getKommuneRegister(): Promise<RegisterEntry[]> {
+  return registerCache("kommune", async () => {
     // Per-element-par fra workLocations: (kommune, fylke) fra SAMME lokasjon —
     // dekker alle arbeidssteder, ikke bare primærkolonnen. lowercase matcher
     // kommuner[]-arrayen som filtre/RPC bruker.
@@ -71,13 +74,11 @@ export const getKommuneRegister = unstable_cache(
     return dedupeSlugs(
       [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, "nb-NO")),
     );
-  },
-  ["jobb-kommune-register"],
-  { revalidate: 3600 },
-);
+  });
+}
 
-export const getKategoriRegister = unstable_cache(
-  async (): Promise<RegisterEntry[]> => {
+export function getKategoriRegister(): Promise<RegisterEntry[]> {
+  return registerCache("kategori", async () => {
     const rows = await prisma.job.groupBy({
       by: ["category"],
       where: { isActive: true, category: { not: null } },
@@ -96,18 +97,19 @@ export const getKategoriRegister = unstable_cache(
       });
     }
     return [...seen.values()];
-  },
-  ["jobb-kategori-register"],
-  { revalidate: 3600 },
-);
+  });
+}
 
 /**
  * Kuraterte /jobb-kombinasjoner for sitemap: alle fylker med treff,
  * kategorier med >= 5 treff, og fylke×kategori-par med >= 5 treff
  * (topp 500 etter antall). Speiler indekserings-reglene i seo.ts.
  */
-export const getCuratedCombos = unstable_cache(
-  async (): Promise<{ fylke?: string; kategori?: string }[]> => {
+const comboCache =
+  createSingleFlightCache<{ fylke?: string; kategori?: string }[]>(3_600_000);
+
+export function getCuratedCombos(): Promise<{ fylke?: string; kategori?: string }[]> {
+  return comboCache("combos", async () => {
     const MIN_KATEGORI = 5;
     const MIN_PAIR = 5;
     const MAX_PAIRS = 500;
@@ -165,10 +167,8 @@ export const getCuratedCombos = unstable_cache(
         combos.map((c) => [`${c.fylke ?? ""}|${c.kategori ?? ""}`, c]),
       ).values(),
     ];
-  },
-  ["jobb-curated-combos"],
-  { revalidate: 3600 },
-);
+  });
+}
 
 /**
  * Slug→dbValue-indeks for URL-parsing. Bygges én gang per request fra de

@@ -5,6 +5,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 import { facetRpcParams, type JobbFilter } from "./filters";
+import { createSingleFlightCache } from "./single-flight-cache";
 
 /**
  * Alle facett-counts for gjeldende filter, gruppert per facettnøkkel, pluss
@@ -19,6 +20,12 @@ export type FacetCounts = {
 
 type FacetCountRow = { facet: string; value: string; n: bigint };
 
+// 3 min TTL per filterkombinasjon: feeden synces hvert 5. min, så ferskere
+// counts finnes ikke — og uten denne kjøres RPC-en per pageview, som under
+// bot-crawl av facet-URL-er ga ubegrenset DB-etterspørsel (hendelsen
+// 2026-06-12). maxEntries begrenser minne under crawl av lange kombo-haler.
+const facetCountsCache = createSingleFlightCache<FacetCounts>(180_000, 1000);
+
 /**
  * cache()-wrappet så page + generateMetadata + sidebar deler én rundtur per
  * request (samme regel som getSessionWithAccess).
@@ -26,7 +33,13 @@ type FacetCountRow = { facet: string; value: string; n: bigint };
 export const getFacetCounts = cache(
   async (filter: JobbFilter): Promise<FacetCounts> => {
     const p = facetRpcParams(filter);
+    return facetCountsCache(JSON.stringify(p), () => loadFacetCounts(p));
+  },
+);
 
+async function loadFacetCounts(
+  p: ReturnType<typeof facetRpcParams>,
+): Promise<FacetCounts> {
     // Eksplisitte casts på ALLE parametre: Prisma sender Date som timestamptz
     // og null som unknown — uten casts matcher ikke funksjonssignaturen
     // (verifisert i prod: 42883 «does not exist»).
@@ -60,5 +73,4 @@ export const getFacetCounts = cache(
       (counts[row.facet] ??= {})[row.value] = n;
     }
     return { total, counts };
-  },
-);
+}
