@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { ImportCVModal } from "@/components/ImportCVModal";
+import { useResumeStore } from "@/store/useResumeStore";
 import { cn } from "@/lib/cn";
 
 type Role = "design" | "utvikling" | "produkt" | "marked" | "helse" | "okonomi" | "salg" | "undervisning";
@@ -40,7 +42,7 @@ const CV_SOURCES: {
   {
     id: "linkedin",
     title: "Importer fra LinkedIn",
-    desc: "Lim inn profil-URL",
+    desc: "Last ned profilen som PDF fra LinkedIn, så leser vi den",
   },
 ];
 
@@ -56,12 +58,36 @@ export function Onboarding({ monthlyPriceId, oneTimePriceId }: Props) {
   const [role, setRole] = useState<Role | null>(null);
   const [customRole, setCustomRole] = useState("");
   const [source, setSource] = useState<CvSource>("pdf");
+  const [importOpen, setImportOpen] = useState(false);
 
   function next() {
     setStep((s) => (s < 5 ? ((s + 1) as Step) : s));
   }
   function back() {
     setStep((s) => (s > 1 ? ((s - 1) as Step) : s));
+  }
+
+  // Svaret fra trinn 2 brukes faktisk: ønsket rolle skrives inn i CV-en
+  // (cloud-sync persisterer) — med mindre CV-en allerede har en rolle.
+  function commitRoleAndNext() {
+    const store = useResumeStore.getState();
+    const chosen =
+      customRole.trim() || ROLES.find((r) => r.id === role)?.label || "";
+    if (chosen && store.isLoaded && !store.data.role.trim()) {
+      store.updateRole(chosen);
+    }
+    next();
+  }
+
+  // Trinn 3: PDF og LinkedIn åpner faktisk import (LinkedIn-profilen lastes
+  // ned som PDF fra LinkedIn og parses av samme flyt); «fra bunnen» går rett
+  // videre. Modal lukkes → videre uansett (import er valgfri å fullføre).
+  function commitSourceAndNext() {
+    if (source === "pdf" || source === "linkedin") {
+      setImportOpen(true);
+      return;
+    }
+    next();
   }
 
   return (
@@ -75,13 +101,25 @@ export function Onboarding({ monthlyPriceId, oneTimePriceId }: Props) {
             setRole={setRole}
             customRole={customRole}
             setCustomRole={setCustomRole}
-            onNext={next}
+            onNext={commitRoleAndNext}
             onBack={back}
           />
         )}
         {step === 3 && (
-          <Step3 source={source} setSource={setSource} onNext={next} onBack={back} />
+          <Step3
+            source={source}
+            setSource={setSource}
+            onNext={commitSourceAndNext}
+            onBack={back}
+          />
         )}
+        <ImportCVModal
+          open={importOpen}
+          onClose={() => {
+            setImportOpen(false);
+            next();
+          }}
+        />
         {step === 4 && <Step4 onNext={next} onBack={back} />}
         {step === 5 && (
           <Step5
@@ -315,6 +353,12 @@ function Step3({
             );
           })}
         </div>
+        {source === "linkedin" && (
+          <p className="mt-4 rounded-2xl bg-[#D5592E]/5 border border-[#D5592E]/20 px-4 py-3 text-[12px] leading-relaxed text-[#14110e]/75">
+            På LinkedIn: åpne profilen din → «Mer» → «Lagre som PDF». Last
+            den opp i neste steg, så fyller vi ut CV-en for deg.
+          </p>
+        )}
       </div>
       <div className="p-6 max-w-xl mx-auto w-full flex gap-2">
         <button
