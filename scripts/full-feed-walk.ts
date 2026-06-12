@@ -22,9 +22,21 @@ import {
 } from "../src/lib/jobs/nav-feed";
 import { processItems } from "../src/lib/jobs/sync";
 
-const STATE_FILE = "/tmp/sb-full-walk-state.json";
+/**
+ * --backfill-old: motsatt modus — prosesser KUN sider eldre enn cutoff
+ * (resten tok hovedwalken), og bare items med status ACTIVE som ikke
+ * allerede er aktive hos oss (per-side DB-sjekk). Detail-endepunktet
+ * returnerer ALLTID nåværende status, så annonser som ble deaktivert etter
+ * det gamle eventet selvkorrigeres av isDetailActive. Gjør 4 300 gamle
+ * sider til minutter i stedet for timer.
+ */
+const BACKFILL_OLD = process.argv.includes("--backfill-old");
+
+const STATE_FILE = BACKFILL_OLD
+  ? "/tmp/sb-old-walk-state.json"
+  : "/tmp/sb-full-walk-state.json";
 const SKIP_OLDER_THAN_DAYS = 250;
-const MAX_PAGES_PER_RUN = 5000;
+const MAX_PAGES_PER_RUN = 6000;
 
 type WalkState = { nextUrl: string | null; pagesDone: number; inserted: number };
 
@@ -63,12 +75,42 @@ async function main() {
 
     const { body, lastModified } = page;
     const pageTime = lastModified ? new Date(lastModified).getTime() : NaN;
-    const tooOld = !Number.isNaN(pageTime) && pageTime < cutoff;
+    const isOldPage = !Number.isNaN(pageTime) && pageTime < cutoff;
 
-    if (tooOld) {
+    if (BACKFILL_OLD && !isOldPage) {
+      // Hovedwalken dekket alt nyere enn cutoff — ferdig.
+      console.log(
+        `Nådde cutoff-dato etter ${state.pagesDone} sider — gamle sider ferdig (+${state.inserted})`,
+      );
+      writeFileSync(STATE_FILE, JSON.stringify({ ...state, nextUrl: "DONE" }));
+      const active = await prisma.job.count({ where: { isActive: true } });
+      console.log(`Aktive jobber i DB nå: ${active}`);
+      return;
+    }
+
+    let items = body.items ?? [];
+    if (BACKFILL_OLD && items.length > 0) {
+      // Kun ACTIVE-events for annonser vi ikke allerede har som aktive.
+      const activeItems = items.filter((i) => i._feed_entry.status === "ACTIVE");
+      if (activeItems.length === 0) {
+        items = [];
+      } else {
+        const known = await prisma.job.findMany({
+          where: {
+            externalId: { in: activeItems.map((i) => i._feed_entry.uuid) },
+            isActive: true,
+          },
+          select: { externalId: true },
+        });
+        const knownSet = new Set(known.map((k) => k.externalId));
+        items = activeItems.filter((i) => !knownSet.has(i._feed_entry.uuid));
+      }
+    }
+
+    if (!BACKFILL_OLD && isOldPage) {
       skipped += 1;
-    } else if ((body.items ?? []).length > 0) {
-      const r = await processItems(body.items, token);
+    } else if (items.length > 0) {
+      const r = await processItems(items, token);
       state.inserted += r.inserted;
       if (r.errors.length > 0) {
         console.error(`  side ${state.pagesDone}: ${r.errors.slice(0, 2).join("; ")}`);

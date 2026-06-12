@@ -273,8 +273,22 @@ export async function processItems(
             ),
           ]);
           if (!detail) return { action: "skipped" as const, error: null };
-          const action = await upsertJob(item, detail);
-          return { action, error: null };
+          try {
+            const action = await upsertJob(item, detail);
+            return { action, error: null };
+          } catch (err) {
+            // P2002: samme annonse kan ha flere events på én side — to
+            // parallelle upserts racer om create. Andre forsøk treffer
+            // update-grenen.
+            if (
+              err instanceof Prisma.PrismaClientKnownRequestError &&
+              err.code === "P2002"
+            ) {
+              const action = await upsertJob(item, detail);
+              return { action, error: null };
+            }
+            throw err;
+          }
         } catch (err) {
           return {
             action: "error" as const,
