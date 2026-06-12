@@ -7,6 +7,7 @@ import { SectionLabel } from "@/components/ui/Pill";
 import { cn } from "@/lib/cn";
 import { AvatarCropper } from "@/components/AvatarCropper";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { NullstillSection } from "./NullstillSection";
 
 type User = {
   id: string;
@@ -345,6 +346,7 @@ export function ProfilForm({ initialUser }: { initialUser: User }) {
               action="Eksporter"
               onClick={onExport}
             />
+            <NullstillSection />
             {!deleteOpen ? (
               <Row
                 title="Slett konto"
