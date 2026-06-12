@@ -6,11 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
 
 import { extractJobKeywords } from "./format";
+import { getKeywordIdf } from "./keyword-idf";
 import {
   normalizeMatchText,
   scoreJobMatch,
   type CvMatchProfile,
   type JobMatchSide,
+  type KeywordIdf,
 } from "./match-scoring";
 
 /**
@@ -21,14 +23,15 @@ import {
  * og UTEN CV-globale bonuser — en irrelevant jobb scorer nær 0, en topisk
  * riktig jobb med god dekning lander 55–85.
  *
- * Terskler kalibrert mot prod-fordelingen etter v2-omregning 2026-06-12
- * (scripts/recompute-matches.ts; skala-strekk ×2.5 i match-scoring.ts):
- * reell utvikler-CV fikk sine åpenbart riktige jobber på 55–73 og beslektede
- * på 30–54, irrelevante 0–10.
- *   Høy ≥ 55, Middels ≥ 30, Lav < 30.
- * Re-kalibrer når brukermassen vokser.
+ * Terskler kalibrert for v3-scoringen 2026-06-12 (scripts/
+ * calibrate-thresholds.ts mot full aktiv jobbmasse + dommer-fasit fra
+ * variant-evalueringen): reell utvikler-CV ga p99=0 (F1 nuller irrelevante),
+ * klare yrkestreff 35–65, beslektede 18–34, og dommer-bekreftet irrelevante
+ * lakk maks til 17.
+ *   Høy ≥ 35, Middels ≥ 18, Lav < 18.
+ * Re-kalibrer når brukermassen vokser (n=1 CV i fasiten).
  */
-export const MATCH_THRESHOLDS = { hoy: 55, middels: 30 } as const;
+export const MATCH_THRESHOLDS = { hoy: 35, middels: 18 } as const;
 
 export type MatchTier = "hoy" | "middels" | "lav";
 
@@ -150,6 +153,7 @@ function asNames(value: unknown): string[] {
 function scoreRows(
   users: { userId: string; profile: ResumeProfile }[],
   jobs: ScorableJob[],
+  idf: KeywordIdf,
 ): { userId: string; jobId: string; score: number; cvHash: string }[] {
   const rows: { userId: string; jobId: string; score: number; cvHash: string }[] = [];
   for (const job of jobs) {
@@ -159,7 +163,7 @@ function scoreRows(
       rows.push({
         userId: u.userId,
         jobId: job.id,
-        score: scoreJobMatch(u.profile.cv, side),
+        score: scoreJobMatch(u.profile.cv, side, idf),
         cvHash: u.profile.cvHash,
       });
     }
@@ -186,7 +190,7 @@ async function writeRows(
 export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
   if (jobIds.length === 0) return 0;
 
-  const [userRows, jobs] = await Promise.all([
+  const [userRows, jobs, idf] = await Promise.all([
     prisma.userData.findMany({
       where: { aiKeywordsHash: { not: null } },
       select: { userId: true, resumeData: true, aiKeywords: true },
@@ -195,6 +199,7 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
       where: { id: { in: jobIds }, isActive: true },
       select: SCORABLE_JOB_SELECT,
     }),
+    getKeywordIdf(),
   ]);
 
   const users = userRows
@@ -205,7 +210,7 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
     .filter((u): u is { userId: string; profile: ResumeProfile } => u.profile !== null);
   if (users.length === 0 || jobs.length === 0) return 0;
 
-  const rows = scoreRows(users, jobs);
+  const rows = scoreRows(users, jobs, idf);
 
   // Delete + createMany er idempotente enkeltsteg (ingen lang transaksjon
   // gjennom pgBouncer); krasj midt i selvhelbreder ved neste kjøring.
@@ -229,13 +234,16 @@ export async function computeMatchesForUser(userId: string): Promise<number> {
   const profile = buildProfile(userData.resumeData, userData.aiKeywords);
   if (!profile) return 0;
 
-  const jobs = await prisma.job.findMany({
-    where: { isActive: true, NOT: { aiKeywords: { isEmpty: true } } },
-    select: SCORABLE_JOB_SELECT,
-  });
+  const [jobs, idf] = await Promise.all([
+    prisma.job.findMany({
+      where: { isActive: true, NOT: { aiKeywords: { isEmpty: true } } },
+      select: SCORABLE_JOB_SELECT,
+    }),
+    getKeywordIdf(),
+  ]);
   if (jobs.length === 0) return 0;
 
-  const rows = scoreRows([{ userId, profile }], jobs);
+  const rows = scoreRows([{ userId, profile }], jobs, idf);
 
   await prisma.jobMatch.deleteMany({ where: { userId } });
   await writeRows(rows);

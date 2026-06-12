@@ -1,27 +1,25 @@
 /**
- * Match-scoring v2: CV ↔ jobb i BEGGE retninger, ren og testbar (ingen IO).
+ * Match-scoring v3 («V8»): CV ↔ jobb i BEGGE retninger, ren og testbar
+ * (ingen IO). Valgt etter variant-evalueringen 2026-06-12: 8 varianter målt
+ * mot LLM-dommer-fasit (150 jobber, rubrikk 0–3) — v3 ga Spearman 0.897 /
+ * NDCG@20 0.772 / topp10-presisjon 1.00, mot v2 sine 0.550 / 0.640 / 0.90.
+ * Harness: scripts/eval-match-variants.ts.
  *
- * v1 (scoreAtsFromNormalized) hadde tre strukturelle problemer:
- *  1. CV-globale bonuser (sammendrag 0.08 + kompletthet 0.12) ga en komplett
- *     CV et 20-poengs gulv på ALLE jobber — irrelevante stillinger landet
- *     som «Middels». Ranking ble ikke påvirket (konstant offset), men
- *     tier-labelene løy.
- *  2. Ren substring-matching: nøkkelordet «it» traff «kvalitet», «b2b» traff
- *     ingenting-relevant, korte termer = støy.
- *  3. Alle nøkkelord veide likt, og matchingen gikk kun én vei (jobbens krav
- *     søkt i CV-en). En jobb med få/generiske nøkkelord («norsk»,
- *     «kommunikasjon») scoret høyt for alle.
+ * v2-svakheten den retter: lineær vekting (0.5·dekning + 0.3·affinitet +
+ * 0.2·tittel) lot en jobb score høyt på ferdighetsdekning ALENE — generiske
+ * nøkkelord («norsk», «kommunikasjon») finnes i enhver CV, så topisk feile
+ * jobber slo topisk riktige.
  *
- * v2: 100 × min(1, 0.5×ferdighetsdekning + 0.3×yrkesaffinitet + 0.2×titteltreff)
- *  - Ferdighetsdekning (jobb → CV): andel av jobbens nøkkelord funnet i
- *    CV-teksten, ordgrense-matchet, vektet etter viktighet (LLM/NAV sorterer
- *    viktigst først — topp 5 teller 1,5×).
- *  - Yrkesaffinitet (CV → jobb): andel av CV-ens topp-yrkestermer (aiKeywords
- *    + rolle) som treffer jobbens yrkesside (tittel, kategori, occupation).
- *    Dette er den motsatte retningen — en sykepleier-CV treffer ikke
- *    utvikler-jobbens yrkesside uansett hvor mange generiske krav som dekkes.
- *  - Titteltreff: rolle/topp-termer i selve annonsetittelen — høypresisjons-
- *    signal begge veier.
+ * v3: 100 × min(1, (F1(dekning, affinitet) + tittelbonus) × 2.8)
+ *  - Ferdighetsdekning (jobb → CV): IDF-vektet — sjeldne nøkkelord
+ *    (TypeScript, sykepleierautorisasjon) teller mye mer enn allesteds-
+ *    værende. IDF-funksjonen injiseres (DB-avledet i prod, se
+ *    keyword-idf.ts); uten injisert IDF degraderer den til uvektet andel.
+ *  - Yrkesaffinitet (CV → jobb): som v2 — andel av CV-ens topp-yrkestermer
+ *    som treffer jobbens yrkesside (tittel, kategori, occupation).
+ *  - F1 (harmonisk middel): BEGGE retninger må treffe — høy dekning med null
+ *    affinitet (eller omvendt) gir lav score. Dette er hovedgevinsten.
+ *  - Tittelbonus: +0.15 når CV-rollen står i selve annonsetittelen.
  * Ingen CV-globale bonuser: en irrelevant jobb scorer nær 0.
  */
 
@@ -78,23 +76,32 @@ export function termMatches(normalizedText: string, rawTerm: string): boolean {
   return re.test(normalizedText);
 }
 
-const TOP_WEIGHT_COUNT = 5;
-const TOP_WEIGHT = 1.5;
 const AFFINITY_TERMS = 15;
-const TITLE_TERMS = 8;
+const TITLE_BONUS = 0.15;
+// Skala-strekk fra evalueringen: F1 for «klart riktig» jobb lander typisk
+// 0.20–0.35 (reell dekning er langt under synthetic-perfekt); ×2.8 strekker
+// dette mot 55–100 i kort-visningen. Irrelevante forblir ~0 (F1 ≈ 0).
+const SCALE = 2.8;
 
-export function scoreJobMatch(cv: CvMatchProfile, job: JobMatchSide): number {
+/** IDF-vekt per nøkkelord (DB-avledet i prod). Uten: alle teller likt. */
+export type KeywordIdf = (keyword: string) => number;
+
+export function scoreJobMatch(
+  cv: CvMatchProfile,
+  job: JobMatchSide,
+  idf?: KeywordIdf,
+): number {
   const keywords = job.keywords.map((k) => k.trim()).filter(Boolean);
   if (keywords.length === 0) return 0;
 
-  // 1) Ferdighetsdekning (jobb → CV), viktighetsvektet.
+  // 1) Ferdighetsdekning (jobb → CV), IDF-vektet.
   let gained = 0;
   let possible = 0;
-  keywords.forEach((kw, i) => {
-    const w = i < TOP_WEIGHT_COUNT ? TOP_WEIGHT : 1;
+  for (const kw of keywords) {
+    const w = idf ? idf(kw) : 1;
     possible += w;
     if (termMatches(cv.text, kw)) gained += w;
-  });
+  }
   const coverage = possible > 0 ? gained / possible : 0;
 
   // 2) Yrkesaffinitet (CV → jobb).
@@ -110,22 +117,17 @@ export function scoreJobMatch(cv: CvMatchProfile, job: JobMatchSide): number {
       ? cvTerms.filter((t) => termMatches(jobOccText, t)).length / cvTerms.length
       : 0;
 
-  // 3) Titteltreff: gradert — rolle i tittel = fullt, ellers andel topp-termer.
-  const jobTitle = normalizeMatchText(job.title);
-  let titleHit = 0;
-  if (cv.role && termMatches(jobTitle, cv.role)) {
-    titleHit = 1;
-  } else {
-    const top = cvTerms.slice(0, TITLE_TERMS);
-    const hits = top.filter((t) => termMatches(jobTitle, t)).length;
-    titleHit = top.length > 0 ? Math.min(1, hits / 2) : 0;
-  }
+  // 3) F1: begge retninger må treffe — ensidige treff straffes hardt.
+  const f1 =
+    coverage + affinity > 0
+      ? (2 * coverage * affinity) / (coverage + affinity)
+      : 0;
 
-  const raw = 0.5 * coverage + 0.3 * affinity + 0.2 * titleHit;
-  // Skala-strekk kalibrert mot prod 2026-06-12: en tydelig topisk riktig jobb
-  // for en reell CV gir raw ~0.22–0.32 (nøkkelorddekning i virkeligheten er
-  // langt under synthetic-perfekt). ×2.5 legger «klart riktig» på 55–80 og
-  // «beslektet» på 30–54 — intuitivt mot 0–100-visningen i kortet. Irrelevante
-  // jobber forblir ~0–10 (ingen bonus-gulv å strekke).
-  return Math.round(Math.min(1, raw * 2.5) * 100);
+  // 4) Tittelbonus: CV-rollen i selve annonsetittelen er høypresisjon.
+  const titleBonus =
+    cv.role && termMatches(normalizeMatchText(job.title), cv.role)
+      ? TITLE_BONUS
+      : 0;
+
+  return Math.round(Math.min(1, (f1 + titleBonus) * SCALE) * 100);
 }

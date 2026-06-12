@@ -5,6 +5,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 import { ERFARING_LABELS, type ErfaringCode } from "./facets";
+import { getKeywordIdf } from "./keyword-idf";
 import {
   buildCvMatchText,
   normalizeResumeData,
@@ -73,6 +74,8 @@ export const computeMatchBreakdown = cache(
     if (side.keywords.length === 0) return null;
 
     const cvText = buildCvMatchText(resume);
+    // Samme IDF som precompute — kort og detaljside skal aldri vise ulike tall.
+    const idf = await getKeywordIdf();
     const score = scoreJobMatch(
       {
         text: cvText,
@@ -80,6 +83,7 @@ export const computeMatchBreakdown = cache(
         cvKeywords: userData.aiKeywords,
       },
       side,
+      idf,
     );
 
     const factors: MatchFactor[] = [

@@ -40,12 +40,12 @@ async function main() {
       ORDER BY m.score DESC LIMIT 10
     `;
     const bands = await prisma.$queryRaw<{ hoy: bigint; middels: bigint }[]>`
-      SELECT count(*) FILTER (WHERE score >= 55) AS hoy,
-             count(*) FILTER (WHERE score >= 30 AND score < 55) AS middels
+      SELECT count(*) FILTER (WHERE score >= 35) AS hoy,
+             count(*) FILTER (WHERE score >= 18 AND score < 35) AS middels
       FROM "JobMatch" WHERE "userId" = ${u.userId}::uuid
     `;
     console.log(
-      `\n${u.userId}: Høy(>=55)=${bands[0].hoy} Middels(30-54)=${bands[0].middels}`,
+      `\n${u.userId}: Høy(>=35)=${bands[0].hoy} Middels(18-34)=${bands[0].middels}`,
     );
     for (const t of top) console.log(`  ${String(t.score).padStart(3)} ${t.title.slice(0, 70)}`);
   }
