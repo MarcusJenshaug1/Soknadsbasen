@@ -290,3 +290,9 @@ body {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
+
+/* Landing-demoen: fremdriftsfyll i aktiv steg-tab (pauses via play-state) */
+@keyframes demo-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
