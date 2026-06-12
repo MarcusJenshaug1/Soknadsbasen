@@ -172,7 +172,7 @@ REGLER:
       temperature: 0.3,
       maxOutputTokens: 2000,
       json: true,
-      onUsage: (u) => void recordAiUsageEvent(session.userId, "cv_tips", "claude-sonnet-4-6", u),
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "cv_tips", u.model, u),
     });
     const parsed = parseLooseJson(raw);
     return NextResponse.json(parsed);

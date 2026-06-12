@@ -82,7 +82,7 @@ Regler:
       temperature: 0.6,
       maxOutputTokens: 2500,
       json: true,
-      onUsage: (u) => void recordAiUsageEvent(session.userId, "interview_prep", "claude-sonnet-4-6", u),
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "interview_prep", u.model, u),
     });
     const parsed = parseLooseJson(raw);
     return NextResponse.json(parsed);

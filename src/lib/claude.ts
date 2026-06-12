@@ -53,11 +53,17 @@ export type ClaudeOptions = {
    */
   jsonSchema?: Record<string, unknown>;
   /**
-   * Kalles med token-forbruket når svaret er komplett (claudeGenerate:
-   * synkront etter kallet; claudeStream: etter siste chunk). Opt-in —
-   * brukes til AiUsageEvent-kostnadsloggen. Feil i callbacken svelges.
+   * Kalles med token-forbruk og faktisk modell når svaret er komplett
+   * (claudeGenerate: synkront etter kallet; claudeStream: etter siste
+   * chunk). Opt-in — brukes til AiUsageEvent-kostnadsloggen. model kommer
+   * fra API-responsen, så ANTHROPIC_MODEL-override logges riktig. Feil i
+   * callbacken svelges.
    */
-  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
+  onUsage?: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    model: string;
+  }) => void;
 };
 
 const JSON_NUDGE =
@@ -116,6 +122,7 @@ export async function claudeGenerate(
       opts.onUsage({
         inputTokens: message.usage.input_tokens,
         outputTokens: message.usage.output_tokens,
+        model: message.model,
       });
     } catch (err) {
       console.error("claudeGenerate onUsage-callback feilet:", err);
@@ -134,22 +141,38 @@ export async function claudeGenerate(
 /**
  * Streaming-variant — returnerer en ReadableStream<string> av tekst-chunks,
  * samme kontrakt som den gamle geminiStream. Kallere må være server-side.
+ *
+ * Første stream-event awaites FØR ReadableStream konstrueres, så pre-stream-
+ * feil (auth, 529-overload, ugyldig modell) kaster fra selve kallet — det er
+ * dét som lar AI-rutene refundere kvote-credits når Claude er nede. Feil
+ * midt i streamen går fortsatt via controller.error.
  */
 export async function claudeStream(
   userPrompt: string,
   opts: ClaudeOptions = {},
 ): Promise<ReadableStream<string>> {
+  const stream = getClient().messages.stream({
+    model: resolveModel(opts),
+    max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+    system: buildSystem(opts),
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  const iterator = stream[Symbol.asyncIterator]();
+  let first: IteratorResult<Anthropic.MessageStreamEvent>;
+  try {
+    first = await iterator.next();
+  } catch (err) {
+    throw toFriendlyError(err);
+  }
+
   return new ReadableStream<string>({
     async start(controller) {
       let emittedText = false;
       try {
-        const stream = getClient().messages.stream({
-          model: resolveModel(opts),
-          max_tokens: opts.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
-          system: buildSystem(opts),
-          messages: [{ role: "user", content: userPrompt }],
-        });
-        for await (const event of stream) {
+        let cursor = first;
+        while (!cursor.done) {
+          const event = cursor.value;
           if (
             event.type === "content_block_delta" &&
             event.delta.type === "text_delta"
@@ -160,6 +183,7 @@ export async function claudeStream(
               controller.enqueue(chunk);
             }
           }
+          cursor = await iterator.next();
         }
         // Samme invariant som claudeGenerate: et «vellykket» svar uten tekst er
         // en feil — ellers shipper konsumentene tomt innhold som suksess.
@@ -173,6 +197,7 @@ export async function claudeStream(
             opts.onUsage({
               inputTokens: final.usage.input_tokens,
               outputTokens: final.usage.output_tokens,
+              model: final.model,
             });
           } catch (err) {
             console.error("claudeStream onUsage-callback feilet:", err);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { hasActiveAccess } from "@/lib/access";
+import { hasAiQuotaAccess } from "@/lib/ai/credits";
 import { stripe, getOrCreateCustomer } from "@/lib/stripe/server";
 
 type Body = {
@@ -43,8 +43,9 @@ export async function POST(req: Request) {
   }
 
   // Påfyll uten aktiv tilgang er bortkastede penger — AI-rutene krever
-  // abonnement uansett, så blokker kjøpet her.
-  if (topupCredits !== null && !(await hasActiveAccess(session.userId))) {
+  // tilgang uansett. Samme regelsett som kvote-resolveren (abonnement,
+  // org-medlemskap, admin/selger), ikke kun Subscription-raden.
+  if (topupCredits !== null && !(await hasAiQuotaAccess(session.userId))) {
     return NextResponse.json(
       { error: "AI-påfyll krever aktivt abonnement" },
       { status: 403 },

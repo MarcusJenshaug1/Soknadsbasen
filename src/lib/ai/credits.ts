@@ -18,7 +18,6 @@ import { prisma } from "@/lib/prisma";
 
 export const MONTHLY_AI_CREDITS = 150;
 export const TRIAL_AI_CREDITS = 25;
-const TRIAL_DAYS = 7;
 
 export type AiAction =
   | "cover_letter"
@@ -84,7 +83,7 @@ async function resolveQuotaContext(userId: string): Promise<QuotaContext> {
       email: true,
       aiUnlimited: true,
       subscription: {
-        select: { status: true, currentPeriodEnd: true },
+        select: { status: true, currentPeriodEnd: true, createdAt: true },
       },
       salesRepProfile: { select: { status: true } },
       orgMemberships: {
@@ -121,8 +120,10 @@ async function resolveQuotaContext(userId: string): Promise<QuotaContext> {
   const isTrial = subActive && sub!.status === "trialing";
   const allowance = isTrial ? TRIAL_AI_CREDITS : MONTHLY_AI_CREDITS;
   const periodStart = isTrial
-    ? // Stabil nøkkel for hele prøveperioden: trial-start = periodeslutt - 7d.
-      startOfDayUTC(new Date(sub!.currentPeriodEnd.getTime() - TRIAL_DAYS * 86_400_000))
+    ? // Stabil nøkkel for hele prøveperioden: Subscription-radens createdAt
+      // (settes ved checkout og endres aldri) — currentPeriodEnd kan flyttes
+      // i Stripe-dashboardet og ville gitt ny bøtte med friske credits.
+      startOfDayUTC(sub!.createdAt)
     : startOfMonthUTC(now);
   const resetsAt = isTrial ? sub!.currentPeriodEnd : startOfNextMonthUTC(now);
 
@@ -140,6 +141,16 @@ async function resolveQuotaContext(userId: string): Promise<QuotaContext> {
     isTrial,
     resetsAt,
   };
+}
+
+/**
+ * Har brukeren tilgang til AI-funksjonene i det hele tatt? Samme regelsett
+ * som kvote-resolveren (abonnement, org, admin/selger, aiUnlimited) — brukes
+ * der hasActiveAccess er for smal (den ser kun på Subscription-raden).
+ */
+export async function hasAiQuotaAccess(userId: string): Promise<boolean> {
+  const ctx = await resolveQuotaContext(userId);
+  return ctx.kind !== "no_access";
 }
 
 /**

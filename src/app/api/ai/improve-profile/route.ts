@@ -101,7 +101,7 @@ ${body.summary ? `EKSISTERENDE PROFIL-TEKST (forbedre denne, behold fakta):\n${b
       temperature: 0.7,
       maxOutputTokens: 400,
       onUsage: (u) =>
-        void recordAiUsageEvent(session.userId, "improve_profile", "claude-sonnet-4-6", u),
+        void recordAiUsageEvent(session.userId, "improve_profile", u.model, u),
     });
   } catch (err) {
     await refundAiCredit(session.userId, credit.source, credit.periodStart);

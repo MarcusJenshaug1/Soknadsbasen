@@ -74,7 +74,7 @@ Regler:
       temperature: 0.7,
       maxOutputTokens: 1000,
       json: true,
-      onUsage: (u) => void recordAiUsageEvent(session.userId, "follow_up", "claude-sonnet-4-6", u),
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "follow_up", u.model, u),
     });
     const parsed = parseLooseJson<{ subject: string; body: string }>(raw);
     const html = marked.parse(parsed.body, { async: false }) as string;

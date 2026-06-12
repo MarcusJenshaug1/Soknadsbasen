@@ -226,7 +226,7 @@ Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved n
       temperature: 0.8,
       maxOutputTokens: 1500,
       onUsage: (u) =>
-        void recordAiUsageEvent(session.userId, "cover_letter", "claude-sonnet-4-6", u),
+        void recordAiUsageEvent(session.userId, "cover_letter", u.model, u),
     });
   } catch (err) {
     await refundAiCredit(session.userId, credit.source, credit.periodStart);

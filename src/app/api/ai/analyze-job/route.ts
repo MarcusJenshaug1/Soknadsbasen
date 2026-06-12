@@ -67,7 +67,7 @@ Regler:
       temperature: 0.2,
       maxOutputTokens: 1500,
       json: true,
-      onUsage: (u) => void recordAiUsageEvent(session.userId, "analyze_job", "claude-sonnet-4-6", u),
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "analyze_job", u.model, u),
     });
     const parsed = parseLooseJson(raw);
     return NextResponse.json(parsed);

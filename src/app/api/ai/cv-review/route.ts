@@ -132,7 +132,7 @@ reason er én kort setning om hvorfor endringen er bedre.`;
       system,
       maxOutputTokens: 4000,
       jsonSchema: REVIEW_SCHEMA as unknown as Record<string, unknown>,
-      onUsage: (u) => void recordAiUsageEvent(session.userId, "cv_review", "claude-sonnet-4-6", u),
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "cv_review", u.model, u),
     });
   } catch (err) {
     console.error("cv-review: claudeGenerate feilet", err);

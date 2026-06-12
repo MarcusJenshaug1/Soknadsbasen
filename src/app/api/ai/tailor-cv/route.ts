@@ -143,7 +143,7 @@ ${JSON.stringify({
       system,
       maxOutputTokens: 3000,
       jsonSchema: TAILOR_SCHEMA as unknown as Record<string, unknown>,
-      onUsage: (u) => void recordAiUsageEvent(session.userId, "tailor_cv", "claude-sonnet-4-6", u),
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "tailor_cv", u.model, u),
     });
   } catch (err) {
     console.error("tailor-cv: claudeGenerate feilet", err);
