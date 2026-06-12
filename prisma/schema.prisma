@@ -31,6 +31,9 @@ model User {
   isAdmin              Boolean            @default(false)
   /// Plattform-rolle. Selger = full Pro-tilgang uten subscription + tilgang til /selger.
   role                 UserRole           @default(user)
+  /// Admin-satt unntak: evig AI-kvote uavhengig av abonnement (partnere,
+  /// venner, support-kompensasjon). Admin/selger har unlimited via role.
+  aiUnlimited          Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   resumes              Resume[]
@@ -60,6 +63,10 @@ model User {
   jobMatches            JobMatch[]
   jobsSeen              JobSeen[]
   savedSearches         SavedSearch[]
+  aiUsage               AiUsage[]
+  aiCreditBalance       AiCreditBalance?
+  aiCreditGrants        AiCreditGrant[]
+  aiUsageEvents         AiUsageEvent[]
 
   @@index([role])
 }
@@ -97,6 +104,58 @@ model Subscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([stripeCustomerId])
+}
+
+/// Én rad per (bruker, kvoteperiode) for AI-handlinger. periodStart = første
+/// dag i kalendermåneden (UTC) for betalende; for trial = trial-startdato
+/// (stabil nøkkel → nøyaktig TRIAL_AI_CREDITS totalt selv over månedsskifte).
+model AiUsage {
+  id          String   @id @default(uuid())
+  userId      String   @db.Uuid
+  periodStart DateTime @db.Date
+  used        Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodStart])
+}
+
+/// Kjøpte påfyll-credits (AI-handlinger). Nullstilles aldri; konsumeres
+/// først når månedskvoten er tom. Egen tabell (ikke Subscription-kolonne):
+/// tilgangshavere uten Subscription-rad finnes, og webhookens
+/// subscription-upserter skal aldri kunne klusse med saldoen.
+model AiCreditBalance {
+  userId    String   @id @db.Uuid
+  extra     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Idempotens-ledger for Stripe-påfyll — unique på stripeSessionId gjør at
+/// webhook-retries aldri krediterer dobbelt.
+model AiCreditGrant {
+  id              String   @id @default(uuid())
+  userId          String   @db.Uuid
+  stripeSessionId String   @unique
+  credits         Int
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Kostnadslogg per AI-kall (~150 rader/bruker/mnd). Prunes ved behov.
+model AiUsageEvent {
+  id           String   @id @default(uuid())
+  userId       String   @db.Uuid
+  action       String
+  model        String
+  inputTokens  Int?
+  outputTokens Int?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Stores all user data as JSON blobs — one row per user.
