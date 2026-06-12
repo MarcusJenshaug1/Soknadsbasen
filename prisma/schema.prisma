@@ -170,6 +170,12 @@ model UserData {
   aiKeywords       String[]  @default([])
   aiKeywordsAt     DateTime?
   aiKeywordsHash   String?
+  /// Hoved-CV for matching (id i resumes[]-payloaden). null = aktiv CV.
+  mainResumeId    String?
+  /// Hash av hoved-CV-summary ved siste eksplisitte match-kjøring (Match
+  /// meg-knappen). null = aldri matchet; != gjeldende hash = stale.
+  matchedCvHash   String?
+  matchedAt       DateTime?
   /// Tetthetsvalg i /jobb-listen: "komfortabel" | "kompakt". null = default.
   jobListDensity  String?
   /// Forrige /jobb-besøk — «Ny»-markering på stillinger publisert etterpå.
