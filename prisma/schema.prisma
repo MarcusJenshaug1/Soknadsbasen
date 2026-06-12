@@ -990,6 +990,7 @@ model Job {
   @@index([isActive, publishedAt])
   @@index([isActive, region])
   @@index([isActive, category])
+  @@index([isActive, occupation])
   @@index([isActive, employerSlug])
   @@index([isActive, applicationDueAt])
   @@index([externalId])
