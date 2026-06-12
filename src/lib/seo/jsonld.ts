@@ -121,6 +121,7 @@ export function articleJsonLd(a: ArticleInput): JsonLd {
 export function webApplicationJsonLd(): JsonLd {
   const monthly = siteConfig.pricing.monthly;
   const sixMonth = siteConfig.pricing.sixMonth;
+  const aiCredits = siteConfig.pricing.aiCredits;
   return {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -140,7 +141,7 @@ export function webApplicationJsonLd(): JsonLd {
     image: absoluteUrl("/opengraph-image"),
     featureList: [
       "CV-bygger med åtte maler",
-      "AI-assistert søknadsbrev",
+      `AI-assistert søknadsbrev (${aiCredits.monthlyIncluded} AI-handlinger per måned inkludert)`,
       "Pipeline med kanban og listevisning",
       "Oppgaver og frister",
       "Innsikt i intervju-kilder",
@@ -168,6 +169,26 @@ export function webApplicationJsonLd(): JsonLd {
         availability: "https://schema.org/InStock",
         eligibleRegion: { "@type": "Country", name: "NO" },
         description: `Engangsbetaling for ${sixMonth.durationMonths} måneders tilgang.`,
+      },
+      {
+        "@type": "Offer",
+        name: `AI-påfyll ${aiCredits.topup50.credits} handlinger`,
+        price: aiCredits.topup50.amount,
+        priceCurrency: aiCredits.topup50.currency,
+        category: "one-time",
+        availability: "https://schema.org/InStock",
+        eligibleRegion: { "@type": "Country", name: "NO" },
+        description: `${aiCredits.topup50.credits} ekstra AI-handlinger, krever aktivt abonnement. Utløper aldri.`,
+      },
+      {
+        "@type": "Offer",
+        name: `AI-påfyll ${aiCredits.topup100.credits} handlinger`,
+        price: aiCredits.topup100.amount,
+        priceCurrency: aiCredits.topup100.currency,
+        category: "one-time",
+        availability: "https://schema.org/InStock",
+        eligibleRegion: { "@type": "Country", name: "NO" },
+        description: `${aiCredits.topup100.credits} ekstra AI-handlinger, krever aktivt abonnement. Utløper aldri.`,
       },
     ],
   };

@@ -24,7 +24,7 @@ const FAQ = [
   },
   {
     q: "Hva koster det?",
-    a: "79 kr per måned med 7 dagers gratis prøveperiode, eller 299 kr for 6 måneders tilgang som engangsbetaling. Engangsvarianten fornyes ikke automatisk.",
+    a: "79 kr per måned med 7 dagers gratis prøveperiode, eller 299 kr for 6 måneders tilgang som engangsbetaling. Begge inkluderer 150 AI-handlinger per måned, og engangsvarianten fornyes ikke automatisk.",
   },
   {
     q: "Eier jeg CV-ene mine?",

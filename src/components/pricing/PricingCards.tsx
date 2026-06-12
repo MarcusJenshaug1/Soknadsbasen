@@ -13,6 +13,7 @@ type Props = {
 // Se AGENTS.md "Sammenligning- og pris-sider er kontrakter".
 const monthlyFeatures = [
   "Ubegrenset tilgang til CV-editor og maler",
+  "150 AI-handlinger per måned",
   "Eksport til PDF",
   "Jobbsøknads-pipeline med oppgaver",
   "Avslutt når du vil",
@@ -20,6 +21,7 @@ const monthlyFeatures = [
 
 const oneTimeFeatures = [
   "6 måneders full tilgang",
+  "150 AI-handlinger per måned",
   "Alt i månedlig plan",
   "Ingen automatisk fornyelse",
   "Én betaling — ferdig",
@@ -33,7 +35,7 @@ export function PricingCards({ monthlyCta, oneTimeCta }: Props) {
         <div className="mb-6">
           <h3 className="text-[20px] font-semibold text-ink">Månedlig</h3>
           <p className="mt-1 text-[13px] text-black/55">
-            Prøv gratis i 7 dager, deretter 79 kr/mnd
+            Prøv gratis i 7 dager (inkl. 25 AI-handlinger), deretter 79 kr/mnd
           </p>
           <div className="mt-4 flex items-baseline gap-1">
             <span className="text-4xl font-semibold text-ink">79 kr</span>
