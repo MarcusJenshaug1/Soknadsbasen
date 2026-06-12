@@ -1,8 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+  LogIn,
+  Shield,
+  Zap,
+  CreditCard,
+  Search,
+  UserPlus,
+} from "lucide-react";
 import { suspendCloudSync } from "@/hooks/useCloudSync";
+import { cn } from "@/lib/cn";
 
 type Subscription = { status: string; type: string; currentPeriodEnd: string | Date };
 
@@ -17,6 +28,15 @@ type User = {
   orgMemberships: { role: string; org: { slug: string; displayName: string } }[];
 };
 
+export type AdminStats = {
+  total: number;
+  betalende: number;
+  prove: number;
+  admins: number;
+  evigAi: number;
+  orgMedlemmer: number;
+};
+
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-green-100 text-green-700",
   trialing: "bg-blue-100 text-blue-700",
@@ -26,6 +46,66 @@ const STATUS_COLORS: Record<string, string> = {
   manual: "bg-purple-100 text-purple-700",
 };
 
+type AccessKey =
+  | "admin"
+  | "betalende"
+  | "prove"
+  | "org"
+  | "kansellert"
+  | "utlopt"
+  | "ingen";
+
+/** Effektiv tilgangsstatus til pille + filter — ett øyekast per bruker. */
+function accessState(
+  u: User,
+  isSuperAdmin: boolean,
+): { key: AccessKey; label: string; cls: string } {
+  if (isSuperAdmin || u.isAdmin)
+    return { key: "admin", label: "Gratis (admin)", cls: "bg-amber-100 text-amber-700" };
+
+  const sub = u.subscription;
+  if (u.orgMemberships[0] && !sub)
+    return { key: "org", label: "Org-tilgang", cls: "bg-indigo-100 text-indigo-700" };
+  if (!sub) return { key: "ingen", label: "Ingen", cls: "bg-zinc-100 text-zinc-500" };
+
+  const expired = new Date(sub.currentPeriodEnd).getTime() < Date.now();
+  if (expired) return { key: "utlopt", label: "Utløpt", cls: "bg-zinc-100 text-zinc-600" };
+  if (sub.status === "active")
+    return { key: "betalende", label: "Betalende", cls: "bg-green-100 text-green-700" };
+  if (sub.status === "trialing")
+    return { key: "prove", label: "Prøveperiode", cls: "bg-blue-100 text-blue-700" };
+  if (sub.status === "canceled")
+    return { key: "kansellert", label: "Kansellert", cls: "bg-red-100 text-red-600" };
+  if (sub.status === "past_due")
+    return { key: "kansellert", label: "Betaling mislyktes", cls: "bg-orange-100 text-orange-700" };
+  return { key: "ingen", label: sub.status, cls: "bg-zinc-100 text-zinc-600" };
+}
+
+type FilterKey = "alle" | "betalende" | "prove" | "gratis" | "utlopt";
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "alle", label: "Alle" },
+  { key: "betalende", label: "Betalende" },
+  { key: "prove", label: "Prøveperiode" },
+  { key: "gratis", label: "Gratis-tilgang" },
+  { key: "utlopt", label: "Utløpt / ingen" },
+];
+
+function matchesFilter(state: AccessKey, filter: FilterKey): boolean {
+  switch (filter) {
+    case "alle":
+      return true;
+    case "betalende":
+      return state === "betalende";
+    case "prove":
+      return state === "prove";
+    case "gratis":
+      return state === "admin" || state === "org";
+    case "utlopt":
+      return state === "utlopt" || state === "ingen" || state === "kansellert";
+  }
+}
+
 type Discount = {
   couponId: string;
   name: string;
@@ -34,9 +114,22 @@ type Discount = {
   currency: string | null;
 } | null;
 
-function SubPanel({ user, onUpdate }: { user: User; onUpdate: (sub: Subscription | null) => void }) {
+function SubPanel({
+  user,
+  onUpdate,
+  openSignal = 0,
+}: {
+  user: User;
+  onUpdate: (sub: Subscription | null) => void;
+  /** Bump fra kebab-menyen for å åpne panelet utenfra. */
+  openSignal?: number;
+}) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openSignal > 0) setOpen(true);
+  }, [openSignal]);
   const [err, setErr] = useState<string | null>(null);
   const [discount, setDiscount] = useState<Discount>(null);
   const [discountReason, setDiscountReason] = useState<string | null>(null);
@@ -227,12 +320,22 @@ function SubPanel({ user, onUpdate }: { user: User; onUpdate: (sub: Subscription
   );
 }
 
-export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User[]; adminEmail: string }) {
+export function BrukereClient({
+  initialUsers,
+  adminEmail,
+  stats,
+}: {
+  initialUsers: User[];
+  adminEmail: string;
+  stats: AdminStats;
+}) {
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [filter, setFilter] = useState<FilterKey>("alle");
 
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<"user" | "admin">("user");
@@ -241,6 +344,8 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [subSignal, setSubSignal] = useState<Record<string, number>>({});
 
   async function impersonate(user: User) {
     setImpersonatingId(user.id);
@@ -343,187 +448,323 @@ export function BrukereClient({ initialUsers, adminEmail }: { initialUsers: User
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, subscription: sub } : u)));
   }
 
+  const visible = users.filter((u) =>
+    matchesFilter(accessState(u, u.email === adminEmail).key, filter),
+  );
+
   return (
-    <div className="space-y-8">
-      {/* Invite form */}
-      <div className="rounded-2xl border border-black/10 p-5">
-        <h2 className="text-[14px] font-semibold mb-4">Inviter bruker</h2>
-        <form onSubmit={handleInvite} className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">E-post</label>
-            <input
-              type="email"
-              required
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="bruker@epost.no"
-              className="w-full border-b border-black/20 bg-transparent py-2 text-[14px] outline-none focus:border-ink"
-            />
-          </div>
-          <div className="flex-1 min-w-[140px]">
-            <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">Navn (valgfritt)</label>
-            <input
-              type="text"
-              value={inviteName}
-              onChange={(e) => setInviteName(e.target.value)}
-              placeholder="Ola Nordmann"
-              className="w-full border-b border-black/20 bg-transparent py-2 text-[14px] outline-none focus:border-ink"
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">Rolle</label>
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as "user" | "admin")}
-              className="border border-black/15 rounded-lg px-3 py-2 text-[13px] bg-bg outline-none focus:border-ink"
-            >
-              <option value="user">Vanlig bruker</option>
-              <option value="admin">Admin (gratis tilgang)</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            disabled={inviting}
-            className="px-5 py-2 rounded-full bg-ink text-bg text-[13px] font-medium disabled:opacity-40 shrink-0"
-          >
-            {inviting ? "Sender…" : "Send invitasjon"}
-          </button>
-        </form>
-        {inviteMsg && (
-          <p className={`mt-3 text-[13px] ${inviteMsg.ok ? "text-green-600" : "text-red-600"}`}>
-            {inviteMsg.text}
-          </p>
-        )}
+    <div className="space-y-6">
+      {/* Statistikk — globale tall */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <StatCard label="Totalt" value={stats.total} />
+        <StatCard label="Betalende" value={stats.betalende} tone="green" />
+        <StatCard label="Prøveperiode" value={stats.prove} tone="blue" />
+        <StatCard label="Org-medlemmer" value={stats.orgMedlemmer} tone="indigo" />
+        <StatCard label="Admins" value={stats.admins} tone="amber" />
+        <StatCard label="Evig AI" value={stats.evigAi} tone="purple" />
       </div>
 
-      {/* Search */}
-      <form onSubmit={search} className="flex gap-3">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søk på epost…"
-          className="flex-1 border-b border-black/20 bg-transparent py-2 text-[14px] outline-none focus:border-ink"
-        />
+      {/* Verktøylinje: søk + inviter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <form onSubmit={search} className="relative flex-1 min-w-[220px]">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Søk på e-post…"
+            className="w-full rounded-full border border-black/12 bg-bg pl-9 pr-24 py-2 text-[13.5px] outline-none focus:border-ink/40"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="absolute right-1 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-full bg-ink text-bg text-[12px] font-medium disabled:opacity-40"
+          >
+            {loading ? "Søker…" : "Søk"}
+          </button>
+        </form>
         <button
-          type="submit"
-          disabled={loading}
-          className="px-5 py-2 rounded-full bg-ink text-bg text-[13px] font-medium disabled:opacity-40"
+          onClick={() => setInviteOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-black/12 text-[13px] font-medium hover:border-black/30 transition-colors shrink-0"
         >
-          {loading ? "Søker…" : "Søk"}
+          <UserPlus size={14} />
+          Inviter bruker
         </button>
-      </form>
+      </div>
 
-      {/* User list */}
-      {(searched || users.length > 0) && (
-        <div className="border border-black/8 rounded-xl overflow-hidden divide-y divide-black/6">
-          {users.map((u) => {
-            const isSuperAdmin = u.email === adminEmail;
-            const sub = u.subscription;
-            const initials = (u.name ?? u.email).slice(0, 2).toUpperCase();
+      {/* Inviter (sammenleggbar) */}
+      {inviteOpen && (
+        <div className="rounded-2xl border border-black/10 bg-black/[0.015] p-5">
+          <form onSubmit={handleInvite} className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">E-post</label>
+              <input
+                type="email"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="bruker@epost.no"
+                className="w-full border-b border-black/20 bg-transparent py-2 text-[14px] outline-none focus:border-ink"
+              />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">Navn (valgfritt)</label>
+              <input
+                type="text"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="Ola Nordmann"
+                className="w-full border-b border-black/20 bg-transparent py-2 text-[14px] outline-none focus:border-ink"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wide text-ink/50 mb-1">Rolle</label>
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as "user" | "admin")}
+                className="border border-black/15 rounded-lg px-3 py-2 text-[13px] bg-bg outline-none focus:border-ink"
+              >
+                <option value="user">Vanlig bruker</option>
+                <option value="admin">Admin (gratis tilgang)</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={inviting}
+              className="px-5 py-2 rounded-full bg-ink text-bg text-[13px] font-medium disabled:opacity-40 shrink-0"
+            >
+              {inviting ? "Sender…" : "Send invitasjon"}
+            </button>
+          </form>
+          {inviteMsg && (
+            <p className={`mt-3 text-[13px] ${inviteMsg.ok ? "text-green-600" : "text-red-600"}`}>
+              {inviteMsg.text}
+            </p>
+          )}
+        </div>
+      )}
 
-            return (
+      {/* Filter-chips */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[11px] uppercase tracking-wide text-ink/40 mr-1">Filtrer listen</span>
+        {FILTERS.map((f) => {
+          const count = users.filter((u) =>
+            matchesFilter(accessState(u, u.email === adminEmail).key, f.key),
+          ).length;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "px-3 py-1 rounded-full text-[12px] font-medium transition-colors border",
+                filter === f.key
+                  ? "border-ink bg-ink text-bg"
+                  : "border-black/12 text-ink/60 hover:border-black/30",
+              )}
+            >
+              {f.label}
+              <span className="ml-1.5 tabular-nums opacity-60">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Brukerliste */}
+      <div className="border border-black/8 rounded-xl overflow-hidden divide-y divide-black/6">
+        {visible.map((u) => {
+          const isSuperAdmin = u.email === adminEmail;
+          const sub = u.subscription;
+          const initials = (u.name ?? u.email).slice(0, 2).toUpperCase();
+          const state = accessState(u, isSuperAdmin);
+          const busy = togglingId === u.id;
+
+          return (
             <div key={u.id} className="px-4 py-3 bg-bg hover:bg-black/[0.015] transition-colors">
               <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${
+                <div className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0",
                   isSuperAdmin ? "bg-red-100 text-red-700" :
-                  u.isAdmin    ? "bg-amber-100 text-amber-700" :
-                                 "bg-black/8 text-ink/60"
-                }`}>
+                  u.isAdmin ? "bg-amber-100 text-amber-700" :
+                  "bg-black/8 text-ink/60",
+                )}>
                   {initials}
                 </div>
 
-                {/* Name + email */}
+                {/* Navn + e-post + chips */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2 min-w-0">
-                    <span className="text-[13px] font-medium truncate">{u.name ?? u.email}</span>
-                    {isSuperAdmin && <span className="text-[10px] text-red-600 font-medium shrink-0">superadmin</span>}
-                    {!isSuperAdmin && u.isAdmin && <span className="text-[10px] text-amber-600 font-medium shrink-0">admin</span>}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-[12px] text-ink/40">{u.email}</span>
-                    {sub && !u.isAdmin && !isSuperAdmin && (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-ink/40">
-                        <span className="text-ink/25">Abo:</span>
-                        <span className={`px-1.5 py-px rounded font-medium ${STATUS_COLORS[sub.status] ?? "bg-zinc-100 text-zinc-600"}`}>
-                          {sub.type === "one_time" ? "Engangs" : sub.type === "monthly" ? "Månedlig" : sub.type}
-                        </span>
-                        <span className={`px-1.5 py-px rounded ${STATUS_COLORS[sub.status] ?? "bg-zinc-100 text-zinc-600"}`}>
-                          {sub.status}
-                        </span>
-                      </span>
-                    )}
-                    {(u.isAdmin || isSuperAdmin) && (
-                      <span className="text-[11px] text-amber-600">gratis tilgang</span>
-                    )}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[13.5px] font-medium truncate">{u.name ?? u.email}</span>
+                    {isSuperAdmin && <Chip cls="bg-red-100 text-red-700">superadmin</Chip>}
                     {u.aiUnlimited && !u.isAdmin && !isSuperAdmin && (
-                      <span className="text-[11px] text-purple-600 font-medium">evig AI-kvote</span>
+                      <Chip cls="bg-purple-100 text-purple-700">evig AI</Chip>
                     )}
                     {u.orgMemberships[0] && (
-                      <a href={`/admin/orger/${u.orgMemberships[0].org.slug}`} className="text-[11px] text-ink/40 hover:text-ink">
+                      <a
+                        href={`/admin/orger/${u.orgMemberships[0].org.slug}`}
+                        className="text-[10.5px] px-1.5 py-px rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 shrink-0 truncate max-w-[140px]"
+                      >
                         {u.orgMemberships[0].org.displayName}
                       </a>
                     )}
                   </div>
+                  <div className="text-[12px] text-ink/40 truncate mt-0.5">{u.email}</div>
                 </div>
 
-                {/* Right: date + action */}
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[12px] text-ink/30 tabular-nums">
-                    {new Date(u.createdAt).toLocaleDateString("nb-NO")}
+                {/* Status-kolonne — alltid samme plass */}
+                <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 w-[120px]">
+                  <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", state.cls)}>
+                    {state.label}
                   </span>
-                  {!isSuperAdmin && (
-                    <button
-                      onClick={() => toggleAdmin(u)}
-                      disabled={togglingId === u.id}
-                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${
-                        u.isAdmin
-                          ? "border-amber-200 text-amber-700 hover:bg-amber-50"
-                          : "border-black/10 text-ink/40 hover:text-ink hover:border-black/20"
-                      }`}
-                    >
-                      {togglingId === u.id ? "…" : u.isAdmin ? "Fjern admin" : "Gi admin"}
-                    </button>
+                  {sub && (
+                    <span className="text-[10.5px] text-ink/40">
+                      {sub.type === "one_time" ? "Engangs" : sub.type === "monthly" ? "Månedlig" : sub.type}
+                      {" · "}
+                      {new Date(sub.currentPeriodEnd).toLocaleDateString("nb-NO")}
+                    </span>
                   )}
-                  {!isSuperAdmin && !u.isAdmin && (
-                    <button
-                      onClick={() => toggleAiUnlimited(u)}
-                      disabled={togglingId === u.id}
-                      title="Evig AI-kvote uavhengig av abonnement"
-                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-40 ${
-                        u.aiUnlimited
-                          ? "border-purple-200 text-purple-700 hover:bg-purple-50"
-                          : "border-black/10 text-ink/40 hover:text-ink hover:border-black/20"
-                      }`}
-                    >
-                      {togglingId === u.id ? "…" : u.aiUnlimited ? "Fjern evig AI" : "Gi evig AI"}
-                    </button>
-                  )}
+                </div>
+
+                {/* Opprettet */}
+                <span className="hidden lg:block text-[11.5px] text-ink/30 tabular-nums shrink-0 w-[78px] text-right">
+                  {new Date(u.createdAt).toLocaleDateString("nb-NO")}
+                </span>
+
+                {/* Kebab-meny */}
+                <div className="relative shrink-0">
                   <button
-                    onClick={() => impersonate(u)}
-                    disabled={impersonatingId === u.id}
-                    title="Åpne Søknadsbasen som denne brukeren"
-                    className="text-[11px] px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    onClick={() => setMenuId(menuId === u.id ? null : u.id)}
+                    disabled={busy || impersonatingId === u.id}
+                    className="size-8 rounded-lg flex items-center justify-center text-ink/45 hover:text-ink hover:bg-black/5 transition-colors disabled:opacity-40"
+                    aria-label="Handlinger"
                   >
-                    {impersonatingId === u.id ? "…" : "Logg inn som"}
+                    {busy || impersonatingId === u.id ? (
+                      <span className="size-3.5 animate-spin rounded-full border-2 border-ink/20 border-t-ink/60" />
+                    ) : (
+                      <MoreHorizontal size={16} />
+                    )}
                   </button>
+                  {menuId === u.id && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setMenuId(null)} />
+                      <div className="absolute right-0 top-9 z-30 w-52 rounded-xl border border-black/10 bg-bg shadow-lg overflow-hidden py-1 text-[13px]">
+                        <MenuItem
+                          icon={<LogIn size={14} />}
+                          onClick={() => { setMenuId(null); impersonate(u); }}
+                          danger
+                        >
+                          Logg inn som
+                        </MenuItem>
+                        {!isSuperAdmin && (
+                          <MenuItem
+                            icon={<Shield size={14} />}
+                            onClick={() => { setMenuId(null); toggleAdmin(u); }}
+                          >
+                            {u.isAdmin ? "Fjern admin" : "Gi admin"}
+                          </MenuItem>
+                        )}
+                        {!isSuperAdmin && !u.isAdmin && (
+                          <MenuItem
+                            icon={<Zap size={14} />}
+                            onClick={() => { setMenuId(null); toggleAiUnlimited(u); }}
+                          >
+                            {u.aiUnlimited ? "Fjern evig AI" : "Gi evig AI"}
+                          </MenuItem>
+                        )}
+                        {!isSuperAdmin && !u.isAdmin && (
+                          <MenuItem
+                            icon={<CreditCard size={14} />}
+                            onClick={() => {
+                              setMenuId(null);
+                              setSubSignal((s) => ({ ...s, [u.id]: (s[u.id] ?? 0) + 1 }));
+                            }}
+                          >
+                            Administrer abonnement
+                          </MenuItem>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
               {!u.isAdmin && !isSuperAdmin && (
-                <div className="ml-11">
-                  <SubPanel user={u} onUpdate={(s) => updateSub(u.id, s)} />
+                <div className="ml-12">
+                  <SubPanel
+                    user={u}
+                    onUpdate={(s) => updateSub(u.id, s)}
+                    openSignal={subSignal[u.id] ?? 0}
+                  />
                 </div>
               )}
             </div>
-            );
-          })}
-          {users.length === 0 && searched && (
-            <p className="text-[13px] text-ink/50">Ingen treff.</p>
-          )}
-        </div>
-      )}
+          );
+        })}
+        {visible.length === 0 && (
+          <p className="px-4 py-8 text-center text-[13px] text-ink/50">
+            {searched || filter !== "alle" ? "Ingen treff." : "Ingen brukere."}
+          </p>
+        )}
+      </div>
     </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone = "ink",
+}: {
+  label: string;
+  value: number;
+  tone?: "ink" | "green" | "blue" | "indigo" | "amber" | "purple";
+}) {
+  const toneCls: Record<string, string> = {
+    ink: "text-ink",
+    green: "text-green-700",
+    blue: "text-blue-700",
+    indigo: "text-indigo-700",
+    amber: "text-amber-700",
+    purple: "text-purple-700",
+  };
+  return (
+    <div className="rounded-xl border border-black/8 bg-bg px-3.5 py-3">
+      <div className={cn("text-[22px] font-semibold tabular-nums leading-none", toneCls[tone])}>
+        {value}
+      </div>
+      <div className="text-[11px] text-ink/50 mt-1.5">{label}</div>
+    </div>
+  );
+}
+
+function Chip({ cls, children }: { cls: string; children: React.ReactNode }) {
+  return (
+    <span className={cn("text-[10px] px-1.5 py-px rounded-full font-medium shrink-0", cls)}>
+      {children}
+    </span>
+  );
+}
+
+function MenuItem({
+  icon,
+  onClick,
+  danger = false,
+  children,
+}: {
+  icon: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center gap-2.5 px-3.5 py-2 text-left hover:bg-black/5 transition-colors",
+        danger ? "text-red-600" : "text-ink/80",
+      )}
+    >
+      <span className="shrink-0">{icon}</span>
+      {children}
+    </button>
   );
 }
