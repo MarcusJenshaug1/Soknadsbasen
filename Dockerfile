@@ -67,6 +67,9 @@ COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 # Prisma schema + migrasjoner trengs for `migrate deploy`.
 COPY --from=build /app/prisma ./prisma
+# Guide-markdown leses fra disk ved runtime (src/lib/guide/loader.ts). Standalone-
+# tracing fanger den i dag, men eksplisitt COPY gjør imaget robust mot refaktorering.
+COPY --from=build /app/src/content ./src/content
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

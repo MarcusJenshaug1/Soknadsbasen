@@ -26,6 +26,13 @@ type Props = {
 
 export async function generateStaticParams() {
   const slugs = await getAllGuideSlugs();
+  if (slugs.length === 0) {
+    // Uten denne ville en build uten guide-markdown (f.eks. .dockerignore-feil)
+    // stille prerendre tom hub + 404 på alle guider i prod.
+    throw new Error(
+      "Ingen guider funnet i src/content/guide, sjekk .dockerignore/build-konteksten",
+    );
+  }
   return slugs.map((slug) => ({ slug }));
 }
 

@@ -11,6 +11,7 @@ npm-debug.log*
 .claude
 hocuspocus-server
 **/*.md
+!src/content/**
 !prisma/**
 Dockerfile
 .dockerignore

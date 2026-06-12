@@ -15,7 +15,8 @@ async function listSlugs(): Promise<string[]> {
     return files
       .filter((f) => f.endsWith(".md"))
       .map((f) => f.replace(/\.md$/, ""));
-  } catch {
+  } catch (err) {
+    console.error("guide-loader: kunne ikke lese", GUIDES_DIR, err);
     return [];
   }
 }
@@ -71,7 +72,8 @@ export const getGuide = cache(async (slug: string): Promise<Guide | null> => {
       wordCount: content.split(/\s+/).filter(Boolean).length,
       readingMinutes: readingTimeMinutes(content),
     };
-  } catch {
+  } catch (err) {
+    console.error(`guide-loader: kunne ikke lese guide "${slug}"`, err);
     return null;
   }
 });
@@ -116,7 +118,8 @@ export const getAllGuidesRaw = cache(async (): Promise<GuideRaw[]> => {
           frontmatter: { ...(data as Omit<GuideFrontmatter, "slug">), slug },
           content,
         };
-      } catch {
+      } catch (err) {
+        console.error(`guide-loader: kunne ikke lese rå guide "${slug}"`, err);
         return null;
       }
     }),
