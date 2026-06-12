@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { displayPlace, formatCategory, isValidFacet } from "./format";
 import { slugifyNb } from "./slug";
 import { fylkeByDbValue } from "./geo";
+import { withHeavyQueryGate } from "./heavy-query-gate";
 import { createSingleFlightCache } from "./single-flight-cache";
 
 /**
@@ -45,7 +46,7 @@ function dedupeSlugs(entries: RegisterEntry[]): RegisterEntry[] {
 }
 
 export function getKommuneRegister(): Promise<RegisterEntry[]> {
-  return registerCache("kommune", async () => {
+  return registerCache("kommune", () => withHeavyQueryGate(async () => {
     // Per-element-par fra workLocations: (kommune, fylke) fra SAMME lokasjon —
     // dekker alle arbeidssteder, ikke bare primærkolonnen. lowercase matcher
     // kommuner[]-arrayen som filtre/RPC bruker.
@@ -74,11 +75,11 @@ export function getKommuneRegister(): Promise<RegisterEntry[]> {
     return dedupeSlugs(
       [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, "nb-NO")),
     );
-  });
+  }));
 }
 
 export function getKategoriRegister(): Promise<RegisterEntry[]> {
-  return registerCache("kategori", async () => {
+  return registerCache("kategori", () => withHeavyQueryGate(async () => {
     const rows = await prisma.job.groupBy({
       by: ["category"],
       where: { isActive: true, category: { not: null } },
@@ -97,7 +98,7 @@ export function getKategoriRegister(): Promise<RegisterEntry[]> {
       });
     }
     return [...seen.values()];
-  });
+  }));
 }
 
 /**
@@ -108,6 +109,9 @@ export function getKategoriRegister(): Promise<RegisterEntry[]> {
 const comboCache =
   createSingleFlightCache<{ fylke?: string; kategori?: string }[]>(3_600_000);
 
+// NB: ikke withHeavyQueryGate her — funksjonen kaller getKategoriRegister()
+// (som selv tar gate-slott); nestede slott kan vranglåse. Sitemap-only og
+// single-flight, så konkurransen er uansett ~1.
 export function getCuratedCombos(): Promise<{ fylke?: string; kategori?: string }[]> {
   return comboCache("combos", async () => {
     const MIN_KATEGORI = 5;

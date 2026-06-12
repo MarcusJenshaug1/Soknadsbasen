@@ -5,6 +5,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 import { facetRpcParams, type JobbFilter } from "./filters";
+import { withHeavyQueryGate } from "./heavy-query-gate";
 import { createSingleFlightCache } from "./single-flight-cache";
 
 /**
@@ -33,7 +34,9 @@ const facetCountsCache = createSingleFlightCache<FacetCounts>(180_000, 1000);
 export const getFacetCounts = cache(
   async (filter: JobbFilter): Promise<FacetCounts> => {
     const p = facetRpcParams(filter);
-    return facetCountsCache(JSON.stringify(p), () => loadFacetCounts(p));
+    return facetCountsCache(JSON.stringify(p), () =>
+      withHeavyQueryGate(() => loadFacetCounts(p)),
+    );
   },
 );
 
