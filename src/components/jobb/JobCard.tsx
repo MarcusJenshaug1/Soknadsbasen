@@ -22,24 +22,22 @@ export function publishedLabel(publishedAt: Date, now: Date): string {
 
 /**
  * Stillingskort (designreferansen): hele kortet klikkbart via stretched link,
- * initial-merke, metarad, pills og match-label i høyrekolonnen. Tetthet
- * styrer logo/utdrag/pills. Sett-dimming og pipeline-knapp kobles på i Fase 2.
+ * initial-merke, metarad, pills og match-label i høyrekolonnen. Begge
+ * tetthetsvarianter rendres i samme markup og styres av data-density på
+ * DensityProvider-wrapperen (group/density), så tetthetsbytte er ren CSS.
  */
 export function JobCard({
   job,
-  density,
   loggedIn,
   now,
   isNew = false,
 }: {
   job: JobListItem;
-  density: Density;
   loggedIn: boolean;
   now: Date;
   /** Publisert etter forrige besøk («Ny»-markering). */
   isNew?: boolean;
 }) {
-  const compact = density === "kompakt";
   const sted = job.kommune ?? job.region;
   const dueDays = job.applicationDueAt
     ? Math.ceil((job.applicationDueAt.getTime() - now.getTime()) / DAY_MS)
@@ -53,23 +51,13 @@ export function JobCard({
   if (job.isSummerJob) pills.push("Sommerjobb");
 
   return (
-    <article
-      className={cn(
-        "group relative rounded-2xl border border-border bg-surface transition-all hover:border-border-strong hover:shadow-[0_2px_14px_rgba(20,17,14,0.06)]",
-        compact ? "px-4 py-3" : "px-5 py-4",
-      )}
-    >
+    <article className="group relative rounded-2xl border border-border bg-surface px-5 py-4 transition-all hover:border-border-strong hover:shadow-[0_2px_14px_rgba(20,17,14,0.06)] group-data-[density=kompakt]/density:px-4 group-data-[density=kompakt]/density:py-3">
       <div className="flex items-start gap-3.5">
-        {!compact && (
+        <div className="shrink-0 group-data-[density=kompakt]/density:hidden">
           <CompanyLogo website={job.employerHomepage} name={job.employerName} size="md" />
-        )}
+        </div>
         <div className="min-w-0 flex-1">
-          <h3
-            className={cn(
-              "flex items-center gap-2 font-medium leading-snug text-ink",
-              compact ? "text-[14px]" : "text-[15.5px]",
-            )}
-          >
+          <h3 className="flex items-center gap-2 text-[15.5px] font-medium leading-snug text-ink group-data-[density=kompakt]/density:text-[14px]">
             {isNew && !job.seen && (
               <span className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-accent px-2 text-[9.5px] font-bold uppercase tracking-wide text-white">
                 Ny
@@ -84,12 +72,7 @@ export function JobCard({
               {job.title}
             </Link>
           </h3>
-          <div
-            className={cn(
-              "flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-ink-soft",
-              compact ? "mt-0.5" : "mt-1",
-            )}
-          >
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-ink-soft group-data-[density=kompakt]/density:mt-0.5">
             <span className="font-medium">{job.employerName}</span>
             {sted && (
               <span className="inline-flex items-center gap-1 text-ink-muted">
@@ -102,13 +85,13 @@ export function JobCard({
               {publishedLabel(job.publishedAt, now)}
             </span>
           </div>
-          {!compact && job.excerpt && (
-            <p className="mt-2 line-clamp-1 text-[12.5px] leading-relaxed text-ink-soft">
+          {job.excerpt && (
+            <p className="mt-2 line-clamp-1 text-[12.5px] leading-relaxed text-ink-soft group-data-[density=kompakt]/density:hidden">
               {job.excerpt}
             </p>
           )}
-          {!compact && pills.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {pills.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 group-data-[density=kompakt]/density:hidden">
               {pills.slice(0, 4).map((p) => (
                 <span
                   key={p}
@@ -121,7 +104,7 @@ export function JobCard({
           )}
         </div>
         <div className="relative z-10 flex shrink-0 flex-col items-end gap-1.5">
-          <MatchLabel score={job.matchScore} loggedIn={loggedIn} compact={compact} />
+          <MatchLabel score={job.matchScore} loggedIn={loggedIn} />
           {job.applicationDueAt && (
             <span
               className={cn(
@@ -134,7 +117,9 @@ export function JobCard({
               Frist {FRIST_FMT.format(job.applicationDueAt)}
             </span>
           )}
-          {!compact && <AddToPipelineButton slug={job.slug} loggedIn={loggedIn} />}
+          <div className="group-data-[density=kompakt]/density:hidden">
+            <AddToPipelineButton slug={job.slug} loggedIn={loggedIn} />
+          </div>
         </div>
       </div>
     </article>

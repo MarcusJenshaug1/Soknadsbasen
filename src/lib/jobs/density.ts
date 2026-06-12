@@ -13,8 +13,8 @@ export function isDensity(value: string): value is Density {
 }
 
 /**
- * Tetthetsvalg: cookie er fast path (settes for alle av setDensity); profil
- * er cross-device-fallback for innloggede uten cookie på denne enheten.
+ * Tetthetsvalg: cookie er fast path (skrives av klienten i DensityToggle);
+ * profil er cross-device-fallback for innloggede uten cookie på denne enheten.
  */
 export async function readDensity(userId: string | null): Promise<Density> {
   const jar = await cookies();

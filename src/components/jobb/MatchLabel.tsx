@@ -10,18 +10,17 @@ const TIER_STYLES = {
 } as const;
 
 /**
- * Match-pill (designreferansen): Høy/Middels/Lav med score-tall i komfortabel
- * tetthet. Anonyme får dashed teaser-lenke til CV-opplasting. score=null hos
+ * Match-pill (designreferansen): Høy/Middels/Lav med score-tall, tallet
+ * skjules i kompakt tetthet via data-density på DensityProvider-wrapperen.
+ * Anonyme får dashed teaser-lenke til CV-opplasting. score=null hos
  * innloggede (ikke beregnet ennå) viser ingenting.
  */
 export function MatchLabel({
   score,
   loggedIn,
-  compact = false,
 }: {
   score: number | null;
   loggedIn: boolean;
-  compact?: boolean;
 }) {
   if (!loggedIn) {
     return (
@@ -44,7 +43,9 @@ export function MatchLabel({
       )}
     >
       {tier.label}
-      {!compact && <span className="font-medium tabular-nums opacity-70">{score}</span>}
+      <span className="font-medium tabular-nums opacity-70 group-data-[density=kompakt]/density:hidden">
+        {score}
+      </span>
     </span>
   );
 }

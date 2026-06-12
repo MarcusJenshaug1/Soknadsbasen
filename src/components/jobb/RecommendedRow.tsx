@@ -27,7 +27,7 @@ export function RecommendedRow({ jobs }: { jobs: JobListItem[] }) {
             scroll={false}
             className="rounded-xl border border-border bg-surface px-4 py-3 text-left outline-none transition-all hover:border-border-strong hover:shadow-[0_2px_10px_rgba(20,17,14,0.06)] focus-visible:ring-2 focus-visible:ring-accent/50"
           >
-            <MatchLabel score={j.matchScore} loggedIn compact />
+            <MatchLabel score={j.matchScore} loggedIn />
             <span className="mt-2 block truncate text-[13px] font-medium text-ink">
               {j.title}
             </span>

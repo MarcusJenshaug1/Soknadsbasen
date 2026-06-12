@@ -6,7 +6,6 @@ import {
   type SortKey,
 } from "@/lib/jobs/search-params";
 
-import type { Density } from "./JobCard";
 import { DensityToggle, VisitTracker } from "./DensityToggle";
 import { SaveSearchButton } from "./SaveSearchButton";
 import { SortSelect } from "./SortSelect";
@@ -25,14 +24,12 @@ export function ListHeader({
   params,
   sort,
   loggedIn,
-  density,
   suggestedSearchName,
 }: {
   total: number;
   params: JobbParams;
   sort: SortKey;
   loggedIn: boolean;
-  density: Density;
   suggestedSearchName: string;
 }) {
   const from = total === 0 ? 0 : (params.side - 1) * PAGE_SIZE + 1;
@@ -63,7 +60,7 @@ export function ListHeader({
           />
         )}
         <SortSelect params={params} current={sort} loggedIn={loggedIn} />
-        <DensityToggle current={density} />
+        <DensityToggle />
       </div>
       <VisitTracker />
     </div>

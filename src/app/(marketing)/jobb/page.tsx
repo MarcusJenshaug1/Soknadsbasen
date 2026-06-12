@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ActiveChips } from "@/components/jobb/ActiveChips";
 import { AnonCvBanner, CvStatusCard } from "@/components/jobb/CvStatusCard";
 import { EmptyState } from "@/components/jobb/EmptyState";
+import { DensityProvider } from "@/components/jobb/DensityProvider";
 import { JobCard, type Density } from "@/components/jobb/JobCard";
 import { ListHeader } from "@/components/jobb/ListHeader";
 import { Pagination } from "@/components/jobb/Pagination";
@@ -90,7 +91,7 @@ export default async function JobbPage({ searchParams }: Props) {
     userId && activeFilters === 0 && ctx.params.side === 1,
   );
   const recommendedPromise = showRecommended ? getTopMatches(userId!, 3) : null;
-  const listKey = `${buildJobbUrl(ctx.params)}|${sort}|${density}`;
+  const listKey = `${buildJobbUrl(ctx.params)}|${sort}`;
 
   return (
     <FilterNavProvider>
@@ -228,46 +229,44 @@ async function ListSection({
   return (
     <>
       {recommended && <RecommendedRow jobs={recommended} />}
-      <ListHeader
-        total={counts.total}
-        params={ctx.params}
-        sort={sort}
-        loggedIn={loggedIn}
-        density={density}
-        suggestedSearchName={suggestSearchName(ctx.params, ctx.index)}
-      />
-      {jobs.length === 0 ? (
-        <EmptyState
+      <DensityProvider initial={density}>
+        <ListHeader
+          total={counts.total}
           params={ctx.params}
-          counts={counts}
-          index={ctx.index}
+          sort={sort}
           loggedIn={loggedIn}
+          suggestedSearchName={suggestSearchName(ctx.params, ctx.index)}
         />
-      ) : (
-        <ul
-          className={`flex flex-col ${density === "kompakt" ? "gap-2" : "gap-2.5"}`}
-        >
-          {jobs.map((job) => (
-            <li key={job.id}>
-              <SeenCardWrapper
-                jobId={job.id}
-                slug={job.slug}
-                loggedIn={loggedIn}
-                seenOnServer={job.seen}
-              >
-                <JobCard
-                  job={job}
-                  density={density}
+        {jobs.length === 0 ? (
+          <EmptyState
+            params={ctx.params}
+            counts={counts}
+            index={ctx.index}
+            loggedIn={loggedIn}
+          />
+        ) : (
+          <ul className="flex flex-col gap-2.5 group-data-[density=kompakt]/density:gap-2">
+            {jobs.map((job) => (
+              <li key={job.id}>
+                <SeenCardWrapper
+                  jobId={job.id}
+                  slug={job.slug}
                   loggedIn={loggedIn}
-                  now={now}
-                  isNew={lastVisit !== null && job.publishedAt > lastVisit}
-                />
-              </SeenCardWrapper>
-            </li>
-          ))}
-        </ul>
-      )}
-      <Pagination params={ctx.params} total={counts.total} />
+                  seenOnServer={job.seen}
+                >
+                  <JobCard
+                    job={job}
+                    loggedIn={loggedIn}
+                    now={now}
+                    isNew={lastVisit !== null && job.publishedAt > lastVisit}
+                  />
+                </SeenCardWrapper>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Pagination params={ctx.params} total={counts.total} />
+      </DensityProvider>
     </>
   );
 }

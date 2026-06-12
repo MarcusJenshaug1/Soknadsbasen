@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect, useOptimistic, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { FiList, FiMenu } from "react-icons/fi";
 
 import { setDensity, touchLastVisit } from "@/lib/jobs/actions";
+import { useDensity } from "./DensityProvider";
 import type { Density } from "./JobCard";
 
 /**
  * Tetthets-toggle (designreferansen): segmentert ikon-par komfortabel/kompakt.
- * Valget lagres via server action (cookie + profil) og listen re-rendres.
+ * Byttet er ren klient-CSS via DensityProvider; cookie skrives fra klienten og
+ * profil-sync går fire-and-forget. Ingen router.refresh — den re-kjørte hele
+ * den tunge listesiden.
  */
-export function DensityToggle({ current }: { current: Density }) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
-  const [optimistic, setOptimistic] = useOptimistic(current);
+export function DensityToggle() {
+  const { density, setDensity: setCtxDensity } = useDensity();
+
+  const choose = (value: Density) => {
+    setCtxDensity(value);
+    document.cookie = `sb_jobb_visning=${value}; path=/jobb; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    setDensity(value).catch((err) => console.error("setDensity feilet:", err));
+  };
 
   return (
     <div
@@ -32,16 +38,10 @@ export function DensityToggle({ current }: { current: Density }) {
           key={value}
           type="button"
           aria-label={label}
-          aria-pressed={optimistic === value}
-          onClick={() =>
-            startTransition(async () => {
-              setOptimistic(value);
-              await setDensity(value);
-              router.refresh();
-            })
-          }
+          aria-pressed={density === value}
+          onClick={() => choose(value)}
           className={`flex h-[26px] w-[36px] items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/50 ${
-            optimistic === value ? "bg-ink text-bg" : "text-ink-muted hover:text-ink"
+            density === value ? "bg-ink text-bg" : "text-ink-muted hover:text-ink"
           }`}
         >
           <Icon size={13} aria-hidden />

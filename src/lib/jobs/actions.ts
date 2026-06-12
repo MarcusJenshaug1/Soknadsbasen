@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-import { DENSITY_COOKIE, isDensity } from "./density";
+import { isDensity } from "./density";
 
 /**
  * Server actions for stillingsmodulen. Alle er fire-and-forget fra klienten —
@@ -27,15 +27,13 @@ export async function markJobSeen(jobId: string): Promise<void> {
   }
 }
 
-/** Lagrer tetthetsvalg: cookie for alle, profil i tillegg for innloggede. */
+/**
+ * Profil-sync av tetthetsvalg for innloggede. Cookien skrives av klienten
+ * (DensityToggle) — cookies().set() her ville invalidert router-cachen og
+ * tvunget full re-render av den tunge listesiden.
+ */
 export async function setDensity(value: string): Promise<void> {
   if (!isDensity(value)) return;
-  const jar = await cookies();
-  jar.set(DENSITY_COOKIE, value, {
-    path: "/jobb",
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: "lax",
-  });
   try {
     const session = await getSession();
     if (session) {
