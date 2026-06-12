@@ -388,6 +388,10 @@ model JobApplication {
   notes            String?
   /// Optional link to a ResumeVersion snapshot sent with this application.
   resumeSnapshotId String?
+  /// AI-skreddersydd CV for denne søknaden — nøkkel inn i
+  /// UserData.resumeData._resumeDataMap (samme mønster som
+  /// ResumeShareLink.resumeId), IKKE en FK. null = ingen tilpasset CV.
+  tailoredResumeId String?
   archivedAt       DateTime?
   /// The job-search session this application belongs to. Null for pre-session data.
   sessionId        String?

@@ -11,6 +11,7 @@ import { PIPELINE_COLUMNS } from "@/lib/pipeline";
 import { cn } from "@/lib/cn";
 import { AiTools } from "./AiTools";
 import { AtsCheck } from "./AtsCheck";
+import { TailorCvCard } from "./TailorCvCard";
 import { InterviewStages, type Stage } from "./InterviewStages";
 import { InviteButton } from "@/components/collab/InviteButton";
 import { OwnerCollabBridge } from "@/components/collab/OwnerCollabBridge";
@@ -82,6 +83,7 @@ type Application = {
   contactPhone: string | null;
   jobDescription: string | null;
   notes: string | null;
+  tailoredResumeId: string | null;
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -613,6 +615,16 @@ export function ApplicationDetail({ initial }: { initial: Application }) {
         <div className="md:col-span-1 space-y-6">
           <Card>
             <AiTools applicationId={app.id} />
+          </Card>
+
+          <Card>
+            <TailorCvCard
+              applicationId={app.id}
+              tailoredResumeId={app.tailoredResumeId}
+              onLinked={(resumeId) =>
+                setApp((a) => ({ ...a, tailoredResumeId: resumeId }))
+              }
+            />
           </Card>
 
           <Card>

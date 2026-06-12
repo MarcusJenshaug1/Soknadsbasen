@@ -59,6 +59,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     jobUrl: string;
     companyId: string | null;
     resumeSnapshotId: string | null;
+    tailoredResumeId: string | null;
     deadlineAt: string | null;
     applicationDate: string | null;
     interviewAt: string | null;
@@ -88,6 +89,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         ...(body.jobUrl !== undefined ? { jobUrl: body.jobUrl } : {}),
         ...("companyId" in body ? { companyId: body.companyId ?? null } : {}),
         ...("resumeSnapshotId" in body ? { resumeSnapshotId: body.resumeSnapshotId ?? null } : {}),
+        ...("tailoredResumeId" in body ? { tailoredResumeId: body.tailoredResumeId ?? null } : {}),
         ...("deadlineAt" in body
           ? { deadlineAt: body.deadlineAt ? new Date(body.deadlineAt) : null }
           : {}),

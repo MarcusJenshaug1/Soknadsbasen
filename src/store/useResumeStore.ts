@@ -207,6 +207,8 @@ interface ResumeStore {
 
   /* Multi-CV actions */
   addResume: (name?: string) => void;
+  /** Som addResume, men med ferdig innhold (AI-tilpasset CV). Returnerer id. */
+  addResumeWithData: (name: string, data: ResumeData) => string;
   removeResume: (id: string) => void;
   setActiveResume: (id: string) => void;
   renameResume: (id: string, name: string) => void;
@@ -387,6 +389,18 @@ export const useResumeStore = create<ResumeStore>()(
           activeResumeId: id,
           data: newData,
         }));
+      },
+
+      addResumeWithData: (name, data) => {
+        const id = `resume-${uid()}`;
+        const now = new Date().toISOString();
+        set((s) => ({
+          resumes: [...s.resumes, { id, name, createdAt: now }],
+          _resumeDataMap: { ...s._resumeDataMap, [s.activeResumeId]: s.data, [id]: data },
+          activeResumeId: id,
+          data,
+        }));
+        return id;
       },
 
       removeResume: (id) => {
