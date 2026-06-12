@@ -27,7 +27,7 @@ interface AuthStore {
     email: string,
     password: string,
     name: string,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{ ok: boolean; error?: string; needsConfirmation?: boolean }>;
   login: (
     email: string,
     password: string,
@@ -125,10 +125,21 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name } },
+        options: {
+          data: { name },
+          // Bekreftelseslenken lander på auto-innloggings-siden, som
+          // etablerer sesjonen klient-side og sender videre til /velkommen.
+          emailRedirectTo: `${window.location.origin}/bekreftet`,
+        },
       });
       if (error) return { ok: false, error: error.message };
       if (!data.user) return { ok: false, error: "Registrering feilet." };
+      // Uten session krever Supabase e-postbekreftelse — IKKE sett user i
+      // storen da (appen ville trodd man var innlogget og bouncet via
+      // /velkommen → /logg-inn uten forklaring).
+      if (!data.session) {
+        return { ok: true, needsConfirmation: true };
+      }
       set({
         user: {
           id: data.user.id,

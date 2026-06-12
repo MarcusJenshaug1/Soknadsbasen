@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bekreft e-posten din</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0ece6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <!-- GoTrue-mal: {{ .ConfirmationURL }} byttes ut ved utsending. -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0ece6;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+          <!-- Logo/avsender -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <span style="font-size:18px;font-weight:600;letter-spacing:-0.02em;color:#14110e;">
+                S&oslash;knadsbasen<span style="color:#D5592E;">.</span>
+              </span>
+            </td>
+          </tr>
+          <!-- Kort -->
+          <tr>
+            <td style="background-color:#faf8f5;border-radius:20px;padding:40px 36px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:20px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="width:56px;height:56px;border-radius:28px;background-color:#fdeee7;font-size:26px;line-height:56px;">
+                          &#9993;
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom:10px;">
+                    <span style="font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#14110e;">
+                      Velkommen! Bare ett klikk igjen.
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <span style="font-size:14px;line-height:1.6;color:#5c564e;">
+                      Bekreft e-postadressen din, s&aring; logger vi deg rett inn
+                      og hjelper deg i gang med CV-en og jobbs&oslash;kingen.
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <a href="{{ .ConfirmationURL }}"
+                       style="display:inline-block;background-color:#D5592E;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:999px;">
+                      Bekreft og logg inn
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="border-top:1px solid #e8e2d8;padding-top:22px;">
+                    <span style="font-size:12px;line-height:1.6;color:#8a8378;">
+                      Fungerer ikke knappen? Kopier denne lenken inn i nettleseren:<br>
+                      <a href="{{ .ConfirmationURL }}" style="color:#D5592E;word-break:break-all;">{{ .ConfirmationURL }}</a>
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding-top:24px;">
+              <span style="font-size:11.5px;line-height:1.7;color:#8a8378;">
+                Du f&aring;r denne e-posten fordi noen registrerte seg p&aring;
+                S&oslash;knadsbasen med denne adressen.<br>
+                Var det ikke deg? Da kan du trygt ignorere den.<br><br>
+                <a href="https://søknadsbasen.no" style="color:#8a8378;">s&oslash;knadsbasen.no</a>
+                &nbsp;&middot;&nbsp; Laget i Norge
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

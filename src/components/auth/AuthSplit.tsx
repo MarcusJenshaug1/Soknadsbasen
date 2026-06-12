@@ -334,15 +334,15 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
     setSubmitting(true);
     setError(null);
     const res = await register(email, password, name);
-    setSubmitting(false);
     if (!res.ok) {
+      setSubmitting(false);
       setError(res.error ?? "Kunne ikke opprette konto");
       return;
     }
-    // Supabase may require email confirmation; if no session yet, surface
-    // that to the user via the login toggle.
-    if (!useAuthStore.getState().user) {
-      onDone();
+    // E-postbekreftelse kreves: egen side med animasjon + resend i stedet
+    // for det gamle stille hoppet til login-fanen.
+    if (res.needsConfirmation) {
+      router.replace(`/sjekk-eposten?epost=${encodeURIComponent(email)}`);
       return;
     }
     router.replace("/velkommen");
