@@ -296,3 +296,10 @@ body {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
+
+/* Match-kjøring (/jobb): indeterminert fyll som flater ut mot ~92 % mens
+   serveren jobber; hopper til 100 % via transition når svaret kommer. */
+@keyframes match-run-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(0.92); }
+}

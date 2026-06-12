@@ -16,8 +16,10 @@ import { FilterNavProvider } from "@/components/jobb/filters/FilterNav";
 import { FilterSidebar } from "@/components/jobb/filters/FilterSidebar";
 import { MobileFilterSheet } from "@/components/jobb/filters/MobileFilterSheet";
 import { SearchTypeahead } from "@/components/jobb/search/SearchTypeahead";
+import { MatchMeBanner } from "@/components/jobb/MatchMeBanner";
 import { getSession } from "@/lib/auth";
 import { getCvStatus, type CvStatus } from "@/lib/jobs/cv-status";
+import { MATCH_REFRESH_COST } from "@/lib/jobs/match-run";
 import { readDensity, readLastVisit } from "@/lib/jobs/density";
 import { getFacetCounts, type FacetCounts } from "@/lib/jobs/facets-query";
 import {
@@ -149,6 +151,7 @@ export default async function JobbPage({ searchParams }: Props) {
                 listPromise={listPromise}
                 facetsPromise={facetsPromise}
                 recommendedPromise={recommendedPromise}
+                cvStatusPromise={cvStatusPromise}
               />
             </Suspense>
           </section>
@@ -210,6 +213,7 @@ async function ListSection({
   listPromise,
   facetsPromise,
   recommendedPromise,
+  cvStatusPromise,
 }: {
   ctx: JobbContext;
   sort: SortKey;
@@ -219,16 +223,26 @@ async function ListSection({
   listPromise: Promise<JobListItem[]>;
   facetsPromise: Promise<FacetCounts>;
   recommendedPromise: Promise<RecommendedJob[]> | null;
+  cvStatusPromise: Promise<CvStatus> | null;
 }) {
-  const [jobs, counts, recommended] = await Promise.all([
+  const [jobs, counts, recommended, cvStatus] = await Promise.all([
     listPromise,
     facetsPromise,
     recommendedPromise,
+    cvStatusPromise,
   ]);
   const now = new Date();
+  const matchState = cvStatus?.hasCv ? cvStatus.matchState : null;
 
   return (
     <>
+      {(matchState === "never" || matchState === "stale") && (
+        <MatchMeBanner
+          variant={matchState}
+          cost={MATCH_REFRESH_COST}
+          totalJobs={counts.total}
+        />
+      )}
       {recommended && <RecommendedRow jobs={recommended} />}
       <DensityProvider initial={density}>
         <ListHeader

@@ -126,7 +126,7 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         q: "Hva er Match Score, og har Lønna det også?",
-        a: "Match Score er en transparent gjennomgang av hvor godt CV-en din dekker stillingsannonsens krav, med per-krav-status (dekket / delvis / mangler). Lønna har ikke dette i det hele tatt. Søknadsbasen tilbyr funksjonen gratis for alle, også uten Pro-abonnement.",
+        a: "Match Score er en transparent gjennomgang av hvor godt CV-en din dekker stillingsannonsens krav, med per-krav-status (dekket / delvis / mangler). Lønna har ikke dette i det hele tatt. Hos Søknadsbasen er første matching gratis; re-matching etter at du har endret CV-en bruker AI-kreditter.",
       },
     ],
   },
