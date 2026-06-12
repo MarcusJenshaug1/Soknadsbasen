@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool, MessageSquare, X } from "lucide-react";
+import { ChevronRight, ChevronLeft, FileUp, Plus, Copy, Trash2, Pencil, Check, ChevronDown, Eye, PenTool, MessageSquare, X, Star } from "lucide-react";
 import { LivePreview, PrintOutput } from "./LivePreview";
 import { useResumeStore, type ResumeEntry } from "@/store/useResumeStore";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -891,6 +891,10 @@ function CVSwitcher() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [resumeToDelete, setResumeToDelete] = useState<ResumeEntry | null>(null);
+  // Hoved-CV for stillingsmatching — server-eid kolonne, hentes lazy ved
+  // første åpning av dropdownen. null = aktiv CV brukes.
+  const [mainResumeId, setMainResumeId] = useState<string | null>(null);
+  const [mainFetched, setMainFetched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeName = resumes.find((r) => r.id === activeResumeId)?.name ?? "CV";
@@ -898,6 +902,41 @@ function CVSwitcher() {
   useEffect(() => {
     if (editingId && inputRef.current) inputRef.current.focus();
   }, [editingId]);
+
+  useEffect(() => {
+    if (!open || mainFetched) return;
+    let cancelled = false;
+    fetch("/api/user/main-resume")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { mainResumeId?: string | null } | null) => {
+        if (!cancelled) {
+          setMainResumeId(d?.mainResumeId ?? null);
+          setMainFetched(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMainFetched(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mainFetched]);
+
+  const setAsMain = async (id: string) => {
+    const next = mainResumeId === id ? null : id;
+    const prev = mainResumeId;
+    setMainResumeId(next);
+    try {
+      const res = await fetch("/api/user/main-resume", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: next }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      setMainResumeId(prev);
+    }
+  };
 
   const startRename = (r: ResumeEntry) => {
     setEditingId(r.id);
@@ -974,8 +1013,31 @@ function CVSwitcher() {
                         className="flex-1 text-left truncate min-w-0"
                       >
                         {r.name}
+                        {mainResumeId === r.id && (
+                          <span className="ml-1.5 inline-flex items-center rounded-full bg-[#D5592E]/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-[#D5592E]">
+                            Hoved
+                          </span>
+                        )}
                       </button>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          onClick={() => void setAsMain(r.id)}
+                          className={
+                            mainResumeId === r.id
+                              ? "p-1 text-[#D5592E]"
+                              : "p-1 hover:text-[#D5592E]"
+                          }
+                          title={
+                            mainResumeId === r.id
+                              ? "Hoved-CV for stillingsmatch (klikk for å bruke aktiv CV)"
+                              : "Sett som hoved-CV for stillingsmatch"
+                          }
+                        >
+                          <Star
+                            className="size-3"
+                            fill={mainResumeId === r.id ? "currentColor" : "none"}
+                          />
+                        </button>
                         <button
                           onClick={() => startRename(r)}
                           className="p-1 hover:text-[#D5592E]"
@@ -1023,7 +1085,19 @@ function CVSwitcher() {
         open={resumeToDelete !== null}
         onClose={() => setResumeToDelete(null)}
         onConfirm={() => {
-          if (resumeToDelete) removeResume(resumeToDelete.id);
+          if (resumeToDelete) {
+            removeResume(resumeToDelete.id);
+            if (mainResumeId === resumeToDelete.id) {
+              // Server-fallbacken (aktiv CV) dekker uansett — dette rydder
+              // bare pekeren. Fire-and-forget med logging.
+              setMainResumeId(null);
+              fetch("/api/user/main-resume", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ resumeId: null }),
+              }).catch((err) => console.error("main-resume cleanup feilet:", err));
+            }
+          }
           setResumeToDelete(null);
         }}
         title="Slette denne CV-en?"

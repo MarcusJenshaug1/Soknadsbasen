@@ -118,7 +118,8 @@ export function TailorCvCard({
         <>
           <p className="text-[12px] text-ink/60 mb-3">
             «{linked.name}» er koblet til denne søknaden og satt som aktiv CV.
-            Den kan redigeres videre i Min CV.
+            Den kan redigeres videre i Min CV. Hoved-CV-en din for
+            stillingsmatch er uendret.
           </p>
           <button
             type="button"
