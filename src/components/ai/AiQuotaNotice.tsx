@@ -42,7 +42,7 @@ export function AiQuotaNotice({ error }: { error: AiError }) {
         >
           {error.code === "no_access"
             ? "Se abonnement"
-            : "Kjøp flere AI-handlinger"}
+            : "Kjøp flere AI-kreditter"}
         </Link>
       </div>
     </div>

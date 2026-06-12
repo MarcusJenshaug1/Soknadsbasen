@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sparkles, CheckCircle2 } from "lucide-react";
 import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
+import { AiCreditBadge, bustAiQuotaCache } from "@/components/ai/AiCreditBadge";
 import { SuggestionCard } from "@/components/collab/SuggestionCard";
 import { applyResumeSuggestion } from "@/lib/cv-suggestions";
 import { useResumeStore } from "@/store/useResumeStore";
@@ -54,6 +55,7 @@ export function AiReviewPanel() {
       const data = (await res.json().catch(() => null)) as
         | { suggestions?: AiSuggestion[] }
         | null;
+      bustAiQuotaCache();
       setSuggestions(data?.suggestions ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI-gjennomgangen feilet. Prøv igjen.");
@@ -92,15 +94,18 @@ export function AiReviewPanel() {
       </div>
 
       {suggestions === null && (
-        <button
-          type="button"
-          onClick={runReview}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-bg text-[13px] font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
-        >
-          <Sparkles size={14} />
-          {loading ? "Gjennomgår CV-en … (tar 10–20 sek)" : "Start AI-gjennomgang"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={runReview}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-bg text-[13px] font-medium hover:opacity-80 transition-opacity disabled:opacity-50"
+          >
+            <Sparkles size={14} />
+            {loading ? "Gjennomgår CV-en … (tar 10–20 sek)" : "Start AI-gjennomgang"}
+          </button>
+          <AiCreditBadge />
+        </div>
       )}
 
       {quotaError && <AiQuotaNotice error={quotaError} />}

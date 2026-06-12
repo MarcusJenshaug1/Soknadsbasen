@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
+import { AiCreditBadge, bustAiQuotaCache } from "@/components/ai/AiCreditBadge";
 import { cn } from "@/lib/cn";
 
 type Tone = "varm" | "formell" | "konsis";
@@ -98,6 +99,7 @@ export function AiDraftButton({
               onStream?.(accumulated);
             }
             if (evt.done && evt.html) {
+              bustAiQuotaCache();
               onStream?.(null);
               onDraft(evt.html);
               if (evt.warnings && evt.warnings.length > 0) {
@@ -161,6 +163,7 @@ export function AiDraftButton({
         >
           {loading ? <><SpinnerDots /> Skriver</> : "Generer"}
         </button>
+        <AiCreditBadge />
         <button
           type="button"
           onClick={() => {

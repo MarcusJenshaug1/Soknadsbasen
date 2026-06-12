@@ -39,11 +39,11 @@ const PRICING_FAQ = [
   },
   {
     q: "Får jeg tilgang til alle funksjoner i begge planer?",
-    a: "Ja. Begge planer gir full tilgang til CV-bygger, søknadsbrev, pipeline, oppgaver, innsikt og ATS-eksport, og samme AI-kvote på 150 AI-handlinger per måned. Det er ingen funksjonsbegrensninger basert på plan.",
+    a: "Ja. Begge planer gir full tilgang til CV-bygger, søknadsbrev, pipeline, oppgaver, innsikt og ATS-eksport, og samme AI-kvote på 150 AI-kreditter per måned. Det er ingen funksjonsbegrensninger basert på plan.",
   },
   {
-    q: "Hva er AI-handlinger og hvor mange får jeg?",
-    a: "AI-handlinger er kjøringer av de generative AI-funksjonene, som AI-søknadsbrev, CV-gjennomgang, tilpasset CV, intervjuforberedelse og analyse av stillingsannonser. Begge planer inkluderer 150 AI-handlinger per måned, og prøveperioden inkluderer 25. Nøkkelordsuttrekk og ATS-sjekk er gratis og teller ikke. Trenger du flere kan du kjøpe påfyll: 50 handlinger for 29 kr eller 100 for 49 kr. Kjøpte handlinger utløper aldri.",
+    q: "Hva er AI-kreditter og hvor mange får jeg?",
+    a: "AI-kreditter er kjøringer av de generative AI-funksjonene, som AI-søknadsbrev, CV-gjennomgang, tilpasset CV, intervjuforberedelse og analyse av stillingsannonser. Begge planer inkluderer 150 AI-kreditter per måned, og prøveperioden inkluderer 25. Nøkkelordsuttrekk og ATS-sjekk er gratis og teller ikke. Trenger du flere kan du kjøpe påfyll: 50 handlinger for 29 kr eller 100 for 49 kr. Kjøpte handlinger utløper aldri.",
   },
   {
     q: "Beholder jeg CV-ene mine etter at abonnementet utløper?",

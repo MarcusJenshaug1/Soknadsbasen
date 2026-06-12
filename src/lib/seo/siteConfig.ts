@@ -36,8 +36,8 @@ export const siteConfig = {
   pricing: {
     monthly: { amount: 79, currency: "NOK", trialDays: 7 },
     sixMonth: { amount: 299, currency: "NOK", durationMonths: 6 },
-    // AI-handlinger: generative AI-funksjoner (søknadsbrev, CV-gjennomgang,
-    // tilpasset CV osv.) bruker 1 handling per kjøring; nøkkelord/ATS-sjekk
+    // AI-kreditter: generative AI-funksjoner (søknadsbrev, CV-gjennomgang,
+    // tilpasset CV osv.) bruker 1 kreditt per kjøring; nøkkelord/ATS-sjekk
     // er gratis. Hold i synk med MONTHLY/TRIAL_AI_CREDITS i src/lib/ai/credits.ts.
     aiCredits: {
       monthlyIncluded: 150,

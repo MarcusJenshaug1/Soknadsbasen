@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Zap } from "lucide-react";
 import { SectionLabel } from "@/components/ui/Pill";
 import { AiQuotaNotice, type AiError } from "@/components/ai/AiQuotaNotice";
+import { AiCreditBadge, bustAiQuotaCache } from "@/components/ai/AiCreditBadge";
 import { cn } from "@/lib/cn";
 
 type JobAnalysis = {
@@ -75,6 +77,7 @@ export function AiTools({ applicationId }: { applicationId: string }) {
         }
         throw new Error(data.error ?? "AI-feil");
       }
+      bustAiQuotaCache();
       return data;
     } catch (err) {
       if (!isQuotaError) setError(err instanceof Error ? err.message : "Ukjent feil");
@@ -114,23 +117,35 @@ export function AiTools({ applicationId }: { applicationId: string }) {
 
   return (
     <div className="space-y-2">
-      <SectionLabel>AI-verktøy</SectionLabel>
+      <div className="flex items-center justify-between gap-2">
+        <SectionLabel>AI-verktøy</SectionLabel>
+        <AiCreditBadge />
+      </div>
       <div className="space-y-1">
         <button onClick={runMatchScore} className={btn}>
-          <span>CV-match mot stillingen</span>
+          <span>
+            CV-match mot stillingen{" "}
+            <span className="text-[10px] text-ink/40">(gratis)</span>
+          </span>
           <span className="text-[11px] text-accent">→</span>
         </button>
         <button onClick={runAnalyze} className={btn}>
           <span>Analyser stillingen</span>
-          <span className="text-[11px] text-accent">→</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-accent">
+            <Zap size={10} aria-hidden /> →
+          </span>
         </button>
         <button onClick={runInterview} className={btn}>
           <span>Intervjuforberedelse</span>
-          <span className="text-[11px] text-accent">→</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-accent">
+            <Zap size={10} aria-hidden /> →
+          </span>
         </button>
         <button onClick={runFollowUp} className={btn}>
           <span>Skriv oppfølgings-e-post</span>
-          <span className="text-[11px] text-accent">→</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-accent">
+            <Zap size={10} aria-hidden /> →
+          </span>
         </button>
       </div>
 

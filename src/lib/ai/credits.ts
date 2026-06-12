@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 
 /**
- * AI-handlinger-kvote. Kun generative kall teller (1 credit per kall);
+ * AI-kreditter-kvote. Kun generative kall teller (1 credit per kall);
  * mekanisk Haiku-ekstraksjon er gratis. Aktivt abonnement (monthly/one_time)
  * og org-tilgang gir MONTHLY_AI_CREDITS per kalendermåned (UTC); trial gir
  * TRIAL_AI_CREDITS totalt (bøtte nøklet på trial-start, så månedsskifte ikke
@@ -154,7 +154,7 @@ export async function hasAiQuotaAccess(userId: string): Promise<boolean> {
 }
 
 /**
- * Trekker 1 AI-handling. Fungerer samtidig som tilgangssjekk — kall etter
+ * Trekker 1 AI-kreditt. Fungerer samtidig som tilgangssjekk — kall etter
  * rate-limit, før datahenting. Ved claude-feil etterpå: refundAiCredit.
  */
 export async function consumeAiCredit(

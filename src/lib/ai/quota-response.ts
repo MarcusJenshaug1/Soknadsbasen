@@ -24,7 +24,7 @@ export function quotaErrorResponse(
   return NextResponse.json(
     {
       error:
-        "Du er tom for AI-handlinger denne perioden. Kjøp påfyll eller vent til neste periode.",
+        "Du er tom for AI-kreditter denne perioden. Kjøp påfyll eller vent til neste periode.",
       code: "quota_exhausted",
       remaining: 0,
     },

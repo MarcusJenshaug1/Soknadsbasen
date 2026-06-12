@@ -115,10 +115,10 @@ export default async function BillingPage() {
 
       {hasMeteredAccess && (
           <Card variant="surface" radius="3xl" className="mt-6 p-6">
-            <h2 className="text-[15px] font-medium text-ink mb-1">AI-handlinger</h2>
+            <h2 className="text-[15px] font-medium text-ink mb-1">AI-kreditter</h2>
             <p className="text-[12px] text-black/55 dark:text-white/55 mb-4">
               Søknadsbrev, CV-gjennomgang, tilpasset CV og andre AI-funksjoner
-              bruker én handling per kjøring. Nøkkelord og ATS-sjekk er gratis.
+              bruker én kreditt per kjøring. Nøkkelord og ATS-sjekk er gratis.
             </p>
 
             <div className="flex items-baseline justify-between gap-3 mb-2">
@@ -146,7 +146,7 @@ export default async function BillingPage() {
               aria-valuemin={0}
               aria-valuemax={quota.allowance}
               aria-valuenow={quota.monthlyRemaining}
-              aria-label="Gjenstående AI-handlinger denne perioden"
+              aria-label="Gjenstående AI-kreditter denne perioden"
               className="h-[6px] overflow-hidden rounded-full bg-black/10 dark:bg-white/10"
             >
               <div
@@ -163,20 +163,20 @@ export default async function BillingPage() {
                   <PricingCardButton
                     priceId={topup50}
                     mode="payment"
-                    label="50 AI-handlinger – 29 kr"
+                    label="50 AI-kreditter – 29 kr"
                   />
                 )}
                 {topup100 && (
                   <PricingCardButton
                     priceId={topup100}
                     mode="payment"
-                    label="100 AI-handlinger – 49 kr"
+                    label="100 AI-kreditter – 49 kr"
                   />
                 )}
               </div>
             )}
             <p className="mt-2 text-[11.5px] text-black/45 dark:text-white/45">
-              Kjøpte handlinger brukes når månedskvoten er tom, og utløper aldri.
+              Kjøpte kreditter brukes når månedskvoten er tom, og utløper aldri.
             </p>
           </Card>
       )}

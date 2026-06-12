@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getAiQuotaStatus } from "@/lib/ai/credits";
 
 /**
- * GET /api/ai/quota — gjenstående AI-handlinger for innlogget bruker.
+ * GET /api/ai/quota — gjenstående AI-kreditter for innlogget bruker.
  * Driver kvote-meteret og 402-feilvisningene i klienten. Billing-siden
  * kaller getAiQuotaStatus direkte server-side (ingen self-fetch).
  */

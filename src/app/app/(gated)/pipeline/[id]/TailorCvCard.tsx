@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, FileText, ArrowRight } from "lucide-react";
 import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
+import { AiCreditBadge, bustAiQuotaCache } from "@/components/ai/AiCreditBadge";
 import { useResumeStore, type ResumeData } from "@/store/useResumeStore";
 
 /**
@@ -59,6 +60,7 @@ export function TailorCvCard({
       if (!data?.name || !data.resumeData) {
         throw new Error("Ugyldig svar fra AI-tilpasningen. Prøv igjen.");
       }
+      bustAiQuotaCache();
 
       newId = useResumeStore
         .getState()
@@ -102,11 +104,14 @@ export function TailorCvCard({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <FileText size={14} className="text-ink/50" />
-        <span className="text-[11px] uppercase tracking-[0.14em] text-ink/50 font-medium">
-          Tilpasset CV
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="flex items-center gap-2">
+          <FileText size={14} className="text-ink/50" />
+          <span className="text-[11px] uppercase tracking-[0.14em] text-ink/50 font-medium">
+            Tilpasset CV
+          </span>
         </span>
+        {!linked && <AiCreditBadge />}
       </div>
 
       {linked ? (

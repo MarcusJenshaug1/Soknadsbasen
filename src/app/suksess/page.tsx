@@ -49,7 +49,7 @@ export default async function SuksessPage({ searchParams }: Props) {
       }
     } else if (checkoutResult.mode === "payment") {
       planLabel = isTopup
-        ? `${topupCredits ?? ""} AI-handlinger`.trim()
+        ? `${topupCredits ?? ""} AI-kreditter`.trim()
         : "6 måneders tilgang";
     }
   }

@@ -7,6 +7,7 @@ import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layou
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
 import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
+import { AiCreditBadge, bustAiQuotaCache } from "@/components/ai/AiCreditBadge";
 import { ShareCVModal } from "@/components/cv/ShareCVModal";
 import { AtsCertifiedBadge } from "@/components/cv/AtsCertifiedBadge";
 import { TemplateRenderer } from "@/components/templates";
@@ -286,6 +287,7 @@ export function SummaryForm() {
               setStreamText(accumulated);
             }
             if (evt.done && evt.text != null) {
+              bustAiQuotaCache();
               const converted = `<p>${evt.text.replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
               updateSummary(converted);
               setEditorKey((k) => k + 1);
@@ -349,6 +351,7 @@ export function SummaryForm() {
             >
               {aiLoading ? "Skriver …" : "Generer"}
             </button>
+            <AiCreditBadge />
             <button
               type="button"
               onClick={() => {

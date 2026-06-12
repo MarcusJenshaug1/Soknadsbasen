@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AiQuotaNotice, type AiError } from "@/components/ai/AiQuotaNotice";
+import { AiCreditBadge, bustAiQuotaCache } from "@/components/ai/AiCreditBadge";
 import { useResumeStore } from "@/store/useResumeStore";
 import { savePendingTips, type CvTipsLink } from "@/lib/cv-pending-tips";
 import { cn } from "@/lib/cn";
@@ -126,6 +127,7 @@ export function CvTipsPanel(props: Props) {
           }
           return;
         }
+        bustAiQuotaCache();
         setTips(payload);
       })
       .catch((err) => {
@@ -167,8 +169,11 @@ export function CvTipsPanel(props: Props) {
       >
         <div className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-black/8 px-6 py-4 flex items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-accent mb-1">
-              AI-coach
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-accent">
+                AI-coach
+              </span>
+              <AiCreditBadge />
             </div>
             <h2 className="text-[18px] md:text-[20px] font-medium tracking-tight text-ink">
               Få hjelp med CV-en din
