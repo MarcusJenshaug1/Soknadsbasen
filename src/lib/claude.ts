@@ -52,6 +52,12 @@ export type ClaudeOptions = {
    * støttes ikke av API-et.
    */
   jsonSchema?: Record<string, unknown>;
+  /**
+   * Kalles med token-forbruket når svaret er komplett (claudeGenerate:
+   * synkront etter kallet; claudeStream: etter siste chunk). Opt-in —
+   * brukes til AiUsageEvent-kostnadsloggen. Feil i callbacken svelges.
+   */
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
 };
 
 const JSON_NUDGE =
@@ -105,6 +111,17 @@ export async function claudeGenerate(
     throw toFriendlyError(err);
   }
 
+  if (opts.onUsage) {
+    try {
+      opts.onUsage({
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
+      });
+    } catch (err) {
+      console.error("claudeGenerate onUsage-callback feilet:", err);
+    }
+  }
+
   const text = message.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
@@ -149,6 +166,17 @@ export async function claudeStream(
         if (!emittedText) {
           controller.error(new Error("Tomt svar fra Claude. Prøv igjen."));
           return;
+        }
+        if (opts.onUsage) {
+          try {
+            const final = await stream.finalMessage();
+            opts.onUsage({
+              inputTokens: final.usage.input_tokens,
+              outputTokens: final.usage.output_tokens,
+            });
+          } catch (err) {
+            console.error("claudeStream onUsage-callback feilet:", err);
+          }
         }
         controller.close();
       } catch (err) {

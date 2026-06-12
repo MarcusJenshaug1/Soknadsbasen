@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { claudeGenerate } from "@/lib/claude";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { consumeAiCredit, refundAiCredit, recordAiUsageEvent } from "@/lib/ai/credits";
+import { quotaErrorResponse } from "@/lib/ai/quota-response";
 import { prisma } from "@/lib/prisma";
 import { parseActiveResume, parseResumeById } from "@/lib/resume-server";
 
@@ -121,15 +123,20 @@ reason er én kort setning om hvorfor endringen er bedre.`;
     })),
   };
 
+  const credit = await consumeAiCredit(session.userId, "cv_review");
+  if (!credit.ok) return quotaErrorResponse(credit);
+
   let raw: string;
   try {
     raw = await claudeGenerate(JSON.stringify(input), {
       system,
       maxOutputTokens: 4000,
       jsonSchema: REVIEW_SCHEMA as unknown as Record<string, unknown>,
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "cv_review", "claude-sonnet-4-6", u),
     });
   } catch (err) {
     console.error("cv-review: claudeGenerate feilet", err);
+    await refundAiCredit(session.userId, credit.source, credit.periodStart);
     return NextResponse.json(
       { error: "AI-gjennomgangen feilet. Prøv igjen om litt." },
       { status: 502 },

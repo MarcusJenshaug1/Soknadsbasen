@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { claudeGenerate } from "@/lib/claude";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { consumeAiCredit, refundAiCredit, recordAiUsageEvent } from "@/lib/ai/credits";
+import { quotaErrorResponse } from "@/lib/ai/quota-response";
 import { prisma } from "@/lib/prisma";
 import { parseActiveResume } from "@/lib/resume-server";
 import type { ResumeData } from "@/store/useResumeStore";
@@ -132,15 +134,20 @@ ${JSON.stringify({
     education: baseEducation.map((e) => `${e.degree} ${e.field}, ${e.school}`),
   })}`;
 
+  const credit = await consumeAiCredit(session.userId, "tailor_cv");
+  if (!credit.ok) return quotaErrorResponse(credit);
+
   let raw: string;
   try {
     raw = await claudeGenerate(userPrompt, {
       system,
       maxOutputTokens: 3000,
       jsonSchema: TAILOR_SCHEMA as unknown as Record<string, unknown>,
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "tailor_cv", "claude-sonnet-4-6", u),
     });
   } catch (err) {
     console.error("tailor-cv: claudeGenerate feilet", err);
+    await refundAiCredit(session.userId, credit.source, credit.periodStart);
     return NextResponse.json(
       { error: "AI-tilpasningen feilet. Prøv igjen om litt." },
       { status: 502 },

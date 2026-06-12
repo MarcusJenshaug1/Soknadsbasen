@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { consumeAiCredit, refundAiCredit, recordAiUsageEvent } from "@/lib/ai/credits";
+import { quotaErrorResponse } from "@/lib/ai/quota-response";
 import { prisma } from "@/lib/prisma";
 import { claudeStream } from "@/lib/claude";
 import { parseActiveResume } from "@/lib/resume-server";
@@ -87,14 +89,22 @@ ${cvSummary}
 
 ${body.summary ? `EKSISTERENDE PROFIL-TEKST (forbedre denne, behold fakta):\n${body.summary}` : "Ingen eksisterende profil — skriv én fra bunn av basert på CV-dataene."}`;
 
+  const credit = await consumeAiCredit(session.userId, "improve_profile");
+  if (!credit.ok) return quotaErrorResponse(credit);
+
+  // Streaming: refunder kun hvis kallet feiler FØR Response er sendt —
+  // mid-stream-feil etter at headere er ute refunderes ikke (akseptert).
   let claudeReadable: ReadableStream<string>;
   try {
     claudeReadable = await claudeStream(userPrompt, {
       system,
       temperature: 0.7,
       maxOutputTokens: 400,
+      onUsage: (u) =>
+        void recordAiUsageEvent(session.userId, "improve_profile", "claude-sonnet-4-6", u),
     });
   } catch (err) {
+    await refundAiCredit(session.userId, credit.source, credit.periodStart);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-feil" },
       { status: 502 },

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { consumeAiCredit, refundAiCredit, recordAiUsageEvent } from "@/lib/ai/credits";
+import { quotaErrorResponse } from "@/lib/ai/quota-response";
 import { prisma } from "@/lib/prisma";
 import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
@@ -63,12 +65,16 @@ Regler:
     app.contactName ? `\nKontaktperson: ${app.contactName}` : ""
   }${app.applicationDate ? `\nSøknadsdato: ${app.applicationDate.toISOString().slice(0, 10)}` : ""}`;
 
+  const credit = await consumeAiCredit(session.userId, "follow_up");
+  if (!credit.ok) return quotaErrorResponse(credit);
+
   try {
     const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.7,
       maxOutputTokens: 1000,
       json: true,
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "follow_up", "claude-sonnet-4-6", u),
     });
     const parsed = parseLooseJson<{ subject: string; body: string }>(raw);
     const html = marked.parse(parsed.body, { async: false }) as string;
@@ -79,6 +85,7 @@ Regler:
       contactEmail: app.contactEmail ?? null,
     });
   } catch (err) {
+    await refundAiCredit(session.userId, credit.source, credit.periodStart);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-feil" },
       { status: 502 },

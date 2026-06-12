@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { consumeAiCredit, refundAiCredit, recordAiUsageEvent } from "@/lib/ai/credits";
+import { quotaErrorResponse } from "@/lib/ai/quota-response";
 import { prisma } from "@/lib/prisma";
 import { claudeGenerate } from "@/lib/claude";
 import { parseLooseJson } from "@/lib/json";
@@ -71,16 +73,21 @@ Regler:
     resumeSummary || "(Ingen CV-data)"
   }`;
 
+  const credit = await consumeAiCredit(session.userId, "interview_prep");
+  if (!credit.ok) return quotaErrorResponse(credit);
+
   try {
     const raw = await claudeGenerate(userPrompt, {
       system,
       temperature: 0.6,
       maxOutputTokens: 2500,
       json: true,
+      onUsage: (u) => void recordAiUsageEvent(session.userId, "interview_prep", "claude-sonnet-4-6", u),
     });
     const parsed = parseLooseJson(raw);
     return NextResponse.json(parsed);
   } catch (err) {
+    await refundAiCredit(session.userId, credit.source, credit.periodStart);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-feil" },
       { status: 502 },

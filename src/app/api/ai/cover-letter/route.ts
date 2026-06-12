@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { marked } from "marked";
 import { getSession } from "@/lib/auth";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { consumeAiCredit, refundAiCredit, recordAiUsageEvent } from "@/lib/ai/credits";
+import { quotaErrorResponse } from "@/lib/ai/quota-response";
 import { prisma } from "@/lib/prisma";
 import { claudeStream } from "@/lib/claude";
 import {
@@ -212,14 +214,22 @@ ${
 
 Skriv brødteksten til søknadsbrevet i Markdown. Adresser kontaktpersonen ved navn hvis oppgitt. Bruk avsenderens navn/kontaktinfo bare hvis det passer naturlig i teksten — den vises uansett i egne felter utenfor brødteksten.`;
 
+  const credit = await consumeAiCredit(session.userId, "cover_letter");
+  if (!credit.ok) return quotaErrorResponse(credit);
+
+  // Streaming: refunder kun hvis kallet feiler FØR Response er sendt —
+  // mid-stream-feil etter at headere er ute refunderes ikke (akseptert).
   let claudeReadable: ReadableStream<string>;
   try {
     claudeReadable = await claudeStream(userPrompt, {
       system,
       temperature: 0.8,
       maxOutputTokens: 1500,
+      onUsage: (u) =>
+        void recordAiUsageEvent(session.userId, "cover_letter", "claude-sonnet-4-6", u),
     });
   } catch (err) {
+    await refundAiCredit(session.userId, credit.source, credit.periodStart);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-feil" },
       { status: 502 },
