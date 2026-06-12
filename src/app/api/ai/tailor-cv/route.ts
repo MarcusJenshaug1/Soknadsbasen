@@ -92,7 +92,13 @@ export async function POST(req: Request) {
   }
 
   const base = parseActiveResume(userData?.resumeData);
-  if (!base || (!base.summary && base.experience.length === 0)) {
+  // Persistert payload kan være "{}" (DB-default og etter Nullstill) — da
+  // mangler felt-arrayene helt, så normaliser før bruk.
+  const baseExperience = Array.isArray(base?.experience) ? base.experience : [];
+  const baseEducation = Array.isArray(base?.education) ? base.education : [];
+  const baseSkills = Array.isArray(base?.skills) ? base.skills : [];
+
+  if (!base || (!base.summary && baseExperience.length === 0)) {
     return NextResponse.json(
       { error: "CV-en er tom. Fyll inn innhold i Min CV først." },
       { status: 400 },
@@ -116,14 +122,14 @@ CV:
 ${JSON.stringify({
     role: base.role,
     summary: base.summary,
-    skills: base.skills,
-    experience: base.experience.map((e) => ({
+    skills: baseSkills,
+    experience: baseExperience.map((e) => ({
       id: e.id,
       title: e.title,
       company: e.company,
       description: e.description.slice(0, 1500),
     })),
-    education: base.education.map((e) => `${e.degree} ${e.field}, ${e.school}`),
+    education: baseEducation.map((e) => `${e.degree} ${e.field}, ${e.school}`),
   })}`;
 
   let raw: string;
@@ -159,7 +165,7 @@ ${JSON.stringify({
   if (result.summary?.trim()) tailored.summary = result.summary.trim();
 
   // Skills må være subset/omsortering av originalen — dropp hallusinerte.
-  const originalSkills = new Map(base.skills.map((s) => [s.toLowerCase(), s]));
+  const originalSkills = new Map(baseSkills.map((s) => [s.toLowerCase(), s]));
   const reordered = (result.skills ?? [])
     .map((s) => originalSkills.get(s.trim().toLowerCase()))
     .filter((s): s is string => Boolean(s));
@@ -168,12 +174,14 @@ ${JSON.stringify({
     // Utelatte ferdigheter beholdes bakerst — AI-en prioriterer, sletter ikke.
     tailored.skills = [
       ...reordered,
-      ...base.skills.filter((s) => !seen.has(s.toLowerCase())),
+      ...baseSkills.filter((s) => !seen.has(s.toLowerCase())),
     ];
   }
 
   for (const patch of result.experience ?? []) {
-    const target = tailored.experience.find((e) => e.id === patch.id);
+    const target = baseExperience.length
+      ? tailored.experience.find((e) => e.id === patch.id)
+      : undefined;
     if (target && patch.description?.trim()) {
       target.description = patch.description.trim();
     }

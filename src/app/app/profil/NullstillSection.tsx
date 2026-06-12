@@ -85,11 +85,13 @@ export function NullstillSection() {
       }
       setDone(true);
       if (touchesCv) {
+        // Behold busy gjennom reload så knappen ikke blinker aktiv igjen.
         window.location.reload();
       } else {
         setCounts(null);
         setSelected(new Set());
         setConfirm("");
+        setBusy(false);
         router.refresh();
       }
     } catch (err) {

@@ -132,6 +132,11 @@ export async function POST(req: Request) {
         where: { userId },
         data: { winningApplicationId: null },
       });
+      // Legacy-brev-bloben dekkes også av Søknader (UI-et lover det).
+      await tx.userData.updateMany({
+        where: { userId },
+        data: { coverLetterData: "{}" },
+      });
     }
 
     if (selected.has("soknadsbrev")) {

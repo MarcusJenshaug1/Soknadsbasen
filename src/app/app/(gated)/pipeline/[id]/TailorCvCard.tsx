@@ -35,6 +35,7 @@ export function TailorCvCard({
     setBusy(true);
     setError(null);
     let newId: string | null = null;
+    const prevActiveId = useResumeStore.getState().activeResumeId;
     try {
       const res = await fetch("/api/ai/tailor-cv", {
         method: "POST",
@@ -62,8 +63,15 @@ export function TailorCvCard({
       onLinked(newId);
     } catch (e) {
       // Koblingen feilet — fjern den nyopprettede CV-en så vi ikke etterlater
-      // en løs kopi brukeren ikke vet om.
-      if (newId) useResumeStore.getState().removeResume(newId);
+      // en løs kopi, og gjenopprett CV-en som var aktiv (removeResume faller
+      // ellers tilbake til første i listen).
+      if (newId) {
+        const store = useResumeStore.getState();
+        store.removeResume(newId);
+        if (store.resumes.some((r) => r.id === prevActiveId)) {
+          useResumeStore.getState().setActiveResume(prevActiveId);
+        }
+      }
       setError(
         e instanceof Error ? e.message : "Kunne ikke lage tilpasset CV. Prøv igjen.",
       );

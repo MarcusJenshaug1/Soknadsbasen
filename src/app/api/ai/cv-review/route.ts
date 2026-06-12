@@ -76,7 +76,14 @@ export async function POST(req: Request) {
     ? parseResumeById(userData?.resumeData, body.resumeId)
     : parseActiveResume(userData?.resumeData);
 
-  if (!resume || (!resume.summary && resume.experience.length === 0)) {
+  // Persistert payload kan være "{}" (DB-default og etter Nullstill) — da
+  // mangler felt-arrayene helt, så normaliser før bruk.
+  const experience = Array.isArray(resume?.experience) ? resume.experience : [];
+  const education = Array.isArray(resume?.education) ? resume.education : [];
+  const skills = Array.isArray(resume?.skills) ? resume.skills : [];
+  const interests = Array.isArray(resume?.interests) ? resume.interests : [];
+
+  if (!resume || (!resume.summary && experience.length === 0)) {
     return NextResponse.json(
       { error: "CV-en er tom. Fyll inn innhold før AI-gjennomgangen." },
       { status: 400 },
@@ -95,9 +102,9 @@ reason er én kort setning om hvorfor endringen er bedre.`;
   const input = {
     role: resume.role,
     summary: resume.summary,
-    skills: resume.skills.join(", "),
-    interests: resume.interests.join(", "),
-    experience: resume.experience.map((e) => ({
+    skills: skills.join(", "),
+    interests: interests.join(", "),
+    experience: experience.map((e) => ({
       id: e.id,
       title: e.title,
       company: e.company,
@@ -105,7 +112,7 @@ reason er én kort setning om hvorfor endringen er bedre.`;
       endDate: e.current ? "nå" : e.endDate,
       description: cap(e.description, 1500),
     })),
-    education: resume.education.map((e) => ({
+    education: education.map((e) => ({
       id: e.id,
       degree: e.degree,
       field: e.field,
@@ -141,8 +148,8 @@ reason er én kort setning om hvorfor endringen er bedre.`;
   }
 
   const knownIds = new Set([
-    ...resume.experience.map((e) => `experience.id:${e.id}.description`),
-    ...resume.education.map((e) => `education.id:${e.id}.description`),
+    ...experience.map((e) => `experience.id:${e.id}.description`),
+    ...education.map((e) => `education.id:${e.id}.description`),
   ]);
 
   // Post-validering: dropp forslag mot ukjente felt/id-er og tomme verdier,

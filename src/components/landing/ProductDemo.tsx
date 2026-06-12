@@ -97,9 +97,13 @@ export default function ProductDemo() {
   const reduce = useReducedMotion();
   const [index, setIndex] = React.useState(0);
   const [paused, setPaused] = React.useState(false);
+  // Bump ved resume: fremdriftsfyllet remountes i synk med den restartede
+  // step-timeren — ellers fullfører fyllet før steget faktisk bytter.
+  const [epoch, setEpoch] = React.useState(0);
 
   React.useEffect(() => {
     if (reduce || !inView || paused) return;
+    setEpoch((e) => e + 1);
     const t = setTimeout(
       () => setIndex((i) => (i + 1) % STEPS.length),
       STEPS[index].duration,
@@ -162,7 +166,7 @@ export default function ProductDemo() {
                         >
                           {active && (
                             <span
-                              key={index}
+                              key={`${index}-${epoch}`}
                               className="absolute inset-0 origin-left rounded-full bg-ink"
                               style={{
                                 animation: `demo-progress ${s.duration}ms linear forwards`,
