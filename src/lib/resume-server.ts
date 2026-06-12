@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { ResumeData, ResumeEntry } from "@/store/useResumeStore";
 
 interface PersistedResumePayload {
@@ -55,6 +57,31 @@ export function parseResumeById(
   } catch {
     return null;
   }
+}
+
+/**
+ * Hoved-CV for matching: eksplisitt valgt CV (UserData.mainResumeId) med
+ * fallback til aktiv CV når ingen er valgt eller den valgte er slettet.
+ */
+export function parseMainResume(
+  raw: string | null | undefined,
+  mainResumeId: string | null | undefined,
+): ResumeData | null {
+  if (mainResumeId) {
+    const main = parseResumeById(raw, mainResumeId);
+    if (main) return main;
+  }
+  return parseActiveResume(raw);
+}
+
+/**
+ * Kanonisk hash av en CV-summary — brukes som cache-nøkkel for aiKeywords
+ * og som «har CV-en endret seg siden sist matching»-signal (matchedCvHash).
+ * Én definisjon, så cv-keywords-ruten, match-pipeline og match-cache aldri
+ * drifter.
+ */
+export function hashResumeSummary(summary: string): string {
+  return createHash("sha256").update(summary).digest("hex").slice(0, 32);
 }
 
 /**

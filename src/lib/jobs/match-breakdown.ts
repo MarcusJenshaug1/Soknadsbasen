@@ -47,7 +47,7 @@ export const computeMatchBreakdown = cache(
     const [userData, job] = await Promise.all([
       prisma.userData.findUnique({
         where: { userId },
-        select: { resumeData: true, aiKeywords: true },
+        select: { resumeData: true, mainResumeId: true, aiKeywords: true },
       }),
       prisma.job.findUnique({
         where: { id: jobId },
@@ -67,7 +67,7 @@ export const computeMatchBreakdown = cache(
       }),
     ]);
     if (!userData || !job) return null;
-    const resume = normalizeResumeData(userData.resumeData);
+    const resume = normalizeResumeData(userData.resumeData, userData.mainResumeId);
     if (!resume) return null;
 
     const side = toJobMatchSide(job);

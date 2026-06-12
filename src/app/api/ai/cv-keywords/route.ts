@@ -1,19 +1,25 @@
-import { NextResponse, after } from "next/server";
-import { createHash } from "node:crypto";
+import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { checkAiRateLimit, AI_RATE_LIMIT_MESSAGE } from "@/lib/ai/rate-limit";
+import { extractCvKeywords } from "@/lib/ai/cv-keyword-extract";
 import { prisma } from "@/lib/prisma";
-import { claudeGenerate } from "@/lib/claude";
-import { parseLooseJson } from "@/lib/json";
-import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
-import { computeMatchesForUser } from "@/lib/jobs/match";
+import {
+  parseMainResume,
+  buildResumeSummary,
+  hashResumeSummary,
+} from "@/lib/resume-server";
 
 /**
  * POST /api/ai/cv-keywords
  * Returns: { keywords: string[], cached: boolean, source: "ai" | "fallback" }
  *
  * Henter (eller computer + cacher) ATS-relevante nøkkelord fra brukerens
- * aktive CV. Cache invalideres når CV endres (hash) eller etter 24t.
+ * HOVED-CV (samme CV som matching bruker — ATS-visning og matching deler
+ * aiKeywords-cachen og må aldri invalidere hverandre). Cache invalideres
+ * når hoved-CV-en endres (hash) eller etter 24t.
+ *
+ * MERK: trigger IKKE lenger re-matching — det skjer kun eksplisitt via
+ * POST /api/jobb/match-me (Match meg-knappen på /jobb).
  */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -26,6 +32,7 @@ export async function POST() {
     where: { userId: session.userId },
     select: {
       resumeData: true,
+      mainResumeId: true,
       aiKeywords: true,
       aiKeywordsAt: true,
       aiKeywordsHash: true,
@@ -35,13 +42,13 @@ export async function POST() {
     return NextResponse.json({ keywords: [], cached: false, source: "fallback" });
   }
 
-  const resume = parseActiveResume(userData.resumeData);
+  const resume = parseMainResume(userData.resumeData, userData.mainResumeId);
   if (!resume) {
     return NextResponse.json({ keywords: [], cached: false, source: "fallback" });
   }
 
   const summary = buildResumeSummary(resume as unknown as Record<string, unknown>);
-  const hash = createHash("sha256").update(summary).digest("hex").slice(0, 32);
+  const hash = hashResumeSummary(summary);
 
   const stillFresh =
     userData.aiKeywords.length > 0 &&
@@ -57,44 +64,8 @@ export async function POST() {
     });
   }
 
-  const system = `Du er en ATS-spesialist. Generer en UTFYLLENDE liste ATS-nøkkelord fra denne CV-en — alle termer rekrutterings-systemer kan matche mot ulike stillingsannonser. Bedre å ha flere relevante enn for få. Returner GYLDIG JSON.
-
-SCHEMA:
-{ "keywords": ["string", ...] }
-
-REGLER:
-- 30-50 nøkkelord, sortert etter viktighet.
-- INKLUDER:
-  • Yrkestittel + ALLE relevante synonymer (om CV sier "Fullstack-utvikler" inkluder også: utvikler, systemutvikler, IKT-systemutvikler, programmerer, frontend-utvikler, backend-utvikler, webutvikler, software engineer)
-  • Tekniske ferdigheter (React, SQL, TypeScript, AutoCAD, etc.)
-  • Verktøy/plattformer (Salesforce, SAP, Figma, Azure, Storybook)
-  • Konsepter/metoder (CI/CD, agile, ISR, server-komponenter, prosjektledelse)
-  • Domener/bransjer (eiendom, B2B, e-handel, helsetjenester, finans, sikkerhet)
-  • Sertifiseringer (PRINCE2, autorisasjon, vekterkort)
-  • Språk (engelsk, norsk)
-  • Soft skills demonstrert i CV-en (ledelse, kommunikasjon, beslutningstaking, problemløsning)
-- EKSKLUDER: stedsnavn, datoer, bedriftsnavn, generiske ord (jobb, person, ansvarlig).
-- Norsk taksonomi: bruk NAV-aktige termer der relevant (IKT-systemutvikler, Servicemedarbeider, etc.) i tillegg til engelske der relevant.
-- Bruk korte termer (1-3 ord). Lowercase med mindre egennavn (React, SAP, Excel, TypeScript).
-- Returner KUN JSON. Ingen markdown, ingen forklaring.`;
-
-  const userPrompt = `=== CV ===\n${summary}\n=== SLUTT ===`;
-
   try {
-    const raw = await claudeGenerate(userPrompt, {
-      model: "claude-haiku-4-5",
-      system,
-      temperature: 0.1,
-      maxOutputTokens: 1500,
-      json: true,
-    });
-    const parsed = parseLooseJson(raw) as { keywords?: unknown };
-    const keywords = Array.isArray(parsed.keywords)
-      ? parsed.keywords
-          .filter((k): k is string => typeof k === "string" && k.trim().length > 0)
-          .map((k) => k.trim())
-          .slice(0, 50)
-      : [];
+    const keywords = await extractCvKeywords(summary);
 
     if (keywords.length > 0) {
       await prisma.userData.update({
@@ -104,20 +75,6 @@ REGLER:
           aiKeywordsAt: new Date(),
           aiKeywordsHash: hash,
         },
-      });
-
-      // Re-scor brukeren mot alle aktive jobber utenfor responstiden.
-      // Fyrer maks ~1×/dag/bruker — gated av TTL+hash-sjekken over.
-      const userId = session.userId;
-      after(async () => {
-        try {
-          await computeMatchesForUser(userId);
-        } catch (err) {
-          console.error(
-            `computeMatchesForUser(${userId}) feilet:`,
-            err instanceof Error ? err.message : err,
-          );
-        }
       });
     }
 
@@ -129,4 +86,3 @@ REGLER:
     );
   }
 }
-

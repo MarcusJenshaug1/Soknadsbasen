@@ -1,9 +1,11 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import { prisma } from "@/lib/prisma";
-import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
+import {
+  parseMainResume,
+  buildResumeSummary,
+  hashResumeSummary,
+} from "@/lib/resume-server";
 
 import { extractJobKeywords } from "./format";
 import { getKeywordIdf } from "./keyword-idf";
@@ -71,10 +73,12 @@ type ResumeProfile = { cv: CvMatchProfile; cvHash: string };
 
 /**
  * Normalisert CV med defensive defaults — gjenbrukes av match-breakdown på
- * detaljsiden (samme form som precompute scorer mot).
+ * detaljsiden (samme form som precompute scorer mot). Bruker hoved-CV-en
+ * (mainResumeId) med fallback til aktiv CV — alt i match-pipelinen skal se
+ * samme CV.
  */
-export function normalizeResumeData(resumeData: string) {
-  const parsed = parseActiveResume(resumeData);
+export function normalizeResumeData(resumeData: string, mainResumeId?: string | null) {
+  const parsed = parseMainResume(resumeData, mainResumeId ?? null);
   if (!parsed) return null;
   return {
     ...parsed,
@@ -111,8 +115,12 @@ export function buildCvMatchText(
 }
 
 /** Parser resumeData-blob → match-profil + hash. null hvis ingen CV. */
-function buildProfile(resumeData: string, cvKeywords: string[]): ResumeProfile | null {
-  const resume = normalizeResumeData(resumeData);
+function buildProfile(
+  resumeData: string,
+  mainResumeId: string | null,
+  cvKeywords: string[],
+): ResumeProfile | null {
+  const resume = normalizeResumeData(resumeData, mainResumeId);
   if (!resume) return null;
   const summary = buildResumeSummary(resume as unknown as Record<string, unknown>);
   return {
@@ -121,7 +129,7 @@ function buildProfile(resumeData: string, cvKeywords: string[]): ResumeProfile |
       role: normalizeMatchText(resume.role),
       cvKeywords,
     },
-    cvHash: createHash("sha256").update(summary).digest("hex").slice(0, 32),
+    cvHash: hashResumeSummary(summary),
   };
 }
 
@@ -193,7 +201,7 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
   const [userRows, jobs, idf] = await Promise.all([
     prisma.userData.findMany({
       where: { aiKeywordsHash: { not: null } },
-      select: { userId: true, resumeData: true, aiKeywords: true },
+      select: { userId: true, resumeData: true, mainResumeId: true, aiKeywords: true },
     }),
     prisma.job.findMany({
       where: { id: { in: jobIds }, isActive: true },
@@ -205,7 +213,7 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
   const users = userRows
     .map((u) => ({
       userId: u.userId,
-      profile: buildProfile(u.resumeData, u.aiKeywords),
+      profile: buildProfile(u.resumeData, u.mainResumeId, u.aiKeywords),
     }))
     .filter((u): u is { userId: string; profile: ResumeProfile } => u.profile !== null);
   if (users.length === 0 || jobs.length === 0) return 0;
@@ -220,18 +228,17 @@ export async function computeMatchesForJobs(jobIds: string[]): Promise<number> {
 }
 
 /**
- * Re-scorer én bruker mot alle aktive, berikede jobber. Hektes på
- * cv-keywords-refresh via after() — fyrer maks ~1×/dag/bruker pga.
- * eksisterende TTL+hash-invalidering der.
+ * Re-scorer én bruker mot alle aktive, berikede jobber. Kalles fra
+ * POST /api/jobb/match-me (Match meg-knappen) via runMatchForUser.
  */
 export async function computeMatchesForUser(userId: string): Promise<number> {
   const userData = await prisma.userData.findUnique({
     where: { userId },
-    select: { resumeData: true, aiKeywords: true },
+    select: { resumeData: true, mainResumeId: true, aiKeywords: true },
   });
   if (!userData) return 0;
 
-  const profile = buildProfile(userData.resumeData, userData.aiKeywords);
+  const profile = buildProfile(userData.resumeData, userData.mainResumeId, userData.aiKeywords);
   if (!profile) return 0;
 
   const [jobs, idf] = await Promise.all([

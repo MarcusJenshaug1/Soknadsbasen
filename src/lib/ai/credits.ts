@@ -27,7 +27,8 @@ export type AiAction =
   | "analyze_job"
   | "cv_tips"
   | "follow_up"
-  | "improve_profile";
+  | "improve_profile"
+  | "match_refresh";
 
 export type ConsumeResult =
   | { ok: true; source: "monthly" | "extra" | "unlimited"; remaining: number | null; periodStart: Date | null }
@@ -154,12 +155,18 @@ export async function hasAiQuotaAccess(userId: string): Promise<boolean> {
 }
 
 /**
- * Trekker 1 AI-kreditt. Fungerer samtidig som tilgangssjekk — kall etter
- * rate-limit, før datahenting. Ved claude-feil etterpå: refundAiCredit.
+ * Trekker `cost` AI-kreditter (default 1). Fungerer samtidig som
+ * tilgangssjekk — kall etter rate-limit, før datahenting. Ved AI-feil
+ * etterpå: refundAiCredit med samme cost.
+ *
+ * MERK: ingen splitting på tvers av pottene — 3 igjen månedlig + 2 extra
+ * dekker IKKE cost 5. Atomisk splitting ville krevd interaktiv transaksjon
+ * (forbudt gjennom pgBouncer); hele kostnaden trekkes fra én pott.
  */
 export async function consumeAiCredit(
   userId: string,
   _action: AiAction,
+  cost = 1,
 ): Promise<ConsumeResult> {
   const ctx = await resolveQuotaContext(userId);
 
@@ -178,14 +185,19 @@ export async function consumeAiCredit(
     });
   }
 
-  // Atomisk kjerne: increment-if-below-cap. To samtidige kall på 149/150
-  // kan aldri begge passere — radlåsen serialiserer og WHERE re-evalueres.
+  // Atomisk kjerne: increment-if-below-cap. To samtidige kall på kanten av
+  // kvoten kan aldri begge passere — radlåsen serialiserer og WHERE
+  // re-evalueres. lte: allowance - cost == lt: allowance når cost er 1.
   const monthly = await prisma.aiUsage.updateMany({
-    where: { userId, periodStart: ctx.periodStart, used: { lt: ctx.allowance } },
-    data: { used: { increment: 1 } },
+    where: {
+      userId,
+      periodStart: ctx.periodStart,
+      used: { lte: ctx.allowance - cost },
+    },
+    data: { used: { increment: cost } },
   });
   if (monthly.count === 1) {
-    const monthlyRemaining = Math.max(0, ctx.allowance - ctx.used - 1);
+    const monthlyRemaining = Math.max(0, ctx.allowance - ctx.used - cost);
     return {
       ok: true,
       source: "monthly",
@@ -194,16 +206,17 @@ export async function consumeAiCredit(
     };
   }
 
-  // Månedskvoten tom — trekk fra kjøpt påfyll.
+  // Månedskvoten tom (eller har ikke plass til hele kostnaden) — trekk fra
+  // kjøpt påfyll.
   const extra = await prisma.aiCreditBalance.updateMany({
-    where: { userId, extra: { gte: 1 } },
-    data: { extra: { decrement: 1 } },
+    where: { userId, extra: { gte: cost } },
+    data: { extra: { decrement: cost } },
   });
   if (extra.count === 1) {
     return {
       ok: true,
       source: "extra",
-      remaining: Math.max(0, ctx.extra - 1),
+      remaining: Math.max(0, ctx.extra - cost),
       periodStart: null,
     };
   }
@@ -219,17 +232,18 @@ export async function refundAiCredit(
   userId: string,
   source: "monthly" | "extra" | "unlimited",
   periodStart: Date | null,
+  cost = 1,
 ): Promise<void> {
   try {
     if (source === "monthly" && periodStart) {
       await prisma.aiUsage.updateMany({
-        where: { userId, periodStart, used: { gte: 1 } },
-        data: { used: { decrement: 1 } },
+        where: { userId, periodStart, used: { gte: cost } },
+        data: { used: { decrement: cost } },
       });
     } else if (source === "extra") {
       await prisma.aiCreditBalance.updateMany({
         where: { userId },
-        data: { extra: { increment: 1 } },
+        data: { extra: { increment: cost } },
       });
     }
   } catch (err) {

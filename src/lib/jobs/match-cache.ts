@@ -1,7 +1,10 @@
 import { cache } from "react";
-import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { parseActiveResume, buildResumeSummary } from "@/lib/resume-server";
+import {
+  parseMainResume,
+  buildResumeSummary,
+  hashResumeSummary,
+} from "@/lib/resume-server";
 
 /**
  * Pre-fetcher cached AI-keywords for /jobb/[slug] sin JobAtsCard. Bruker
@@ -27,6 +30,7 @@ export const getCachedMatch = cache(
         where: { userId },
         select: {
           resumeData: true,
+          mainResumeId: true,
           aiKeywords: true,
           aiKeywordsAt: true,
           aiKeywordsHash: true,
@@ -42,11 +46,11 @@ export const getCachedMatch = cache(
     if (userData.aiKeywords.length === 0) return null;
     if (job.aiKeywords.length === 0) return null;
 
-    const resume = parseActiveResume(userData.resumeData);
+    const resume = parseMainResume(userData.resumeData, userData.mainResumeId);
     if (!resume) return null;
 
     const summary = buildResumeSummary(resume as unknown as Record<string, unknown>);
-    const hash = createHash("sha256").update(summary).digest("hex").slice(0, 32);
+    const hash = hashResumeSummary(summary);
 
     const stillFresh =
       userData.aiKeywordsHash === hash &&
