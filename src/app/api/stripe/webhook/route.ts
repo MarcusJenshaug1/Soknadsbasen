@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addMonths } from "date-fns";
 import type Stripe from "stripe";
+import { Prisma } from "@prisma/client";
 import { stripe } from "@/lib/stripe/server";
 import { prisma } from "@/lib/prisma";
 
@@ -30,7 +31,12 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        const type = session.metadata?.type as "monthly" | "one_time" | "org" | undefined;
+        const type = session.metadata?.type as
+          | "monthly"
+          | "one_time"
+          | "org"
+          | "ai_topup"
+          | undefined;
         const customerId =
           typeof session.customer === "string"
             ? session.customer
@@ -66,6 +72,41 @@ export async function POST(req: Request) {
 
         const userId = session.metadata?.userId;
         if (!userId) break;
+
+        if (type === "ai_topup") {
+          const credits = Number(session.metadata?.credits);
+          if (!Number.isInteger(credits) || credits <= 0) {
+            console.warn("[stripe/webhook] ai_topup uten gyldig credits", {
+              sessionId: session.id,
+            });
+            break;
+          }
+          try {
+            // Batch-transaksjon (ikke interaktiv — pgBouncer-trygg): grant-
+            // raden og saldo-økningen committer sammen. Unique-constraint på
+            // stripeSessionId gjør webhook-retries idempotente.
+            await prisma.$transaction([
+              prisma.aiCreditGrant.create({
+                data: { userId, stripeSessionId: session.id, credits },
+              }),
+              prisma.aiCreditBalance.upsert({
+                where: { userId },
+                create: { userId, extra: credits },
+                update: { extra: { increment: credits } },
+              }),
+            ]);
+          } catch (err) {
+            if (
+              err instanceof Prisma.PrismaClientKnownRequestError &&
+              err.code === "P2002"
+            ) {
+              // Retry av allerede prosessert event — kreditert én gang.
+              break;
+            }
+            throw err;
+          }
+          break;
+        }
 
         if (type === "monthly") {
           const subscriptionId =

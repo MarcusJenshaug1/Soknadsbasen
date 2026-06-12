@@ -37,6 +37,9 @@ export default async function SuksessPage({ searchParams }: Props) {
     }),
   ]);
 
+  const isTopup = checkoutResult?.metadata?.type === "ai_topup";
+  const topupCredits = isTopup ? checkoutResult?.metadata?.credits : null;
+
   if (checkoutResult) {
     if (checkoutResult.mode === "subscription") {
       planLabel = "månedlig abonnement";
@@ -45,7 +48,9 @@ export default async function SuksessPage({ searchParams }: Props) {
         isTrialing = sub.status === "trialing";
       }
     } else if (checkoutResult.mode === "payment") {
-      planLabel = "6 måneders tilgang";
+      planLabel = isTopup
+        ? `${topupCredits ?? ""} AI-handlinger`.trim()
+        : "6 måneders tilgang";
     }
   }
 
@@ -80,7 +85,9 @@ export default async function SuksessPage({ searchParams }: Props) {
           <p className="text-[15px] md:text-[17px] leading-[1.6] text-white/65 mb-10">
             {isTrialing
               ? "Kortet ditt belastes ikke før prøveperioden utløper. Du kan kansellere når som helst under Abonnement."
-              : `Du har nå ${planLabel}. Alt er klart — la oss begynne med CV-en din.`}
+              : isTopup
+                ? `${planLabel} er lagt til på kontoen din. De brukes når månedskvoten er tom, og utløper aldri.`
+                : `Du har nå ${planLabel}. Alt er klart — la oss begynne med CV-en din.`}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10 text-left">

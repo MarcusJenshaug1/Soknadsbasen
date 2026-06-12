@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { hasActiveAccess } from "@/lib/access";
 import { stripe, getOrCreateCustomer } from "@/lib/stripe/server";
 
 type Body = {
@@ -23,15 +24,35 @@ export async function POST(req: Request) {
   const { priceId, mode } = body;
   const monthly = process.env.STRIPE_PRICE_MONTHLY!;
   const oneTime = process.env.STRIPE_PRICE_ONETIME!;
+  const aiTopup50 = process.env.STRIPE_PRICE_AI_50;
+  const aiTopup100 = process.env.STRIPE_PRICE_AI_100;
+
+  const topupCredits =
+    priceId === aiTopup50 && aiTopup50
+      ? 50
+      : priceId === aiTopup100 && aiTopup100
+        ? 100
+        : null;
 
   const valid =
     (priceId === monthly && mode === "subscription") ||
-    (priceId === oneTime && mode === "payment");
+    (priceId === oneTime && mode === "payment") ||
+    (topupCredits !== null && mode === "payment");
   if (!valid) {
     return NextResponse.json({ error: "Ugyldig priceId/mode" }, { status: 400 });
   }
 
-  const type = priceId === monthly ? "monthly" : "one_time";
+  // Påfyll uten aktiv tilgang er bortkastede penger — AI-rutene krever
+  // abonnement uansett, så blokker kjøpet her.
+  if (topupCredits !== null && !(await hasActiveAccess(session.userId))) {
+    return NextResponse.json(
+      { error: "AI-påfyll krever aktivt abonnement" },
+      { status: 403 },
+    );
+  }
+
+  const type =
+    topupCredits !== null ? "ai_topup" : priceId === monthly ? "monthly" : "one_time";
   const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   try {
@@ -44,7 +65,11 @@ export async function POST(req: Request) {
       success_url: `${origin}/suksess?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/app/billing`,
       allow_promotion_codes: true,
-      metadata: { userId: session.userId, type },
+      metadata: {
+        userId: session.userId,
+        type,
+        ...(topupCredits !== null ? { credits: String(topupCredits) } : {}),
+      },
       ...(mode === "subscription"
         ? {
             subscription_data: {

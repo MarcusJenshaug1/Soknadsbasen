@@ -80,6 +80,8 @@ STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET           # ny verdi fra nytt webhook-endpoint (steg 10)
 STRIPE_PRICE_MONTHLY
 STRIPE_PRICE_ONETIME
+STRIPE_PRICE_AI_50              # engangs-pris: 50 AI-handlinger, 29 kr
+STRIPE_PRICE_AI_100             # engangs-pris: 100 AI-handlinger, 49 kr
 STRIPE_PRICE_ORG_SEAT
 STRIPE_PRODUCT_INDIVIDUAL
 STRIPE_PRODUCT_ORG
