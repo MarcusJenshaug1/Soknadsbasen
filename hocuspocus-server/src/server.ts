@@ -62,10 +62,10 @@ const server = new Hocuspocus({
     if (!cvOwnerId) throw new Error("Invalid document name");
     if (!token) throw new Error("Missing auth token");
 
+    // HS256-stien sjekker ikke issuer: selvhostet GoTrue utsteder tokens
+    // uten iss-claim, og delt secret er integritetsbeviset uansett.
     const { payload } = JWT_SECRET
-      ? await jwtVerify(token, JWT_SECRET, {
-          issuer: `${SUPABASE_URL}/auth/v1`,
-        })
+      ? await jwtVerify(token, JWT_SECRET)
       : await jwtVerify(token, JWKS!, {
           issuer: `${SUPABASE_URL}/auth/v1`,
         });
