@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ImportCVModal } from "./ImportCVModal";
 import { AvatarCropper } from "./AvatarCropper";
+import { AiReviewPanel } from "@/components/cv/AiReviewPanel";
 import {
   RoleForm,
   ExperienceForm,
@@ -35,6 +36,7 @@ const STEPS = [
   { id: "languages", title: "Språk" },
   { id: "extra", title: "Ekstra seksjoner" },
   { id: "design", title: "Design & Eksport" },
+  { id: "ai-review", title: "AI-hjelper" },
 ];
 
 export function ResumeEditor() {
@@ -172,6 +174,7 @@ export function ResumeEditor() {
                 {currentStep === 6 && <LanguagesForm />}
                 {currentStep === 7 && <ExtraSectionsForm />}
                 {currentStep === 8 && <DesignExportForm />}
+                {currentStep === 9 && <AiReviewPanel />}
               </motion.div>
             </AnimatePresence>
           </div>

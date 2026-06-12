@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, X, ArrowRight, Inbox } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { useResumeStore } from "@/store/useResumeStore";
+import { Inbox } from "lucide-react";
+import { applyResumeSuggestion } from "@/lib/cv-suggestions";
+import { SuggestionCard } from "./SuggestionCard";
 
 /**
  * Eier-innboks for collab-forslag. Lister pending CollabSuggestion for en
@@ -83,7 +83,7 @@ export function SuggestionsInbox({
         setResolvingId(null);
         return;
       }
-      appliedAccept = applyToResumeStore(target.fieldPath, target.afterValue);
+      appliedAccept = applyResumeSuggestion(target.fieldPath, target.afterValue);
       if (!appliedAccept) {
         setError(
           "Feltet finnes ikke lenger i CV-en, så forslaget kan ikke brukes. Avslå det for å rydde opp.",
@@ -113,7 +113,7 @@ export function SuggestionsInbox({
       // beholder CV-en en endring som aldri ble godtatt server-side, mens
       // forslaget fortsatt står som pending.
       if (appliedAccept && target) {
-        applyToResumeStore(target.fieldPath, target.beforeValue);
+        applyResumeSuggestion(target.fieldPath, target.beforeValue);
       }
       setError(e instanceof Error ? e.message : "Kunne ikke behandle forslaget");
     } finally {
@@ -146,7 +146,10 @@ export function SuggestionsInbox({
         {suggestions.map((s) => (
           <SuggestionCard
             key={s.id}
-            suggestion={s}
+            fieldPath={s.fieldPath}
+            beforeValue={s.beforeValue}
+            afterValue={s.afterValue}
+            authorLabel={`${s.authorName?.trim() || "En hjelper"} foreslår`}
             busy={resolvingId === s.id}
             onAccept={() => resolve(s.id, "accept")}
             onReject={() => resolve(s.id, "reject")}
@@ -155,208 +158,4 @@ export function SuggestionsInbox({
       </ul>
     </div>
   );
-}
-
-function SuggestionCard({
-  suggestion,
-  busy,
-  onAccept,
-  onReject,
-}: {
-  suggestion: SuggestionRow;
-  busy: boolean;
-  onAccept: () => void;
-  onReject: () => void;
-}) {
-  const label = labelForFieldPath(suggestion.fieldPath);
-  const author = suggestion.authorName?.trim() || "En hjelper";
-
-  return (
-    <li className="rounded-xl border border-black/8 dark:border-white/8 bg-surface p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[13px] font-medium text-ink">{label}</span>
-        <span className="text-[11px] text-ink/55 shrink-0">
-          {author} foreslår
-        </span>
-      </div>
-
-      <div className="space-y-2">
-        <ValueBlock kind="before" value={suggestion.beforeValue} />
-        <div className="flex items-center gap-1.5 text-ink/40">
-          <ArrowRight size={13} />
-          <span className="text-[10px] uppercase tracking-[0.18em]">Til</span>
-        </div>
-        <ValueBlock kind="after" value={suggestion.afterValue} />
-      </div>
-
-      <div className="flex items-center justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onReject}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-black/12 dark:border-white/12 text-[12px] text-ink/75 hover:text-ink hover:border-black/30 dark:hover:border-white/30 transition-colors disabled:opacity-40"
-        >
-          <X size={14} />
-          Avslå
-        </button>
-        <button
-          type="button"
-          onClick={onAccept}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-bg hover:bg-accent-hover transition-colors text-[12px] font-medium disabled:opacity-40"
-        >
-          <Check size={14} />
-          {busy ? "Behandler …" : "Godta"}
-        </button>
-      </div>
-    </li>
-  );
-}
-
-function ValueBlock({
-  kind,
-  value,
-}: {
-  kind: "before" | "after";
-  value: unknown;
-}) {
-  const items = toDisplayItems(value);
-  const isEmpty = items.length === 0;
-
-  if (kind === "before") {
-    return (
-      <div className="rounded-lg bg-panel/60 px-3 py-2">
-        {isEmpty ? (
-          <span className="text-[12px] text-ink/35 italic">(tomt)</span>
-        ) : (
-          <ValueItems items={items} className="text-[12px] text-ink/45 line-through" />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg bg-accent/8 border border-accent/20 px-3 py-2">
-      {isEmpty ? (
-        <span className="text-[12px] text-ink/35 italic">(tomt)</span>
-      ) : (
-        <ValueItems items={items} className="text-[12px] text-accent font-medium" />
-      )}
-    </div>
-  );
-}
-
-function ValueItems({
-  items,
-  className,
-}: {
-  items: string[];
-  className: string;
-}) {
-  // Array-verdier (f.eks. skills) vises som chips; string-verdier som tekst.
-  if (items.length > 1) {
-    return (
-      <div className="flex flex-wrap gap-1.5">
-        {items.map((item, i) => (
-          <span
-            key={`${item}-${i}`}
-            className={cn(
-              "inline-flex px-2 py-0.5 rounded-full bg-bg border border-black/8 dark:border-white/8",
-              className,
-            )}
-          >
-            {item}
-          </span>
-        ))}
-      </div>
-    );
-  }
-  return <p className={cn("whitespace-pre-wrap break-words", className)}>{items[0]}</p>;
-}
-
-/* ─── Helpers ────────────────────────────────────────────────── */
-
-/**
- * Normaliserer en suggestion-verdi til en liste av strenger for visning.
- * Håndterer at beforeValue/afterValue kan være string (de fleste felt) ELLER
- * array (skills). Tomme/whitespace-verdier filtreres bort.
- */
-function toDisplayItems(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value
-      .map((v) => (typeof v === "string" ? v : String(v ?? "")).trim())
-      .filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.trim() ? [value] : [];
-  }
-  if (value == null) return [];
-  return [String(value)];
-}
-
-function asString(value: unknown): string {
-  return typeof value === "string" ? value : String(value ?? "");
-}
-
-/**
- * Anvender en godkjent forslagsverdi i den levende CV-storen via de vanlige
- * store-actionene. fieldPath er id-basert for liste-elementer
- * ("experience.id:<uuid>.description"). Returnerer false hvis feltet ikke
- * lenger finnes, så vi unngår å markere et forslag som godtatt uten effekt.
- */
-function applyToResumeStore(fieldPath: string, afterValue: unknown): boolean {
-  const store = useResumeStore.getState();
-
-  if (fieldPath === "role") {
-    store.updateRole(asString(afterValue));
-    return true;
-  }
-  if (fieldPath === "summary") {
-    store.updateSummary(asString(afterValue));
-    return true;
-  }
-  if (fieldPath === "skills") {
-    const skills = Array.isArray(afterValue)
-      ? afterValue.map((v) => asString(v).trim()).filter(Boolean)
-      : asString(afterValue)
-          .split(",")
-          .map((v) => v.trim())
-          .filter(Boolean);
-    store.updateSkills(skills);
-    return true;
-  }
-
-  const m = fieldPath.match(/^(experience|education)\.id:([^.]+)\.description$/);
-  if (m) {
-    const [, section, id] = m;
-    if (section === "experience") {
-      if (!store.data.experience.some((e) => e.id === id)) return false;
-      store.updateExperience(id, { description: asString(afterValue) });
-      return true;
-    }
-    if (!store.data.education.some((e) => e.id === id)) return false;
-    store.updateEducation(id, { description: asString(afterValue) });
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Oversetter en CollabSuggestion.fieldPath til en menneskelig norsk label.
- */
-function labelForFieldPath(fieldPath: string): string {
-  const direct: Record<string, string> = {
-    role: "Ønsket rolle",
-    summary: "Profil",
-    skills: "Ferdigheter",
-  };
-  if (fieldPath in direct) return direct[fieldPath];
-
-  if (/^experience\.id:[^.]+\.description$/.test(fieldPath))
-    return "Erfaring, beskrivelse";
-  if (/^education\.id:[^.]+\.description$/.test(fieldPath))
-    return "Utdanning, beskrivelse";
-
-  return fieldPath;
 }
