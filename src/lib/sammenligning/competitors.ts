@@ -71,7 +71,7 @@ export const COMPETITORS: Competitor[] = [
       { feature: "ATS-vennlig PDF (Webcruiter, ReachMee)", soknadsbasen: "yes (testet)", competitor: "Ikke verifisert" },
       { feature: "Jobbaggregator inkludert", soknadsbasen: "Kommer (NAV API, kvalitetskuratert)", competitor: "yes (UUID-slug, dårlig SEO)" },
       { feature: "Lønnsassistent", soknadsbasen: "Kommer (SSB åpen data)", competitor: "yes" },
-      { feature: "Match Score (CV vs annonse)", soknadsbasen: "yes (gratis)", competitor: "no" },
+      { feature: "Match Score (CV vs annonse)", soknadsbasen: "yes (første matching gratis)", competitor: "no" },
       { feature: "Innsikt med svarrate per kilde", soknadsbasen: "yes", competitor: "Begrenset" },
       { feature: "Klar merkevare", soknadsbasen: "Søknadsbasen", competitor: "Forvirring (Jobbe.ai/Lønna/Lønni)" },
       { feature: "Datalagring eksplisitt EU", soknadsbasen: "yes (Stockholm)", competitor: "Ikke spesifisert offentlig" },
@@ -96,7 +96,7 @@ export const COMPETITORS: Competitor[] = [
     soknadsbasenStrengths: [
       "Eksplisitt norsk-konvensjons-prompt: maks 350 ord, ingen «begeistret» eller «lidenskapelig», konkrete tall foran adjektiv. Markedsført som «Norsk-modus».",
       "240 unike CV-kombinasjoner (8 maler × 6 fargepaletter × 5 typografisett), mot Lønnas 6 maler.",
-      "Match Score som er gratis for alle: Søknadsbasen forklarer hvilke krav fra annonsen du dekker og hvilke som er gap. Lønna har ikke dette i det hele tatt.",
+      "Match Score med gratis første matching: Søknadsbasen forklarer hvilke krav fra annonsen du dekker og hvilke som er gap. Lønna har ikke dette i det hele tatt.",
       "Pipeline med kanban + liste + tidslinje, tre visninger for samme data.",
       "Innsiktsmodul med svarrate per kilde (FINN, LinkedIn, Webcruiter, direkte) og funnel-analyse — dypere enn Lønnas markedsførte versjon.",
       "Eksplisitt EU-lagring (Supabase Stockholm), ingen datasalg, dedikert /personvern-og-data-side med arkitekturdiagram.",
@@ -106,7 +106,7 @@ export const COMPETITORS: Competitor[] = [
     whenToChooseCompetitor:
       "Velg Lønna hvis stillingsaggregatoren er hovedgrunnen til at du vurderer et verktøy, og du er villig til å betale 3x for å slippe å åpne Finn og NAV separat. Også et valg hvis du allerede er etablert på plattformen og ikke vil migrere.",
     whenToChooseSoknadsbasen:
-      "Velg Søknadsbasen hvis du vil ha CV-byggeren med flest kombinasjoner i Norge, AI-søknadsbrev som faktisk følger norsk konvensjon (ikke amerikansk cover-letter-stil), gratis Match Score som forklarer gap, og tre pipeline-visninger til en tredjedel av prisen. Også sterkt anbefalt hvis du verdsetter klar merkevare og eksplisitt EU-personvern.",
+      "Velg Søknadsbasen hvis du vil ha CV-byggeren med flest kombinasjoner i Norge, AI-søknadsbrev som faktisk følger norsk konvensjon (ikke amerikansk cover-letter-stil), Match Score som forklarer gap (første matching gratis), og tre pipeline-visninger til en tredjedel av prisen. Også sterkt anbefalt hvis du verdsetter klar merkevare og eksplisitt EU-personvern.",
     faq: [
       {
         q: "Hva er forskjellen på Jobbe.ai og Lønna?",

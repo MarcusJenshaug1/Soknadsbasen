@@ -83,12 +83,15 @@ export async function runMatchForUser(userId: string): Promise<{ jobsMatched: nu
 
   if (!keywordsFresh) {
     const keywords = await extractCvKeywords(summary);
-    if (keywords.length > 0) {
-      await prisma.userData.update({
-        where: { userId },
-        data: { aiKeywords: keywords, aiKeywordsAt: new Date(), aiKeywordsHash: hash },
-      });
+    if (keywords.length === 0) {
+      // Tomt svar = scoring ville kjørt mot UTDATERTE nøkkelord mens
+      // tilstanden stemples «fresh» — kast så ruten refunderer og reverterer.
+      throw new Error("Nøkkelord-ekstraksjonen ga tomt resultat");
     }
+    await prisma.userData.update({
+      where: { userId },
+      data: { aiKeywords: keywords, aiKeywordsAt: new Date(), aiKeywordsHash: hash },
+    });
   }
 
   const jobsMatched = await computeMatchesForUser(userId);

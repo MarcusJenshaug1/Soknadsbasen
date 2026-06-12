@@ -89,9 +89,20 @@ export async function POST() {
   };
 
   // Betalt sti: trekk kreditter ETTER claimet (kun én betaler i et race).
+  // try/catch også her — en DB-feil i konsumeringen uten revert ville
+  // etterlatt tilstanden «fresh» for alltid uten at noe ble kjørt.
   let consumed: ConsumeResult | null = null;
   if (resolved.state === "stale") {
-    consumed = await consumeAiCredit(userId, "match_refresh", MATCH_REFRESH_COST);
+    try {
+      consumed = await consumeAiCredit(userId, "match_refresh", MATCH_REFRESH_COST);
+    } catch (err) {
+      console.error("match-me: consumeAiCredit feilet:", err);
+      await revertClaim();
+      return NextResponse.json(
+        { error: "Matchingen feilet. Prøv igjen om litt." },
+        { status: 502 },
+      );
+    }
     if (!consumed.ok) {
       await revertClaim();
       return quotaErrorResponse(consumed);
