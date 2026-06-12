@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SectionLabel } from "@/components/ui/Pill";
+import { AiQuotaNotice, type AiError } from "@/components/ai/AiQuotaNotice";
 import { cn } from "@/lib/cn";
 
 type JobAnalysis = {
@@ -42,6 +43,7 @@ export function AiTools({ applicationId }: { applicationId: string }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<AiError | null>(null);
   const [analysis, setAnalysis] = useState<JobAnalysis | null>(null);
   const [interview, setInterview] = useState<InterviewPrep | null>(null);
   const [followUp, setFollowUp] = useState<FollowUp | null>(null);
@@ -53,6 +55,8 @@ export function AiTools({ applicationId }: { applicationId: string }) {
   ): Promise<unknown> {
     setLoading(true);
     setError(null);
+    setQuotaError(null);
+    let isQuotaError = false;
     try {
       const res = await fetch(`/api/ai/${path}`, {
         method: "POST",
@@ -60,10 +64,20 @@ export function AiTools({ applicationId }: { applicationId: string }) {
         body: JSON.stringify({ applicationId, ...(extra ?? {}) }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "AI-feil");
+      if (!res.ok) {
+        const code =
+          data?.code === "quota_exhausted" || data?.code === "no_access"
+            ? (data.code as AiError["code"])
+            : null;
+        if (code) {
+          isQuotaError = true;
+          setQuotaError({ message: data.error ?? "AI-feil", code });
+        }
+        throw new Error(data.error ?? "AI-feil");
+      }
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ukjent feil");
+      if (!isQuotaError) setError(err instanceof Error ? err.message : "Ukjent feil");
       throw err;
     } finally {
       setLoading(false);
@@ -144,7 +158,12 @@ export function AiTools({ applicationId }: { applicationId: string }) {
               </div>
             </div>
           )}
-          {error && (
+          {quotaError && (
+            <div className="py-4">
+              <AiQuotaNotice error={quotaError} />
+            </div>
+          )}
+          {error && !quotaError && (
             <div className="py-4 text-[12px] text-accent">{error}</div>
           )}
 
@@ -166,6 +185,7 @@ export function AiTools({ applicationId }: { applicationId: string }) {
               onClick={() => {
                 setPanel(null);
                 setError(null);
+                setQuotaError(null);
               }}
               className="text-[11px] text-[#14110e]/55 dark:text-[#f0ece6]/55 hover:text-ink"
             >

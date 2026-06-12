@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AiQuotaNotice, type AiError } from "@/components/ai/AiQuotaNotice";
 import { useResumeStore } from "@/store/useResumeStore";
 import { savePendingTips, type CvTipsLink } from "@/lib/cv-pending-tips";
 import { cn } from "@/lib/cn";
@@ -50,6 +51,7 @@ export function CvTipsPanel(props: Props) {
   const { jobTitle, employerName, onClose } = props;
   const [tips, setTips] = useState<CvTips | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<AiError | null>(null);
   const [loading, setLoading] = useState(true);
 
   const data = useResumeStore((s) => s.data);
@@ -114,7 +116,14 @@ export function CvTipsPanel(props: Props) {
         const payload = await r.json();
         if (cancelled) return;
         if (!r.ok) {
-          setError(payload?.error ?? "Kunne ikke hente tips");
+          if (payload?.code === "quota_exhausted" || payload?.code === "no_access") {
+            setQuotaError({
+              message: payload.error ?? "Kunne ikke hente tips",
+              code: payload.code,
+            });
+          } else {
+            setError(payload?.error ?? "Kunne ikke hente tips");
+          }
           return;
         }
         setTips(payload);
@@ -213,6 +222,7 @@ export function CvTipsPanel(props: Props) {
             </div>
           )}
 
+          {quotaError && !loading && <AiQuotaNotice error={quotaError} />}
           {error && !loading && (
             <div className="rounded-xl bg-accent/10 border border-accent/30 px-4 py-3 text-[13px] text-accent">
               {error}

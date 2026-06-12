@@ -6,6 +6,7 @@ import { analyzeAtsMatch } from "@/lib/ats";
 import { Plus, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Palette, Type, Layout, Download, Globe, GripVertical, Sparkles, Target, ArrowDownUp, Share2, History, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Modal } from "@/components/ui/Modal";
+import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
 import { ShareCVModal } from "@/components/cv/ShareCVModal";
 import { AtsCertifiedBadge } from "@/components/cv/AtsCertifiedBadge";
 import { TemplateRenderer } from "@/components/templates";
@@ -234,11 +235,13 @@ export function SummaryForm() {
   const [tone, setTone] = useState<"varm" | "formell" | "konsis">("varm");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<AiError | null>(null);
   const [streamText, setStreamText] = useState<string | null>(null);
 
   async function runImprove() {
     setAiLoading(true);
     setAiError(null);
+    setQuotaError(null);
     setStreamText("");
     try {
       const res = await fetch("/api/ai/improve-profile", {
@@ -247,8 +250,13 @@ export function SummaryForm() {
         body: JSON.stringify({ summary, tone }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "AI-feil");
+        const aiErr = await parseAiError(res);
+        if (aiErr.code) {
+          setQuotaError(aiErr);
+          setStreamText(null);
+          return;
+        }
+        throw new Error(aiErr.message);
       }
 
       const reader = res.body!.getReader();
@@ -354,7 +362,8 @@ export function SummaryForm() {
           </div>
         )}
       </div>
-      {aiError && <p className="text-[11px] text-accent">{aiError}</p>}
+      {quotaError && <AiQuotaNotice error={quotaError} />}
+      {aiError && !quotaError && <p className="text-[11px] text-accent">{aiError}</p>}
       {streamText !== null ? (
         <div className="relative rounded-2xl bg-surface border border-accent overflow-hidden min-h-[160px]">
           <div className="px-5 py-4 text-[14px] text-ink leading-[1.6] whitespace-pre-wrap">

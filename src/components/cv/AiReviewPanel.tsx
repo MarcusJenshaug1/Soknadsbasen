@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Sparkles, CheckCircle2 } from "lucide-react";
+import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
 import { SuggestionCard } from "@/components/collab/SuggestionCard";
 import { applyResumeSuggestion } from "@/lib/cv-suggestions";
 import { useResumeStore } from "@/store/useResumeStore";
@@ -27,11 +28,13 @@ export function AiReviewPanel() {
   const [suggestions, setSuggestions] = useState<AiSuggestion[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<AiError | null>(null);
   const [acceptedCount, setAcceptedCount] = useState(0);
 
   async function runReview() {
     setLoading(true);
     setError(null);
+    setQuotaError(null);
     setSuggestions(null);
     setAcceptedCount(0);
     try {
@@ -40,10 +43,17 @@ export function AiReviewPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeId: activeResumeId }),
       });
+      if (!res.ok) {
+        const aiErr = await parseAiError(res);
+        if (aiErr.code) {
+          setQuotaError(aiErr);
+          return;
+        }
+        throw new Error(aiErr.message);
+      }
       const data = (await res.json().catch(() => null)) as
-        | { suggestions?: AiSuggestion[]; error?: string }
+        | { suggestions?: AiSuggestion[] }
         | null;
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
       setSuggestions(data?.suggestions ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "AI-gjennomgangen feilet. Prøv igjen.");
@@ -93,7 +103,8 @@ export function AiReviewPanel() {
         </button>
       )}
 
-      {error && (
+      {quotaError && <AiQuotaNotice error={quotaError} />}
+      {error && !quotaError && (
         <p className="text-[12px] text-accent" role="alert">
           {error}
         </p>

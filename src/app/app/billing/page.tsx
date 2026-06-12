@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Card } from "@/components/ui/Card";
 import { getSessionUserId } from "@/lib/auth";
+import { getAiQuotaStatus } from "@/lib/ai/credits";
 import { prisma } from "@/lib/prisma";
 import { PricingCards } from "@/components/pricing/PricingCards";
 import { PricingCardButton } from "@/components/pricing/PricingCardButton";
@@ -27,9 +28,10 @@ export default async function BillingPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/logg-inn?redirect=/app/billing");
 
-  const sub = await prisma.subscription.findUnique({
-    where: { userId },
-  });
+  const [sub, quota] = await Promise.all([
+    prisma.subscription.findUnique({ where: { userId } }),
+    getAiQuotaStatus(userId),
+  ]);
 
   const active =
     sub &&
@@ -41,6 +43,7 @@ export default async function BillingPage() {
       <h1 className="mb-6 text-2xl font-semibold text-ink">Abonnement</h1>
 
       {active && sub ? (
+        <>
         <Card variant="surface" radius="3xl" className="p-6">
           <dl className="grid grid-cols-1 gap-4 text-[14px] sm:grid-cols-2">
             <div>
@@ -70,6 +73,69 @@ export default async function BillingPage() {
             <BillingPortalButton />
           </div>
         </Card>
+
+        {!quota.unlimited && (
+          <Card variant="surface" radius="3xl" className="mt-6 p-6">
+            <h2 className="text-[15px] font-medium text-ink mb-1">AI-handlinger</h2>
+            <p className="text-[12px] text-black/55 dark:text-white/55 mb-4">
+              Søknadsbrev, CV-gjennomgang, tilpasset CV og andre AI-funksjoner
+              bruker én handling per kjøring. Nøkkelord og ATS-sjekk er gratis.
+            </p>
+
+            <div className="flex items-baseline justify-between gap-3 mb-2">
+              <span className="text-[14px] text-ink">
+                <strong className="font-semibold tabular-nums">
+                  {quota.monthlyRemaining}
+                </strong>{" "}
+                av {quota.allowance} igjen
+                {quota.extra > 0 && (
+                  <span className="text-black/55 dark:text-white/55">
+                    {" "}
+                    + {quota.extra} ekstra
+                  </span>
+                )}
+              </span>
+              {quota.resetsAt && (
+                <span className="text-[11.5px] text-black/45 dark:text-white/45">
+                  {quota.isTrial ? "Prøveperioden ut" : "Fylles på"}{" "}
+                  {format(new Date(quota.resetsAt), "d. MMMM", { locale: nb })}
+                </span>
+              )}
+            </div>
+            <div
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={quota.allowance}
+              aria-valuenow={quota.monthlyRemaining}
+              aria-label="Gjenstående AI-handlinger denne perioden"
+              className="h-[6px] overflow-hidden rounded-full bg-black/10 dark:bg-white/10"
+            >
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{
+                  width: `${quota.allowance > 0 ? Math.round((quota.monthlyRemaining / quota.allowance) * 100) : 0}%`,
+                }}
+              />
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <PricingCardButton
+                priceId={process.env.STRIPE_PRICE_AI_50 ?? ""}
+                mode="payment"
+                label="50 AI-handlinger – 29 kr"
+              />
+              <PricingCardButton
+                priceId={process.env.STRIPE_PRICE_AI_100 ?? ""}
+                mode="payment"
+                label="100 AI-handlinger – 49 kr"
+              />
+            </div>
+            <p className="mt-2 text-[11.5px] text-black/45 dark:text-white/45">
+              Kjøpte handlinger brukes når månedskvoten er tom, og utløper aldri.
+            </p>
+          </Card>
+        )}
+        </>
       ) : (
         <>
           <Card variant="surface" radius="3xl" className="p-6 mb-8">

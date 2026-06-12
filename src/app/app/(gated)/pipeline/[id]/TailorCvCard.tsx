@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, FileText, ArrowRight } from "lucide-react";
+import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
 import { useResumeStore, type ResumeData } from "@/store/useResumeStore";
 
 /**
@@ -26,6 +27,7 @@ export function TailorCvCard({
   const resumes = useResumeStore((s) => s.resumes);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<AiError | null>(null);
 
   const linked = tailoredResumeId
     ? (resumes.find((r) => r.id === tailoredResumeId) ?? null)
@@ -34,6 +36,7 @@ export function TailorCvCard({
   async function generate() {
     setBusy(true);
     setError(null);
+    setQuotaError(null);
     let newId: string | null = null;
     const prevActiveId = useResumeStore.getState().activeResumeId;
     try {
@@ -42,11 +45,19 @@ export function TailorCvCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ applicationId }),
       });
+      if (!res.ok) {
+        const aiErr = await parseAiError(res);
+        if (aiErr.code) {
+          setQuotaError(aiErr);
+          return;
+        }
+        throw new Error(aiErr.message);
+      }
       const data = (await res.json().catch(() => null)) as
-        | { name?: string; resumeData?: unknown; error?: string }
+        | { name?: string; resumeData?: unknown }
         | null;
-      if (!res.ok || !data?.name || !data.resumeData) {
-        throw new Error(data?.error ?? `HTTP ${res.status}`);
+      if (!data?.name || !data.resumeData) {
+        throw new Error("Ugyldig svar fra AI-tilpasningen. Prøv igjen.");
       }
 
       newId = useResumeStore
@@ -136,7 +147,12 @@ export function TailorCvCard({
         </>
       )}
 
-      {error && (
+      {quotaError && (
+        <div className="mt-3">
+          <AiQuotaNotice error={quotaError} />
+        </div>
+      )}
+      {error && !quotaError && (
         <p className="text-[12px] text-accent mt-3" role="alert">
           {error}
         </p>

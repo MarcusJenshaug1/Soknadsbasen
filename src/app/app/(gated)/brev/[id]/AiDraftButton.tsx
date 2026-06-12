@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { AiQuotaNotice, parseAiError, type AiError } from "@/components/ai/AiQuotaNotice";
 import { cn } from "@/lib/cn";
 
 type Tone = "varm" | "formell" | "konsis";
@@ -42,11 +43,13 @@ export function AiDraftButton({
   const [tone, setTone] = useState<Tone>("varm");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<AiError | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
 
   async function generate() {
     setLoading(true);
     setError(null);
+    setQuotaError(null);
     setWarnings([]);
     onStream?.("");
     try {
@@ -56,8 +59,14 @@ export function AiDraftButton({
         body: JSON.stringify({ applicationId, tone, letter }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Kunne ikke hente utkast");
+        // 402/403 kommer som JSON før streamingen starter.
+        const aiErr = await parseAiError(res);
+        if (aiErr.code) {
+          setQuotaError(aiErr);
+          onStream?.(null);
+          return;
+        }
+        throw new Error(aiErr.message);
       }
 
       const reader = res.body!.getReader();
@@ -157,13 +166,14 @@ export function AiDraftButton({
           onClick={() => {
             setOpen(false);
             setError(null);
+            setQuotaError(null);
             setWarnings([]);
           }}
           className="text-[11px] text-ink/55 hover:text-ink"
         >
           Avbryt
         </button>
-        {error && (
+        {error && !quotaError && (
           <span
             role="alert"
             className="inline-flex items-center gap-1 text-[11px] text-accent"
@@ -173,6 +183,11 @@ export function AiDraftButton({
           </span>
         )}
       </div>
+      {quotaError && (
+        <div className="max-w-md">
+          <AiQuotaNotice error={quotaError} />
+        </div>
+      )}
       {warnings.length > 0 && (
         <div className="rounded-lg border border-amber-300/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:text-amber-200 max-w-md">
           <div className="font-medium mb-1">
