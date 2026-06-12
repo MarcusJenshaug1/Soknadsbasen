@@ -102,20 +102,25 @@ export function useYjsSync({ enabled = true }: { enabled?: boolean } = {}) {
               isApplyingFromYjs = false;
             }
           } else {
-            // Tom Y.Doc — seed fra eksisterende Zustand-state (useCloudSync
-            // har sannsynligvis allerede hydrert fra REST).
+            // Tom Y.Doc = brukeren har ingen persistert CV: serveren seeder
+            // doc-en fra UserData.resumeData når den finnes, så hit kommer vi
+            // kun for helt ny konto eller rett etter Nullstill (som sletter
+            // cv_yjs_state og tømmer resumeData). Seed fra Zustand-state
+            // (default tom CV hvis ikke hydrert) og marker lastet — uten
+            // setLoaded står /app/cv evig på «Laster CV-data».
             const current = useResumeStore.getState();
-            if (current.isLoaded) {
-              const payload: ResumePayloadV2 = {
-                resumes: current.resumes,
-                activeResumeId: current.activeResumeId,
-                _resumeDataMap: {
-                  ...current._resumeDataMap,
-                  [current.activeResumeId]: current.data,
-                },
-                data: current.data,
-              };
-              applyResumeToYDoc(ydoc, payload);
+            const payload: ResumePayloadV2 = {
+              resumes: current.resumes,
+              activeResumeId: current.activeResumeId,
+              _resumeDataMap: {
+                ...current._resumeDataMap,
+                [current.activeResumeId]: current.data,
+              },
+              data: current.data,
+            };
+            applyResumeToYDoc(ydoc, payload);
+            if (!current.isLoaded) {
+              useResumeStore.getState().setLoaded(true);
             }
           }
           useCloudSyncStore.getState().setStatus("idle");
