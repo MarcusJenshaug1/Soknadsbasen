@@ -206,15 +206,25 @@ export function useCloudSync({ enabled = true }: { enabled?: boolean } = {}) {
         }
         const data: ServerData = await res.json();
 
-        // Session-email-mismatch (klient vs server) er fortsatt en defense.
+        // Session-email-mismatch (klient vs server) er fortsatt en defense
+        // mot at en annen brukers CV hydreres inn i editoren. VIKTIG: IKKE
+        // marker som lastet her. Setter vi isLoaded=true ville editoren vist
+        // tom default-state som en (forvirret) admin kunne redigere — og en
+        // påfølgende auto-save går mot server-sesjonen (cookie = riktig
+        // bruker), altså ville vi OVERSKREVET riktig brukers CV med tomt
+        // innhold. Behold "Laster"-tilstanden og la neste forsøk (poll, eller
+        // korrigert klient-identitet) hydrere når identitetene stemmer igjen.
         const serverEmail = data.debug?.sessionEmail ?? null;
-        if (expectedEmail && serverEmail && expectedEmail !== serverEmail) {
-          console.warn("[CloudSync] Session-email mismatch.", {
+        const norm = (s: string) => s.trim().toLowerCase();
+        if (
+          expectedEmail &&
+          serverEmail &&
+          norm(expectedEmail) !== norm(serverEmail)
+        ) {
+          console.warn("[CloudSync] Session-email mismatch — hopper over hydrering.", {
             expected: expectedEmail,
             server: serverEmail,
           });
-          useResumeStore.getState().setLoaded(true);
-          loadedRef.current = true;
           return;
         }
 

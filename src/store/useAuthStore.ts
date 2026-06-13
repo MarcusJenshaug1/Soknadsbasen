@@ -37,15 +37,26 @@ interface AuthStore {
 
 type ProfileResponse = { user: AuthUser; impersonatedBy: AuthUser | null };
 
-async function fetchProfile(): Promise<ProfileResponse | null> {
-  try {
-    const res = await fetch("/api/user/profile", { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = (await res.json()) as ProfileResponse;
-    return data;
-  } catch {
-    return null;
+async function fetchProfile(retries = 3): Promise<ProfileResponse | null> {
+  // Bounded retry: et transient blink (nettverk eller en SW-mellomliggende
+  // feil) på /api/user/profile MÅ ikke etterlate auth-storen på fallback-
+  // identiteten. Under impersonering er fallback (raw Supabase = admin) feil
+  // bruker, og en feil store.user gir email-mismatch i useCloudSync som
+  // blokkerer hydrering av target-CV-en. Happy path returnerer på 1. forsøk.
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch("/api/user/profile", { cache: "no-store" });
+      if (res.ok) {
+        return (await res.json()) as ProfileResponse;
+      }
+    } catch {
+      // nettverksblipp — prøv igjen under
+    }
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+    }
   }
+  return null;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => {
