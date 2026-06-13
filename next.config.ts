@@ -68,8 +68,8 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   env: {
     NEXT_PUBLIC_BUILD_ID:
-      process.env.VERCEL_GIT_COMMIT_SHA ??
-      process.env.SOURCE_COMMIT ??
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      process.env.SOURCE_COMMIT ||
       `dev-${Date.now()}`,
   },
   serverExternalPackages: ["pdfjs-dist", "puppeteer", "puppeteer-core", "@sparticuz/chromium"],

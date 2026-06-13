@@ -154,7 +154,7 @@ export const NAV_SLIDES: PitchSlide[] = [
     title: "La oss kjøre 1 000-bruker piloten i 4 måneder.",
     items: [
       { label: "Marcus Jenshaug", text: "marcus@jenshaug.no" },
-      { label: "Web", text: "soknadsbasen.no" },
+      { label: "Web", text: "søknadsbasen.no" },
     ],
   },
 ];

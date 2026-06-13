@@ -8,6 +8,13 @@ secret-tilgang).
 > **Behold Vercel kjørende til Coolify er verifisert.** Gjør DNS-cutover (steg 9)
 > helt til slutt, så har du rollback hele veien.
 
+> **Domene-status:** Produksjonsdomenet er **`søknadsbasen.no`** (med `ø`, IDNA
+> `xn--sknadsbasen-ggb.no`) — det er kanonisk overalt i koden (`siteConfig.ts`).
+> ASCII-domenet `soknadsbasen.no` (uten `ø`) er bestilt, men ikke aktivt ennå, så
+> ikke pek noe på det før det resolver. Når det er live: gjør ASCII-domenet til
+> primær, sett 301-redirect fra ø-domenet til det, og oppdater `siteUrl` i
+> `src/lib/seo/siteConfig.ts`. Coolify-dashbordet ligger på `https://coolify.søknadsbasen.no`.
+
 ---
 
 ## 1. Provisjoner Hetzner-server (EU)
@@ -38,10 +45,10 @@ Pek domenene mot serverens IP (senk TTL til 300s et døgn før cutover):
 
 | Record | Navn | Verdi |
 |---|---|---|
-| A | `soknadsbasen.no` (eller subdomene for test først) | `<server-ip>` |
+| A | `søknadsbasen.no` (eller subdomene for test først) | `<server-ip>` |
 | A | `coolify.dindomene.no` | `<server-ip>` |
 
-**Test gjerne på et midlertidig subdomene** (`coolify-test.soknadsbasen.no`) før
+**Test gjerne på et midlertidig subdomene** (`coolify-test.søknadsbasen.no`) før
 du flytter hoveddomenet.
 
 ## 4. Opprett applikasjonen i Coolify
@@ -64,7 +71,7 @@ buildtime»).
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-NEXT_PUBLIC_SITE_URL            # https://soknadsbasen.no
+NEXT_PUBLIC_SITE_URL            # https://søknadsbasen.no
 NEXT_PUBLIC_VAPID_PUBLIC_KEY
 NEXT_PUBLIC_HOCUSPOCUS_URL      # kun hvis collab-realtime brukes (se steg 10)
 ```
@@ -117,7 +124,7 @@ Vercel-dashbordet (Settings → Environment Variables).
 
 ## 7. Domene + TLS
 
-I Coolify: sett app-domenet (`https://soknadsbasen.no`). Coolify utsteder
+I Coolify: sett app-domenet (`https://søknadsbasen.no`). Coolify utsteder
 Let's Encrypt-sertifikat automatisk når DNS peker riktig. Deploy.
 
 ## 8. Cron / planlagte oppgaver
@@ -135,17 +142,17 @@ Coolify (eller systemd/cron på serveren) som kaller appens egne endepunkt med
 
 Kommando per task:
 ```sh
-curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://soknadsbasen.no/api/cron/jobs-sync
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://søknadsbasen.no/api/cron/jobs-sync
 ```
 
 > Rutene feiler nå **lukket** uten `CRON_SECRET` — sørg for at den er satt.
 
 ## 9. Repoint webhooks og auth (FØR cutover)
 
-- **Stripe:** lag nytt webhook-endpoint → `https://soknadsbasen.no/api/stripe/webhook`,
+- **Stripe:** lag nytt webhook-endpoint → `https://søknadsbasen.no/api/stripe/webhook`,
   abonner på samme events som før, kopier ny signing secret til
   `STRIPE_WEBHOOK_SECRET`.
-- **Resend (inbound):** pek webhook til `https://soknadsbasen.no/api/resend/inbound`,
+- **Resend (inbound):** pek webhook til `https://søknadsbasen.no/api/resend/inbound`,
   oppdater `RESEND_WEBHOOK_SECRET`.
 - **Supabase Auth:** legg til ny URL under Auth → URL Configuration (Site URL +
   Redirect URLs) slik at innlogging/passord-reset peker på nytt domene.
@@ -163,7 +170,7 @@ er satt (build-time). Er den tom, brukes Supabase broadcast-sync som før.
 ### Deploy som egen Coolify-resource
 1. **+ New Resource → samme repo**, men **Build Pack = Dockerfile** med
    **Dockerfile-sti = `Dockerfile.hocuspocus`**.
-2. **Port:** `1234`. **Domene:** `collab.soknadsbasen.no` (Coolify gir TLS;
+2. **Port:** `1234`. **Domene:** `collab.søknadsbasen.no` (Coolify gir TLS;
    WebSocket går over `wss://`).
 3. **Env (runtime):**
    ```
@@ -172,10 +179,10 @@ er satt (build-time). Er den tom, brukes Supabase broadcast-sync som før.
    DIRECT_URL                    # non-pooled
    PORT=1234
    ```
-4. **Aktiver i hovedappen:** sett `NEXT_PUBLIC_HOCUSPOCUS_URL=wss://collab.soknadsbasen.no`
+4. **Aktiver i hovedappen:** sett `NEXT_PUBLIC_HOCUSPOCUS_URL=wss://collab.søknadsbasen.no`
    som **build-arg** på hovedapp-resourcen, og redeploy den (NEXT_PUBLIC_* inlines
    ved build).
-5. **DNS:** A-record `collab.soknadsbasen.no` → server-IP.
+5. **DNS:** A-record `collab.søknadsbasen.no` → server-IP.
 
 > Tjenesten kjører ingen migrasjoner (hovedappen eier `prisma migrate deploy`).
 > Den deler DB og leser/skriver `cvYjsState` + `UserData.resumeData`.
@@ -201,7 +208,7 @@ Trigger deploy i Coolify. Sjekk byggeloggen for «Compiled successfully» og at
 
 ## 12. Cutover
 
-Når alt er grønt: flytt A-recorden for `soknadsbasen.no` til serverens IP.
+Når alt er grønt: flytt A-recorden for `søknadsbasen.no` til serverens IP.
 Behold Vercel som rollback til du har sett trafikk + webhooks virke et døgn.
 Deretter kan Vercel-prosjektet pauses/slettes og `vercel.json` fjernes fra repoet.
 

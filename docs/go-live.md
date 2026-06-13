@@ -8,7 +8,7 @@ Huskeliste for å flytte Stripe-betaling fra test til prod. Arbeid deg nedover �
 - [ ] Opprett produktene på nytt i live-modus (test-priser fungerer ikke) → noter nye `price_…`-ID-er
 - [ ] Kopier live `pk_live_…` og `sk_live_…` fra [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys)
 - [ ] [dashboard.stripe.com/webhooks](https://dashboard.stripe.com/webhooks) → **Add endpoint**
-  - URL: `https://søknadsbasen.no/api/stripe/webhook` (IDNA: `xn--sknadsbasen-95a.no`)
+  - URL: `https://søknadsbasen.no/api/stripe/webhook` (IDNA: `xn--sknadsbasen-ggb.no`)
   - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
   - Kopier `whsec_…` (prod — forskjellig fra test-secret)
 - [ ] Aktiver **Customer Portal** i live-modus ([dashboard.stripe.com/settings/billing/portal](https://dashboard.stripe.com/settings/billing/portal)) — egen konfig per modus. Repeter oppsettet fra Sandbox
