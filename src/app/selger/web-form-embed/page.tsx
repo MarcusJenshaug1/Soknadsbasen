@@ -8,7 +8,7 @@ export default async function WebFormEmbedPage() {
   const access = await getSelgerPanelAccess();
   if (!access) redirect("/logg-inn?redirect=/selger/web-form-embed");
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soknadsbasen.no";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://søknadsbasen.no";
 
   return (
     <div className="space-y-5 max-w-3xl">
