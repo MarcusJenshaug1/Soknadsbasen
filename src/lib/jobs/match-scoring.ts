@@ -73,7 +73,17 @@ export function termMatches(normalizedText: string, rawTerm: string): boolean {
     term.length <= 3
       ? new RegExp(`(?:^| )${escapeRe(term)}(?:$| )`)
       : new RegExp(`(?:^| )${escapeRe(term)}`);
-  return re.test(normalizedText);
+  if (re.test(normalizedText)) return true;
+  // Sammensatt-ord-toleranse: NAV-taksonomien limer yrkestitler sammen
+  // («fullstackutvikler») mens CV-er skriver dem med bindestrek eller mellomrom
+  // («fullstack-utvikler»). Som fallback sammenlignes separator-kollapset. Gated
+  // på >= 9 tegn så korte termer ikke treffer inni urelaterte ord — terskelen er
+  // kalibrert mot eval-harnessen (scripts/eval-match-variants.ts).
+  const termJoined = term.replace(/[- ]/g, "");
+  if (termJoined.length >= 9) {
+    return normalizedText.replace(/[- ]/g, "").includes(termJoined);
+  }
+  return false;
 }
 
 const AFFINITY_TERMS = 15;
