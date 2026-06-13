@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { hasActiveAccess } from "@/lib/access";
+import { getSession, getSessionWithAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { listResumesFromPayload } from "@/lib/resume-server";
 import {
@@ -55,10 +54,12 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession();
+  const session = await getSessionWithAccess();
   if (!session) return NextResponse.json({ error: "Ikke autentisert" }, { status: 401 });
 
-  if (!(await hasActiveAccess(session.userId))) {
+  // hasAccess dekker abonnement, org-tilgang, selger og intern admin. Admins
+  // og selgere skal kunne dele CV uten eget abonnement.
+  if (!session.hasAccess) {
     return NextResponse.json(
       { error: "Krever aktivt abonnement", redirect: "/app/billing" },
       { status: 402 },
