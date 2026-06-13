@@ -87,7 +87,7 @@ export const computeMatchBreakdown = cache(
     );
 
     const factors: MatchFactor[] = [
-      skillsFactor(cvText, side.keywords),
+      skillsFactor(cvText, userData.aiKeywords, side.keywords),
       affinityFactor(
         resume.role,
         userData.aiKeywords,
@@ -108,9 +108,17 @@ export const computeMatchBreakdown = cache(
   },
 );
 
-function skillsFactor(cvText: string, keywords: string[]): MatchFactor {
-  const matched = keywords.filter((k) => termMatches(cvText, k));
-  const missing = keywords.filter((k) => !termMatches(cvText, k));
+function skillsFactor(
+  cvText: string,
+  cvKeywords: string[],
+  keywords: string[],
+): MatchFactor {
+  // Søk også i CV-ens AI-nøkkelord (normaliserte rolle-/skill-synonymer som
+  // «backend-utvikler», «systemutvikler») i tillegg til CV-fullteksten, så
+  // breakdownen ikke påstår at en fullstack-utvikler «mangler Fullstackutvikler».
+  const haystack = cvText + " " + normalizeMatchText(cvKeywords.join(" "));
+  const matched = keywords.filter((k) => termMatches(haystack, k));
+  const missing = keywords.filter((k) => !termMatches(haystack, k));
   const value = Math.round((matched.length / keywords.length) * 100);
   return {
     label: "Ferdigheter",
@@ -125,22 +133,44 @@ function skillsFactor(cvText: string, keywords: string[]): MatchFactor {
   };
 }
 
-/** Motsatt retning: CV-ens yrkestermer søkt i jobbens yrkesside. */
+/**
+ * Motsatt retning: peker CV-en mot stillingens yrkesfelt? Rollen din mot
+ * jobbens yrkesside er HOVEDsignalet — tekniske nøkkelord står sjelden i NAV-
+ * yrkestaksonomien, så de skal forsterke et rolletreff, ikke fortynne det.
+ * (Gammel feil: ett rolletreff ble delt på 15 termer der 14 aldri kunne
+ * treffe → en jobb med rollen i tittelen ble vist som "utenfor yrkesfeltet".)
+ * NAV limer sammen yrkestitler ("Fullstackutvikler") mens CV-en bruker
+ * bindestrek ("Fullstack-utvikler"), så rolletreffet sjekkes også separator-
+ * kollapset.
+ */
 function affinityFactor(
   role: string,
   cvKeywords: string[],
   jobOccText: string,
 ): MatchFactor {
-  const terms = [role, ...cvKeywords].map((t) => t.trim()).filter(Boolean).slice(0, 15);
-  const hits = terms.filter((t) => termMatches(jobOccText, t));
-  const value = terms.length > 0 ? Math.round((hits.length / terms.length) * 100) : 0;
+  const normRole = role.trim();
+  const collapsedOcc = jobOccText.replace(/[-\s]/g, "");
+  const roleHit =
+    normRole.length > 0 &&
+    (termMatches(jobOccText, normRole) ||
+      (normRole.length >= 6 &&
+        collapsedOcc.includes(normalizeMatchText(normRole).replace(/[-\s]/g, ""))));
+
+  const kwTerms = cvKeywords.map((t) => t.trim()).filter(Boolean).slice(0, 14);
+  const kwHits = kwTerms.filter((t) => termMatches(jobOccText, t));
+
+  const value = roleHit
+    ? Math.min(100, 75 + kwHits.length * 8)
+    : Math.round(Math.min(1, kwHits.length / 4) * 100);
+
+  const matched = [roleHit ? normRole : "", ...kwHits].filter(Boolean).slice(0, 2);
   return {
     label: "Yrkesretning",
     value,
     word: word(value),
     detail:
       value >= 40
-        ? `Profilen din (${hits.slice(0, 2).join(", ")}) treffer stillingens yrkesfelt.`
+        ? `Profilen din (${matched.join(", ")}) treffer stillingens yrkesfelt.`
         : "Stillingen ligger utenfor yrkesfeltet CV-en din peker mot.",
   };
 }

@@ -90,10 +90,21 @@ export function normalizeResumeData(resumeData: string, mainResumeId?: string | 
     education: parsed.education ?? [],
     projects: parsed.projects ?? [],
     certifications: parsed.certifications ?? [],
+    languages: parsed.languages ?? [],
+    courses: parsed.courses ?? [],
+    volunteering: parsed.volunteering ?? [],
+    awards: parsed.awards ?? [],
+    publications: parsed.publications ?? [],
+    interests: parsed.interests ?? [],
   };
 }
 
-/** Komponerer CV-fulltekst for matching — samme felter som v1, ny normalisering. */
+/**
+ * Komponerer CV-fulltekst for matching. Leser ALLE innholdsseksjoner som kan
+ * bære et jobbkrav — inkl. språk (ellers ser ikke språk-faktoren "Engelsk –
+ * Flytende"), kurs, frivillig arbeid, priser, publikasjoner og interesser.
+ * Referanser utelates bevisst (PII, ikke en kvalifikasjon).
+ */
 export function buildCvMatchText(
   resume: NonNullable<ReturnType<typeof normalizeResumeData>>,
 ): string {
@@ -110,6 +121,16 @@ export function buildCvMatchText(
         .join(" "),
       resume.projects.map((p) => [p.name, p.role, p.description].join(" ")).join(" "),
       resume.certifications.map((c) => [c.name, c.issuer].join(" ")).join(" "),
+      resume.languages.map((l) => [l.name, l.level].join(" ")).join(" "),
+      resume.courses.map((c) => [c.name, c.institution, c.description].join(" ")).join(" "),
+      resume.volunteering
+        .map((v) => [v.role, v.organization, v.description].join(" "))
+        .join(" "),
+      resume.awards.map((a) => [a.title, a.issuer, a.description].join(" ")).join(" "),
+      resume.publications
+        .map((p) => [p.title, p.publisher, p.description].join(" "))
+        .join(" "),
+      resume.interests.join(" "),
     ].join(" "),
   );
 }
